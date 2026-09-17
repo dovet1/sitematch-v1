@@ -33,7 +33,8 @@ import type { DigestReport, DigestSummary, MonitorPatch, MonitorRow } from './ty
  */
 
 const SUMMARY_HIGHLIGHTS = 5
-const REPORT_HIGHLIGHTS = 25
+// The weekly panel lists every development the week touched, grouped by use; the model sees fewer.
+const REPORT_HIGHLIGHTS = 120
 /** How long a scheduled run waits for a stale source to recover before issuing a labelled partial report. */
 export const COVERAGE_RECOVERY_HOURS = 12
 const PREVIEW_DEBOUNCE_MS = 90_000

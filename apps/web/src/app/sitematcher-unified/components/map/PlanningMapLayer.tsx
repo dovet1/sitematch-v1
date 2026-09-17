@@ -2,50 +2,65 @@
 
 import { useEffect, useRef } from 'react'
 import type mapboxgl from 'mapbox-gl'
-import type { MonitorCluster } from '@/lib/planning-monitor/types'
+import type { DigestHighlight, MonitorCluster } from '@/lib/planning-monitor/types'
 import type { PatchGeometry } from '@/lib/planning-monitor/geometry'
-import { usePlanningMonitorStore } from '../../lib/stores/planning-monitor-store'
+import { usePlanningMonitorStore, type StackPick } from '../../lib/stores/planning-monitor-store'
+import { MAX_CLUSTER_ZOOM, groupByPosition } from '../../lib/planning-monitor-ui'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 
 /**
- * Planning mode's map: patch outline, server clusters and single records, the selected record's
- * ring, and the chosen estate's stores. It owns only its own sources and layers, re-adds them after
- * every style load, and removes nothing belonging to other modes. Clicks are handled here, so the
- * shared map's click handler has nothing to do in Planning.
+ * Planning mode's map: patch outline, server clusters and single developments, NEW badges, the
+ * hovered and selected pin, dimmed matches outside the patch, an archived week's points, and the
+ * chosen brands' stores. Several applications at one point draw as a stacked pin that opens a list. It owns only its own sources and layers, re-adds them after every style
+ * load, and removes nothing belonging to other modes. Clicks are handled here, so the shared map's
+ * click handler has nothing to do in Planning.
  */
 
 export const PLANNING_COLORS = {
-  residential: '#8B6CFF',
-  commercial: '#34D399',
-  mixed: '#C4B5FD',
+  residential: '#7033FF',
+  commercial: '#0F9B8E',
+  mixed: '#F26B1F',
   estate: '#0EAE73',
-  patch: '#9E82FF',
+  patch: '#B49CFF',
 }
 
 const SRC_PATCH = 'pm-patch'
 const SRC_POINTS = 'pm-points'
+const SRC_OUTSIDE = 'pm-outside'
 const SRC_STORES = 'pm-stores'
-const L_PATCH_FILL = 'pm-patch-fill'
 const L_PATCH_LINE = 'pm-patch-line'
+const L_OUTSIDE = 'pm-outside'
+const L_OUTSIDE_COUNT = 'pm-outside-count'
 const L_CLUSTER = 'pm-cluster'
+const L_STACK_BACK = 'pm-stack-back'
+const L_STACK_MID = 'pm-stack-mid'
 const L_CLUSTER_COUNT = 'pm-cluster-count'
+const L_HALO = 'pm-halo'
 const L_SINGLE = 'pm-single'
 const L_SINGLE_APPROX = 'pm-single-approx'
-const L_HOVER = 'pm-hover'
-const L_SELECTED = 'pm-selected'
+const L_FOCUS = 'pm-focus'
+const L_NEW = 'pm-new'
 const L_STORES = 'pm-stores'
 const STORE_IMAGE = 'pm-store-square'
-export const PLANNING_LAYER_IDS = [L_PATCH_FILL, L_PATCH_LINE, L_STORES, L_HOVER, L_SELECTED, L_CLUSTER, L_CLUSTER_COUNT, L_SINGLE_APPROX, L_SINGLE]
+const NEW_IMAGES = { residential: 'pm-new-residential', commercial: 'pm-new-commercial', mixed: 'pm-new-mixed' } as const
+const SOURCES = [SRC_PATCH, SRC_POINTS, SRC_OUTSIDE, SRC_STORES]
+export const PLANNING_LAYER_IDS = [
+  L_PATCH_LINE, L_STORES, L_OUTSIDE, L_OUTSIDE_COUNT, L_HALO, L_STACK_BACK, L_STACK_MID, L_CLUSTER, L_CLUSTER_COUNT, L_SINGLE_APPROX, L_SINGLE, L_FOCUS, L_NEW,
+]
+const PICKABLE = [L_NEW, L_FOCUS, L_SINGLE, L_SINGLE_APPROX, L_CLUSTER]
 
+/** Cell keys of an archived week's stacked pins; the rest is the position key. */
+const STACK_PREFIX = 'hs:'
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+const NONE = '__none__'
 
 function dominant(cluster: MonitorCluster): 'residential' | 'commercial' | 'mixed' {
-  if (cluster.residential > 0 && cluster.commercial > 0) {
-    if (cluster.residential >= cluster.commercial * 2) return 'residential'
-    if (cluster.commercial >= cluster.residential * 2) return 'commercial'
-    return 'mixed'
+  if (cluster.single) {
+    if (cluster.residential > 0 && cluster.commercial > 0) return 'mixed'
+    return cluster.commercial > 0 ? 'commercial' : 'residential'
   }
-  return cluster.commercial > 0 ? 'commercial' : 'residential'
+  // Clusters are violet unless commercial clearly leads.
+  return cluster.commercial > cluster.residential ? 'commercial' : 'residential'
 }
 
 export function clustersToGeoJSON(clusters: MonitorCluster[]): GeoJSON.FeatureCollection {
@@ -60,11 +75,59 @@ export function clustersToGeoJSON(clusters: MonitorCluster[]): GeoJSON.FeatureCo
         label: cluster.count > 999 ? `${Math.round(cluster.count / 100) / 10}k` : String(cluster.count),
         kind: dominant(cluster),
         single: cluster.single ? 1 : 0,
+        stacked: cluster.colocated ? 1 : 0,
         exact: cluster.single?.exact ? 1 : 0,
         rowKey: cluster.single?.key ?? '',
         applicationId: cluster.single?.applicationId ?? '',
       },
     })),
+  }
+}
+
+const highlightKind = (h: DigestHighlight) => (h.isResidential && h.isCommercial ? 'mixed' : h.isCommercial ? 'commercial' : 'residential')
+
+/** An archived week's developments: single pins, or a stacked pin where several share a point. */
+export function highlightsToGeoJSON(points: DigestHighlight[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: groupByPosition(points).map((group): GeoJSON.Feature => {
+      const geometry: GeoJSON.Point = { type: 'Point', coordinates: [group.lng, group.lat] }
+      if (group.points.length > 1) {
+        const commercial = group.points.filter((h) => h.isCommercial).length
+        return {
+          type: 'Feature',
+          geometry,
+          properties: {
+            cellKey: `${STACK_PREFIX}${group.key}`,
+            count: group.points.length,
+            label: String(group.points.length),
+            kind: commercial > group.points.length - commercial ? 'commercial' : 'residential',
+            single: 0,
+            stacked: 1,
+            exact: 0,
+            rowKey: '',
+            applicationId: '',
+          },
+        }
+      }
+      const h = group.points[0]
+      return {
+        type: 'Feature',
+        geometry,
+        properties: {
+          cellKey: `h:${h.applicationId}`,
+          count: 1,
+          label: '1',
+          kind: highlightKind(h),
+          single: 1,
+          stacked: 0,
+          exact: h.approximateLocation ? 0 : 1,
+          // The same key the developments list uses, so hover and selection line up.
+          rowKey: h.developmentId ?? `app:${h.applicationId}`,
+          applicationId: h.applicationId,
+        },
+      }
+    }),
   }
 }
 
@@ -85,7 +148,31 @@ function storeImage(): ImageData {
   return ctx.getImageData(0, 0, size, size)
 }
 
+/** The mono "NEW" badge drawn above a pin, in its use colour. Rendered at 2x. */
+function newBadgeImage(color: string): ImageData {
+  const w = 64
+  const h = 30
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.roundRect(2, 2, w - 4, h - 4, 10)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,.9)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '600 17px "JetBrains Mono", ui-monospace, Menlo, monospace'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('NEW', w / 2, h / 2 + 1)
+  return ctx.getImageData(0, 0, w, h)
+}
+
 const kindColor: mapboxgl.Expression = ['match', ['get', 'kind'], 'commercial', PLANNING_COLORS.commercial, 'mixed', PLANNING_COLORS.mixed, PLANNING_COLORS.residential]
+const kindHalo: mapboxgl.Expression = ['match', ['get', 'kind'], 'commercial', 'rgba(15,155,142,0.3)', 'mixed', 'rgba(242,107,31,0.3)', 'rgba(112,51,255,0.3)']
 
 /**
  * False once the shared map has been removed. UnifiedMap removes it when the workspace unmounts,
@@ -99,88 +186,164 @@ export function mapAlive(map: mapboxgl.Map): boolean {
 function ensureLayers(map: mapboxgl.Map) {
   if (!mapAlive(map) || !map.isStyleLoaded()) return false
   if (!map.hasImage(STORE_IMAGE)) map.addImage(STORE_IMAGE, storeImage(), { pixelRatio: 2 })
-  for (const id of [SRC_PATCH, SRC_POINTS, SRC_STORES]) {
+  for (const kind of ['residential', 'commercial', 'mixed'] as const) {
+    if (!map.hasImage(NEW_IMAGES[kind])) map.addImage(NEW_IMAGES[kind], newBadgeImage(PLANNING_COLORS[kind]), { pixelRatio: 2 })
+  }
+  for (const id of SOURCES) {
     if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: EMPTY })
   }
-  if (!map.getLayer(L_PATCH_FILL)) {
-    map.addLayer({ id: L_PATCH_FILL, type: 'fill', source: SRC_PATCH, paint: { 'fill-color': 'rgba(139,108,255,0.13)' } })
+  const add = (layer: mapboxgl.AnyLayer) => {
+    if (!map.getLayer(layer.id)) map.addLayer(layer)
   }
-  if (!map.getLayer(L_PATCH_LINE)) {
-    map.addLayer({ id: L_PATCH_LINE, type: 'line', source: SRC_PATCH, paint: { 'line-color': PLANNING_COLORS.patch, 'line-width': 2, 'line-dasharray': [2, 1.5] } })
-  }
-  if (!map.getLayer(L_STORES)) {
-    map.addLayer({
-      id: L_STORES, type: 'symbol', source: SRC_STORES,
-      layout: { 'icon-image': STORE_IMAGE, 'icon-size': 1, 'icon-allow-overlap': true },
-    })
-  }
-  if (!map.getLayer(L_HOVER)) {
-    map.addLayer({
-      id: L_HOVER, type: 'circle', source: SRC_POINTS, filter: ['==', ['get', 'rowKey'], '__none__'],
-      paint: { 'circle-radius': 16, 'circle-color': 'rgba(255,255,255,0.12)', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5 },
-    })
-  }
-  if (!map.getLayer(L_SELECTED)) {
-    map.addLayer({
-      id: L_SELECTED, type: 'circle', source: SRC_POINTS, filter: ['==', ['get', 'rowKey'], '__none__'],
-      paint: { 'circle-radius': 17, 'circle-color': 'rgba(108,71,255,0.25)', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 },
-    })
-  }
-  if (!map.getLayer(L_CLUSTER)) {
-    map.addLayer({
-      id: L_CLUSTER, type: 'circle', source: SRC_POINTS, filter: ['==', ['get', 'single'], 0],
-      paint: {
-        'circle-radius': ['step', ['get', 'count'], 16, 10, 19, 50, 22, 250, 26, 1000, 30],
-        'circle-color': kindColor,
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': 3,
-      },
-    })
-  }
-  if (!map.getLayer(L_CLUSTER_COUNT)) {
-    map.addLayer({
-      id: L_CLUSTER_COUNT, type: 'symbol', source: SRC_POINTS, filter: ['==', ['get', 'single'], 0],
-      layout: { 'text-field': ['get', 'label'], 'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'], 'text-size': 12, 'text-allow-overlap': true, 'text-ignore-placement': true },
-      paint: { 'text-color': '#14121A' },
-    })
-  }
+  add({ id: L_PATCH_LINE, type: 'line', source: SRC_PATCH, paint: { 'line-color': PLANNING_COLORS.patch, 'line-width': 3 } })
+  add({ id: L_STORES, type: 'symbol', source: SRC_STORES, layout: { 'icon-image': STORE_IMAGE, 'icon-size': 1, 'icon-allow-overlap': true } })
+  // Matches outside the patch: white and dimmed, so an edge case is still visible.
+  add({
+    id: L_OUTSIDE, type: 'circle', source: SRC_OUTSIDE,
+    paint: {
+      'circle-radius': ['case', ['==', ['get', 'single'], 1], 6, ['step', ['get', 'count'], 13, 10, 15, 50, 17, 250, 19]],
+      'circle-color': 'rgba(255,255,255,0.55)',
+      'circle-stroke-color': 'rgba(255,255,255,0.85)',
+      'circle-stroke-width': 1.5,
+    },
+  })
+  add({
+    id: L_OUTSIDE_COUNT, type: 'symbol', source: SRC_OUTSIDE, filter: ['==', ['get', 'single'], 0],
+    layout: { 'text-field': ['get', 'label'], 'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true },
+    paint: { 'text-color': 'rgba(23,20,25,0.7)' },
+  })
+  add({
+    id: L_HALO, type: 'circle', source: SRC_POINTS, filter: ['==', ['get', 'rowKey'], NONE],
+    paint: { 'circle-radius': 21, 'circle-color': kindHalo },
+  })
+  // A stacked pin: two offset discs behind the count, like a pile of cards.
+  const stacked: mapboxgl.Expression = ['all', ['==', ['get', 'single'], 0], ['==', ['get', 'stacked'], 1]]
+  add({
+    id: L_STACK_BACK, type: 'circle', source: SRC_POINTS, filter: stacked,
+    paint: { 'circle-radius': 16, 'circle-color': kindColor, 'circle-opacity': 0.45, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-translate': [8, -8] },
+  })
+  add({
+    id: L_STACK_MID, type: 'circle', source: SRC_POINTS, filter: stacked,
+    paint: { 'circle-radius': 16, 'circle-color': kindColor, 'circle-opacity': 0.7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-translate': [4, -4] },
+  })
+  add({
+    id: L_CLUSTER, type: 'circle', source: SRC_POINTS, filter: ['==', ['get', 'single'], 0],
+    paint: {
+      'circle-radius': ['case', ['==', ['get', 'stacked'], 1], 16, ['step', ['get', 'count'], 19, 10, 21, 50, 23, 250, 25, 1000, 26]],
+      'circle-color': kindColor,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 3,
+    },
+  })
+  add({
+    id: L_CLUSTER_COUNT, type: 'symbol', source: SRC_POINTS, filter: ['==', ['get', 'single'], 0],
+    layout: {
+      'text-field': ['get', 'label'],
+      'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+      'text-size': ['case', ['==', ['get', 'stacked'], 1], 13, ['step', ['get', 'count'], 14, 100, 15, 1000, 16]],
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: { 'text-color': '#ffffff' },
+  })
   // Approximate positions are hollow rings: a different shape, not just a different colour.
-  if (!map.getLayer(L_SINGLE_APPROX)) {
-    map.addLayer({
-      id: L_SINGLE_APPROX, type: 'circle', source: SRC_POINTS, filter: ['all', ['==', ['get', 'single'], 1], ['==', ['get', 'exact'], 0]],
-      paint: { 'circle-radius': 8, 'circle-color': 'rgba(14,21,34,0.6)', 'circle-stroke-color': kindColor, 'circle-stroke-width': 3 },
-    })
-  }
-  if (!map.getLayer(L_SINGLE)) {
-    map.addLayer({
-      id: L_SINGLE, type: 'circle', source: SRC_POINTS, filter: ['all', ['==', ['get', 'single'], 1], ['==', ['get', 'exact'], 1]],
-      paint: { 'circle-radius': 8, 'circle-color': kindColor, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 },
-    })
-  }
+  add({
+    id: L_SINGLE_APPROX, type: 'circle', source: SRC_POINTS, filter: ['all', ['==', ['get', 'single'], 1], ['==', ['get', 'exact'], 0]],
+    paint: { 'circle-radius': 6, 'circle-color': 'rgba(255,255,255,0.35)', 'circle-stroke-color': kindColor, 'circle-stroke-width': 2.5 },
+  })
+  add({
+    id: L_SINGLE, type: 'circle', source: SRC_POINTS, filter: ['all', ['==', ['get', 'single'], 1], ['==', ['get', 'exact'], 1]],
+    paint: { 'circle-radius': 7, 'circle-color': kindColor, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 },
+  })
+  // The hovered or selected pin grows to 26px with a 4px white border.
+  add({
+    id: L_FOCUS, type: 'circle', source: SRC_POINTS, filter: ['==', ['get', 'rowKey'], NONE],
+    paint: { 'circle-radius': 13, 'circle-color': kindColor, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 4 },
+  })
+  add({
+    id: L_NEW, type: 'symbol', source: SRC_POINTS, filter: ['==', ['get', 'rowKey'], NONE],
+    layout: {
+      'icon-image': ['match', ['get', 'kind'], 'commercial', NEW_IMAGES.commercial, 'mixed', NEW_IMAGES.mixed, NEW_IMAGES.residential],
+      'icon-anchor': 'bottom',
+      'icon-offset': [0, -11],
+      'icon-allow-overlap': true,
+    },
+  })
   return true
+}
+
+interface LayerData {
+  clusters: MonitorCluster[]
+  outside: MonitorCluster[]
+  /** The zoom the clusters were computed at. */
+  clusterZoom: number | null
+  archived: DigestHighlight[] | null
+  patchGeometry: PatchGeometry | null
+  stores: NearbyStore[]
+  newKeys: string[]
+  focusKeys: string[]
+  interactive: boolean
+}
+
+function apply(map: mapboxgl.Map, data: LayerData) {
+  const source = (id: string) => map.getSource(id) as mapboxgl.GeoJSONSource
+  source(SRC_POINTS).setData(data.archived ? highlightsToGeoJSON(data.archived) : clustersToGeoJSON(data.clusters))
+  source(SRC_OUTSIDE).setData(data.archived ? EMPTY : clustersToGeoJSON(data.outside))
+  source(SRC_PATCH).setData(data.patchGeometry ? { type: 'Feature', geometry: data.patchGeometry, properties: {} } : EMPTY)
+  source(SRC_STORES).setData({
+    type: 'FeatureCollection',
+    features: data.stores.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id } })),
+  })
+  applyFilters(map, data)
+}
+
+function applyFilters(map: mapboxgl.Map, data: Pick<LayerData, 'newKeys' | 'focusKeys'>) {
+  const focus: mapboxgl.Expression = ['all', ['==', ['get', 'single'], 1], ['in', ['get', 'rowKey'], ['literal', data.focusKeys.length ? data.focusKeys : [NONE]]]]
+  map.setFilter(L_FOCUS, focus)
+  map.setFilter(L_HALO, focus)
+  map.setFilter(L_NEW, ['all', ['==', ['get', 'single'], 1], ['in', ['get', 'rowKey'], ['literal', data.newKeys.length ? data.newKeys : [NONE]]]])
 }
 
 export function PlanningMapLayer({
   map,
   clusters,
+  outside,
+  clusterZoom,
+  archived,
   patchGeometry,
   stores,
+  newKeys,
+  interactive,
   onPickSingle,
+  onPickStack,
 }: {
   map: mapboxgl.Map
   clusters: MonitorCluster[]
+  outside: MonitorCluster[]
+  clusterZoom: number | null
+  /** An archived week's points; replaces the live clusters while set. */
+  archived: DigestHighlight[] | null
   patchGeometry: PatchGeometry | null
   stores: NearbyStore[]
+  /** Row keys added in the last 7 days. */
+  newKeys: string[]
+  /** False while drawing: the draw layer owns clicks. */
+  interactive: boolean
   onPickSingle: (pick: { applicationId: string; rowKey: string; lngLat: [number, number] }) => void
+  /** A pin holding several applications that zooming cannot separate. */
+  onPickStack: (pick: StackPick) => void
 }) {
   const setViewport = usePlanningMonitorStore((s) => s.setViewport)
   const selectedKey = usePlanningMonitorStore((s) => s.selected?.key ?? null)
   const hoveredKey = usePlanningMonitorStore((s) => s.hoveredKey)
-  const setHoveredKey = usePlanningMonitorStore((s) => s.setHoveredKey)
+  const setHovered = usePlanningMonitorStore((s) => s.setHovered)
+  const setHoverStack = usePlanningMonitorStore((s) => s.setHoverStack)
   const select = usePlanningMonitorStore((s) => s.select)
+  const focusKeys = [selectedKey, hoveredKey].filter(Boolean) as string[]
 
-  const latest = useRef({ clusters, patchGeometry, stores, selectedKey, hoveredKey, onPickSingle })
-  latest.current = { clusters, patchGeometry, stores, selectedKey, hoveredKey, onPickSingle }
+  const data: LayerData = { clusters, outside, clusterZoom, archived, patchGeometry, stores, newKeys, focusKeys, interactive }
+  const latest = useRef({ data, onPickSingle, onPickStack })
+  latest.current = { data, onPickSingle, onPickStack }
   // Set when an update could not be applied because the style was busy (isStyleLoaded is false
   // while tiles load after a move). The next idle applies the latest data instead of dropping it.
   const pending = useRef(false)
@@ -193,15 +356,7 @@ export function PlanningMapLayer({
         return
       }
       pending.current = false
-      const { clusters: c, patchGeometry: g, stores: st, selectedKey: sel, hoveredKey: hov } = latest.current
-      ;(map.getSource(SRC_POINTS) as mapboxgl.GeoJSONSource).setData(clustersToGeoJSON(c))
-      ;(map.getSource(SRC_PATCH) as mapboxgl.GeoJSONSource).setData(g ? { type: 'Feature', geometry: g, properties: {} } : EMPTY)
-      ;(map.getSource(SRC_STORES) as mapboxgl.GeoJSONSource).setData({
-        type: 'FeatureCollection',
-        features: st.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id } })),
-      })
-      map.setFilter(L_SELECTED, ['==', ['get', 'rowKey'], sel ?? '__none__'])
-      map.setFilter(L_HOVER, ['==', ['get', 'rowKey'], hov ?? '__none__'])
+      apply(map, latest.current.data)
     }
     const reportViewport = () => {
       if (!mapAlive(map)) return
@@ -209,15 +364,33 @@ export function PlanningMapLayer({
       if (!b) return
       setViewport({ bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom: map.getZoom() })
     }
-    const onStyle = () => sync()
     // 'idle' restores layers a style swap removed and applies an update that arrived while the style
     // was busy. Re-sending data on every idle would re-render the map and fire idle again, forever.
     const onIdle = () => {
       if (pending.current || !map.getSource(SRC_POINTS)) sync()
     }
+    const hitAt = (point: mapboxgl.Point) => {
+      const layers = PICKABLE.filter((id) => map.getLayer(id))
+      return layers.length ? map.queryRenderedFeatures(point, { layers })[0] : undefined
+    }
+    /** The list behind a group pin, or null when zooming in can still separate it. */
+    const stackPick = (props: Record<string, unknown>, coords: [number, number]): StackPick | null => {
+      const { archived, clusterZoom } = latest.current.data
+      const cellKey = String(props.cellKey)
+      const count = Number(props.count)
+      if (archived) {
+        if (!cellKey.startsWith(STACK_PREFIX)) return null
+        const position = cellKey.slice(STACK_PREFIX.length)
+        const highlights = groupByPosition(archived).find((g) => g.key === position)?.points ?? []
+        return { cellKey, lngLat: coords, count, zoom: null, highlights }
+      }
+      // A group still together at full zoom is as separate as the map can make it.
+      if (Number(props.stacked) !== 1 && map.getZoom() < MAX_CLUSTER_ZOOM - 0.05) return null
+      return { cellKey, lngLat: coords, count, zoom: clusterZoom, highlights: null }
+    }
     const onClick = (e: mapboxgl.MapMouseEvent) => {
-      const layers = [L_SINGLE, L_SINGLE_APPROX, L_CLUSTER].filter((id) => map.getLayer(id))
-      const hit = layers.length ? map.queryRenderedFeatures(e.point, { layers })[0] : undefined
+      if (!latest.current.data.interactive) return
+      const hit = hitAt(e.point)
       if (!hit) {
         select(null)
         return
@@ -226,76 +399,77 @@ export function PlanningMapLayer({
       const coords = (hit.geometry as GeoJSON.Point).coordinates as [number, number]
       if (Number(props.single) === 1) {
         latest.current.onPickSingle({ applicationId: String(props.applicationId), rowKey: String(props.rowKey), lngLat: coords })
-      } else {
-        // A cluster zooms in; it never opens a list of its own.
-        map.easeTo({ center: coords, zoom: Math.min(map.getZoom() + 2.5, 18), duration: 500 })
+        return
       }
+      const pick = stackPick(props, coords)
+      if (pick) latest.current.onPickStack(pick)
+      else map.easeTo({ center: coords, zoom: Math.min(map.getZoom() + 2.5, MAX_CLUSTER_ZOOM), duration: 500 })
     }
     const onMove = (e: mapboxgl.MapMouseEvent) => {
-      const layers = [L_SINGLE, L_SINGLE_APPROX, L_CLUSTER].filter((id) => map.getLayer(id))
-      const hit = layers.length ? map.queryRenderedFeatures(e.point, { layers })[0] : undefined
+      if (!latest.current.data.interactive) return
+      const hit = hitAt(e.point)
       map.getCanvas().style.cursor = hit ? 'pointer' : ''
       const key = hit && Number(hit.properties?.single) === 1 ? String(hit.properties?.rowKey) : null
-      if (key !== latest.current.hoveredKey) setHoveredKey(key)
+      const state = usePlanningMonitorStore.getState()
+      if (key !== state.hoveredKey) setHovered(key, 'map')
+      const stackKey = hit && Number(hit.properties?.stacked) === 1 ? String(hit.properties?.cellKey) : null
+      if (stackKey !== (state.hoverStack?.key ?? null)) {
+        setHoverStack(stackKey && hit
+          ? { key: stackKey, lngLat: (hit.geometry as GeoJSON.Point).coordinates as [number, number], count: Number(hit.properties?.count) }
+          : null)
+      }
+    }
+    const onLeave = () => {
+      if (usePlanningMonitorStore.getState().hoverSource === 'map') setHovered(null, 'map')
+      setHoverStack(null)
     }
 
     sync()
     reportViewport()
-    map.on('style.load', onStyle)
+    map.on('style.load', sync)
     map.on('idle', onIdle)
     map.on('moveend', reportViewport)
     map.on('click', onClick)
     map.on('mousemove', onMove)
+    map.on('mouseout', onLeave)
     return () => {
-      map.off('style.load', onStyle)
+      map.off('style.load', sync)
       map.off('idle', onIdle)
       map.off('moveend', reportViewport)
       map.off('click', onClick)
       map.off('mousemove', onMove)
+      map.off('mouseout', onLeave)
       if (!mapAlive(map)) return
       map.getCanvas().style.cursor = ''
       // Leave nothing behind for the next mode. The style swap on leaving Planning clears these
       // too; removing them here covers a mode change that does not swap style.
       if (map.isStyleLoaded()) {
         for (const id of PLANNING_LAYER_IDS) if (map.getLayer(id)) map.removeLayer(id)
-        for (const id of [SRC_PATCH, SRC_POINTS, SRC_STORES]) if (map.getSource(id)) map.removeSource(id)
+        for (const id of SOURCES) if (map.getSource(id)) map.removeSource(id)
       }
     }
-  }, [map, setViewport, setHoveredKey, select])
+  }, [map, setViewport, setHovered, setHoverStack, select])
 
-  // Data and highlight updates.
+  // Data updates.
+  const dataKey = [clusters, outside, archived, patchGeometry, stores]
   useEffect(() => {
     if (!ensureLayers(map)) {
       pending.current = true
       return
     }
-    ;(map.getSource(SRC_POINTS) as mapboxgl.GeoJSONSource).setData(clustersToGeoJSON(clusters))
-  }, [map, clusters])
+    apply(map, latest.current.data)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, ...dataKey])
+
+  // Highlight updates.
+  const filterKey = `${newKeys.join(',')}|${focusKeys.join(',')}`
   useEffect(() => {
     if (!ensureLayers(map)) {
       pending.current = true
       return
     }
-    ;(map.getSource(SRC_PATCH) as mapboxgl.GeoJSONSource).setData(patchGeometry ? { type: 'Feature', geometry: patchGeometry, properties: {} } : EMPTY)
-  }, [map, patchGeometry])
-  useEffect(() => {
-    if (!ensureLayers(map)) {
-      pending.current = true
-      return
-    }
-    ;(map.getSource(SRC_STORES) as mapboxgl.GeoJSONSource).setData({
-      type: 'FeatureCollection',
-      features: stores.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id } })),
-    })
-  }, [map, stores])
-  useEffect(() => {
-    if (!ensureLayers(map)) {
-      pending.current = true
-      return
-    }
-    map.setFilter(L_SELECTED, ['==', ['get', 'rowKey'], selectedKey ?? '__none__'])
-    map.setFilter(L_HOVER, ['==', ['get', 'rowKey'], hoveredKey ?? '__none__'])
-  }, [map, selectedKey, hoveredKey])
+    applyFilters(map, latest.current.data)
+  }, [map, filterKey])
 
   return null
 }

@@ -83,6 +83,10 @@ export function archivePatch(patchId: string) {
   return call<void>(`/api/planning-monitor/patches/${patchId}`, { method: 'DELETE' })
 }
 
+export function restorePatch(patchId: string, emailEnabled: boolean) {
+  return call<{ patch: MonitorPatch }>(`/api/planning-monitor/patches/${patchId}/restore`, { method: 'POST', json: { emailEnabled } })
+}
+
 export function setWatch(applicationId: string, watched: boolean, patchId?: string | null) {
   return call<{ watched: boolean }>('/api/planning-monitor/watches', {
     method: watched ? 'POST' : 'DELETE',
@@ -94,7 +98,17 @@ export interface PatchDigestResponse {
   latest: (DigestReport & { fromOlderRevision: boolean }) | null
   preparing: { runId: string; kind: string } | null
   lastFailed: boolean
-  history: Array<{ runId: string; kind: string; periodLabel: string; generatedAt: string | null; summaryKind: string | null }>
+  /** Kept reports, newest first. `newApplications` is null on reports that predate the count. */
+  history: Array<{
+    runId: string
+    kind: string
+    periodLabel: string
+    periodStart: string
+    periodEnd: string
+    generatedAt: string | null
+    summaryKind: string | null
+    newApplications: number | null
+  }>
   nextEmailAt: string | null
 }
 

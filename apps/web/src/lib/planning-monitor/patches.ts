@@ -228,6 +228,34 @@ export async function archivePatch(userId: string, patchId: string, db: Planning
   return true
 }
 
+/** How long a deleted patch can be brought back from the undo toast. */
+export const RESTORE_WINDOW_MS = 10 * 60_000
+
+/**
+ * Undo an archive made moments ago. Restores the patch and, if the caller says it was on, its
+ * weekly email. Refuses anything archived longer ago than the undo window.
+ */
+export async function restorePatch(
+  userId: string,
+  patchId: string,
+  options: { emailEnabled: boolean },
+  db: PlanningAdminClient = createPlanningAdminClient()
+) {
+  const { data, error } = await db
+    .from('planning_monitor_patches')
+    .update({ archived_at: null, is_active: true })
+    .eq('id', patchId)
+    .eq('owner_id', userId)
+    .gte('archived_at', new Date(Date.now() - RESTORE_WINDOW_MS).toISOString())
+    .select('id')
+  if (error) throw error
+  if (!data?.length) return false
+  if (options.emailEnabled) {
+    await db.from('planning_monitor_subscriptions').update({ email_enabled: true, updated_at: new Date().toISOString() }).eq('patch_id', patchId)
+  }
+  return true
+}
+
 export async function updateSubscription(
   userId: string,
   patchId: string,

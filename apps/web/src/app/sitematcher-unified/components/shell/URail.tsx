@@ -1,6 +1,6 @@
 'use client'
 
-import { MapPin, Search, PenTool, Layers, HelpCircle, Radar } from 'lucide-react'
+import { MapPin, Search, PenTool, Layers, HelpCircle, ClipboardList } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import type { WorkspaceMode } from '../../types/unified-workspace'
@@ -16,13 +16,15 @@ const MODES: { id: WorkspaceMode; label: string; Icon: typeof MapPin }[] = [
 ]
 
 // Offered only while the Planning Monitor flag is on.
-const PLANNING_MODE = { id: 'planning' as const, label: 'Planning monitor', Icon: Radar }
+const PLANNING_MODE = { id: 'planning' as const, label: 'Planning monitor', Icon: ClipboardList }
 
 export function URail() {
   const view = useWorkspaceStore((s) => s.view)
   const setMode = useWorkspaceStore((s) => s.setMode)
   const planningEnabled = usePlanningMonitorEnabled()
   const modes = planningEnabled ? [...MODES.slice(0, 3), PLANNING_MODE, MODES[3]] : MODES
+  // Drawing a patch takes over the view: the other modes grey out until it is saved or cancelled.
+  const drawingPatch = usePlanningMonitorStore((s) => view === 'planning' && s.drawing != null)
 
   // Leaving a dirty sketch session prompts before discarding the work.
   const handleModeClick = (id: WorkspaceMode) => {
@@ -46,19 +48,23 @@ export function URail() {
     <nav className="flex h-full w-14 flex-col items-center gap-1 border-r border-sm-border bg-sm-surface py-3">
       {modes.map(({ id, label, Icon }) => {
         const active = view === id
+        const locked = drawingPatch && !active
         return (
           <button
             key={id}
             type="button"
-            title={label}
+            title={locked ? 'Finish or cancel the patch first' : label}
             aria-label={label}
             aria-pressed={active}
+            disabled={locked}
             onClick={() => handleModeClick(id)}
             className={
               'flex h-10 w-10 items-center justify-center rounded-lg transition-colors ' +
               (active
                 ? 'bg-sm-ink text-white'
-                : 'text-sm-ink2 hover:bg-sm-border-soft')
+                : locked
+                  ? 'cursor-not-allowed text-[#D5D0C8]'
+                  : 'text-sm-ink2 hover:bg-sm-border-soft')
             }
           >
             <Icon size={18} />

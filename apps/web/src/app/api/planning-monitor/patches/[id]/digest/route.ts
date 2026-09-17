@@ -10,7 +10,7 @@ type Params = { params: Promise<{ id: string }> }
 
 /**
  * The patch card's briefing: the latest generated report, whether a newer one is being prepared,
- * and recent report history. A report from an older revision is flagged so the card can say the
+ * and the kept report history (newest first, with each week's new-application count for the week picker). A report from an older revision is flagged so the card can say the
  * criteria have changed since.
  */
 export async function GET(_request: NextRequest, { params }: Params) {
@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     .eq('patch_id', id)
     .neq('status', 'cancelled')
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(60)
   if (error) return jsonError('Briefing could not be loaded', 500)
   const runs = data ?? []
   const latest = runs.find((r) => r.status === 'generated') ?? null
@@ -38,7 +38,16 @@ export async function GET(_request: NextRequest, { params }: Params) {
       lastFailed: !latest && runs[0]?.status === 'failed',
       history: runs
         .filter((r) => r.status === 'generated')
-        .map((r) => ({ runId: r.id, kind: r.kind, periodLabel: r.period_label, generatedAt: r.generated_at, summaryKind: r.summary_kind })),
+        .map((r) => ({
+          runId: r.id,
+          kind: r.kind,
+          periodLabel: r.period_label,
+          periodStart: r.period_start,
+          periodEnd: r.period_end,
+          generatedAt: r.generated_at,
+          summaryKind: r.summary_kind,
+          newApplications: (r.report as { counts?: { newApplications?: number } } | null)?.counts?.newApplications ?? null,
+        })),
       nextEmailAt: patch.subscription?.emailEnabled ? patch.subscription.nextDueAt : null,
     },
     { headers: { 'Cache-Control': 'private, no-store' } }

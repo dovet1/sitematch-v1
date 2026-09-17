@@ -159,6 +159,16 @@ export function countChanges(changes: CategorisedChange[]): NonNullable<DigestRe
   }
   for (const change of changes) if (change.row.familyState === 'awaiting_original') unresolved.add(groupKey(change.row))
 
+  // Proposed homes in this week's new residential applications, once per development. Follow-on
+  // paperwork restates a scheme already counted, so only the scheme's own application states homes.
+  const proposedByDevelopment = new Map<string, number>()
+  for (const change of newOnes) {
+    const row = change.row
+    if (!row.isResidential || row.dwellings == null || restatesExistingConsent(row)) continue
+    if (row.developmentId && !HOME_STATING_ROLES.has(row.developmentRole ?? '')) continue
+    proposedByDevelopment.set(groupKey(row), Math.max(proposedByDevelopment.get(groupKey(row)) ?? 0, row.dwellings))
+  }
+
   return {
     newApplications: newOnes.length,
     newDevelopments: new Set(newOnes.map((c) => groupKey(c.row))).size,
@@ -170,6 +180,11 @@ export function countChanges(changes: CategorisedChange[]): NonNullable<DigestRe
     knownNewDwellings: [...homesByDevelopment.values()].reduce((sum, n) => sum + n, 0),
     unresolvedFamilies: unresolved.size,
     watchedChanges: changes.filter((c) => c.watched).length,
+    newResidential: newOnes.filter((c) => c.row.isResidential).length,
+    newResidentialDwellings: [...proposedByDevelopment.values()].reduce((sum, n) => sum + n, 0),
+    newCommercial: newOnes.filter((c) => c.row.isCommercial).length,
+    // Only confirmed straight-line matches; approximate points never count as near.
+    newNearStores: newOnes.filter((c) => c.row.nearConfirmed === true && c.row.locationProvenance === 'source_exact').length,
   }
 }
 
@@ -234,6 +249,19 @@ export function toHighlight(change: CategorisedChange): DigestHighlight {
     headline: `${CATEGORY_WORDS[lead]} · ${typeLabel(row)}`,
     sourceUrl: row.sourceUrl,
     approximateLocation: row.locationProvenance !== 'source_exact',
+    categories: change.categories,
+    rowKey: row.key,
+    isResidential: row.isResidential,
+    isCommercial: row.isCommercial,
+    dwellings: row.dwellings,
+    stage: row.stage,
+    dateReceived: row.dateReceived,
+    dateValidated: row.dateValidated,
+    dateDecided: row.dateDecided,
+    matchedApplications: row.matchedApplications,
+    nearConfirmed: row.locationProvenance === 'source_exact' ? row.nearConfirmed : null,
+    lng: row.lng,
+    lat: row.lat,
   }
 }
 

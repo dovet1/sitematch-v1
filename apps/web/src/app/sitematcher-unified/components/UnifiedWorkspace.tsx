@@ -42,25 +42,18 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
 import { TIER_FEATURES } from '@/lib/sitesketcher-v2/constants'
 import {
-  PlanningMobilePaneSwitch,
   PlanningModeMapOverlay,
   PlanningModeModals,
   PlanningModePanel,
   PlanningModeProvider,
+  PlanningModeResults,
   usePlanningDeepLink,
 } from './shell/planning/PlanningMode'
 import { usePlanningMonitorEnabled } from '../lib/planning-monitor-flag-context'
-import { usePlanningMonitorStore } from '../lib/stores/planning-monitor-store'
 
 // Radius used when reading the landscape around a selected built-up area
 // (the Assess dropped-point radius comes from the store instead).
 const BUA_RADIUS_KM = 5
-
-// On small screens Planning shows either its list or its map; the map hides while the list is open.
-function usePlanningMainClass(isPlanning: boolean) {
-  const mobilePane = usePlanningMonitorStore((s) => s.mobilePane)
-  return isPlanning && mobilePane === 'list' ? 'hidden lg:block' : ''
-}
 
 export function UnifiedWorkspace() {
   const view = useWorkspaceStore((s) => s.view)
@@ -102,7 +95,6 @@ export function UnifiedWorkspace() {
   // The flag is also enforced by every Planning API; a stale deep link cannot open a disabled mode.
   const isPlanning = view === 'planning' && planningEnabled
   usePlanningDeepLink()
-  const planningMainClass = usePlanningMainClass(isPlanning)
 
   // Keep the sketch store's tier access in sync so CAD interaction is unlocked.
   const { hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier()
@@ -538,7 +530,7 @@ export function UnifiedWorkspace() {
           />
         )}
 
-        <main className={'relative flex-1' + (isPlanning ? ' ' + planningMainClass : '')}>
+        <main className="relative flex-1">
           <UnifiedMap
             onMap={setMap}
             storeDots={landscape.stores}
@@ -590,7 +582,7 @@ export function UnifiedWorkspace() {
           )}
         </main>
 
-        {isPlanning && <PlanningMobilePaneSwitch />}
+        {isPlanning && <PlanningModeResults />}
 
         {isSketch && sketchActive && <USketchInspector />}
 

@@ -97,6 +97,23 @@ describe('categoriseChanges', () => {
 })
 
 describe('countChanges', () => {
+  it('counts this week\'s new applications by use, with proposed homes once per development', () => {
+    const rows = [
+      row({ applicationId: 'r1', key: 'r1', developmentId: 'dev1', developmentRole: 'primary', dwellings: 88, nearConfirmed: true }),
+      row({ applicationId: 'r2', key: 'r2', developmentId: 'dev1', developmentRole: 'condition', dwellings: 88, procedure: 'discharge' }),
+      row({ applicationId: 'c1', key: 'c1', isResidential: false, isCommercial: true, dwellings: null, nearConfirmed: true, locationProvenance: 'source_centroid' }),
+      row({ applicationId: 'x', key: 'x', dateReceived: '2025-01-01', stage: 'approved', dateDecided: '2026-09-15' }),
+    ]
+    const counts = countChanges(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows, events: [event('observed', 'r1'), event('observed', 'r2'), event('observed', 'c1'), event('decided', 'x', { stage: 'approved' })] }))
+    expect(counts.newApplications).toBe(3)
+    expect(counts.newResidential).toBe(2)
+    expect(counts.newResidentialDwellings).toBe(88)
+    expect(counts.newCommercial).toBe(1)
+    // An approximate point is never counted as near.
+    expect(counts.newNearStores).toBe(1)
+    expect(counts.decisions).toBe(1)
+  })
+
   it('counts a parent permission and five follow-ons as one development of 300 homes', () => {
     const family = ['parent', 'rm1', 'rm2', 'd1', 'd2', 'd3'].map((id, i) =>
       row({ applicationId: id, developmentId: 'dev1', developmentRole: i === 0 ? 'principal' : i < 3 ? 'member' : 'condition', stage: 'approved', dateDecided: '2026-09-16', dateReceived: '2025-01-01', dwellings: 300 })

@@ -58,6 +58,8 @@ export interface MonitorCluster {
   possible: number
   /** Set when the cell holds exactly one unit. */
   single: { applicationId: string; key: string; exact: boolean } | null
+  /** Set when a cell holds several units at one point, which no zoom level can separate. */
+  colocated: boolean
 }
 
 export interface MonitorTotals {
@@ -132,6 +134,21 @@ export interface DigestHighlight {
   headline: string
   sourceUrl: string | null
   approximateLocation: boolean
+  // Stored on reports generated from 16 Sep 2026; absent on earlier ones.
+  /** What happened to it in the period: 'new' and/or a decision ('approved', 'refused', …). */
+  categories?: string[]
+  rowKey?: string
+  isResidential?: boolean
+  isCommercial?: boolean
+  dwellings?: number | null
+  stage?: string | null
+  dateReceived?: string | null
+  dateValidated?: string | null
+  dateDecided?: string | null
+  matchedApplications?: number
+  nearConfirmed?: boolean | null
+  lng?: number
+  lat?: number
 }
 
 export interface DigestSummary {
@@ -166,6 +183,11 @@ export interface DigestReport {
     knownNewDwellings: number
     unresolvedFamilies: number
     watchedChanges: number
+    // New applications by use, as the weekly panel's counters show them. Absent on reports before 16 Sep 2026.
+    newResidential?: number
+    newResidentialDwellings?: number
+    newCommercial?: number
+    newNearStores?: number
   } | null
   summary: DigestSummary | null
   highlights: DigestHighlight[]

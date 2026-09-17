@@ -41,7 +41,7 @@ export type CommercialWork = (typeof COMMERCIAL_WORK)[number]
 export const DATE_FIELDS = ['received', 'validated', 'decided'] as const
 export type DateField = (typeof DATE_FIELDS)[number]
 
-export const DATE_PRESETS = ['7d', '30d', '90d', 'this_year', 'all', 'custom'] as const
+export const DATE_PRESETS = ['7d', '30d', '90d', '12m', 'this_year', 'all', 'custom'] as const
 export type DatePreset = (typeof DATE_PRESETS)[number]
 
 export const MAX_STORE_RADIUS_METERS = 50_000
@@ -231,6 +231,8 @@ export function resolveDateWindow(
       return { from: minus(30), to: null }
     case '90d':
       return { from: minus(90), to: null }
+    case '12m':
+      return { from: minus(365), to: null }
     case 'this_year':
       return { from: `${today.slice(0, 4)}-01-01`, to: null }
     case 'all':

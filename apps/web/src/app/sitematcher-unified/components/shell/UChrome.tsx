@@ -20,6 +20,8 @@ import {
   type LocationResult,
 } from '@/lib/mapbox'
 import { useAuth } from '@/contexts/auth-context'
+import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import { usePlanningMonitorStore } from '../../lib/stores/planning-monitor-store'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +56,9 @@ export function UChrome({
   const debouncedSearch = useRef(createDebouncedLocationSearch(300))
 
   const { user, profile, signOut, isAdmin } = useAuth()
+  // Export waits while a Planning patch is being drawn.
+  const planningDrawing = usePlanningMonitorStore((s) => s.drawing != null)
+  const drawingPatch = useWorkspaceStore((s) => s.view) === 'planning' && planningDrawing
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
   const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false)
@@ -289,7 +294,8 @@ export function UChrome({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-sm-violet px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-sm-violet-deep"
+          disabled={drawingPatch}
+          className="inline-flex items-center gap-2 rounded-lg bg-sm-violet px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-sm-violet-deep disabled:cursor-not-allowed disabled:bg-[#F5F4F2] disabled:text-[#A8A29A]"
         >
           <Download size={15} />
           Export

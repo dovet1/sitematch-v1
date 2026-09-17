@@ -181,6 +181,7 @@ async function readClusters(db: PlanningAdminClient, predicate: MonitorPredicate
     single: cell.single_id
       ? { applicationId: String(cell.single_id), key: String(cell.single_key), exact: Boolean(cell.single_exact) }
       : null,
+    colocated: cell.colocated === true,
   }))
   return { clusters, unavailable: null }
 }
