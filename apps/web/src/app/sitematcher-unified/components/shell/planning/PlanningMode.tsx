@@ -395,7 +395,6 @@ function Legend({ patch, stores, radiusMeters }: { patch: boolean; stores: boole
             <li className="flex items-center gap-2">
               <span className="rounded-[4px] bg-sm-violet px-1 font-mono text-[8px] font-semibold uppercase text-white">New</span> Added in the last 7 days
             </li>
-            <li className="flex items-center gap-2">{dot('#C9C3BA')} Outside the patch — dimmed</li>
           </>
         )}
         {stores && <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-white ring-[1.5px] ring-[#2A6FDB]" /> Chosen brands’ stores</li>}
@@ -446,7 +445,6 @@ export function PlanningModeMapOverlay({ map }: { map: mapboxgl.Map }) {
       <PlanningMapLayer
         map={map}
         clusters={drawingNew ? [] : mapState.clusters}
-        outside={drawingNew ? [] : mapState.outside}
         clusterZoom={mapState.zoom}
         archived={archivedWeek?.points ?? null}
         patchGeometry={inPatch && !drawing ? patch.displayGeometry : null}

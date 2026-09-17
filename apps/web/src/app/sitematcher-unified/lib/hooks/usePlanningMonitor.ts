@@ -128,8 +128,6 @@ export function usePlanningList(enabled: boolean): PlanningListState {
 
 export interface PlanningMapState {
   clusters: MonitorCluster[]
-  /** My patch only: matching developments outside the patch, drawn dimmed. */
-  outside: MonitorCluster[]
   /** The zoom the clusters were computed at; their cell keys depend on it. */
   zoom: number | null
   loading: boolean
@@ -144,12 +142,11 @@ export function usePlanningMap(enabled: boolean): PlanningMapState {
   const viewport = usePlanningMonitorStore((s) => s.viewport)
   const revision = usePlanningMonitorStore((s) => s.revision)
   const criteria = usePlanningMonitorStore(selectActiveCriteria)
-  const patchCriteria = usePlanningMonitorStore((s) => selectPatch(s)?.criteria ?? null)
   const patchesLoaded = usePlanningMonitorStore((s) => s.patchesLoaded)
   const criteriaKey = JSON.stringify(criteria)
   const viewportKey = viewportKeyOf(viewport)
 
-  const [state, setState] = useState<PlanningMapState>({ clusters: [], outside: [], zoom: null, loading: false, error: null, unavailable: false })
+  const [state, setState] = useState<PlanningMapState>({ clusters: [], zoom: null, loading: false, error: null, unavailable: false })
   const requestId = useRef(0)
 
   useEffect(() => {
@@ -159,24 +156,17 @@ export function usePlanningMap(enabled: boolean): PlanningMapState {
     const timer = setTimeout(() => {
       setState((s) => ({ ...s, loading: true, error: null }))
       const base = { grouping: 'developments' as const, viewport: viewport.bbox, zoom: viewport.zoom, include: { totals: false, rows: false, clusters: true } }
-      const inside = queryMonitor({
+      // Inside a patch the map shows only the patch's developments; nothing is fetched beyond it.
+      queryMonitor({
         ...base,
         scope,
         patchId: scope === 'patch' ? activePatchId : null,
         criteria: scope === 'uk' ? criteria : undefined,
       }, controller.signal)
-      // Outside the patch the same filters still apply; those developments are shown dimmed.
-      const outside = scope === 'patch' && patchCriteria
-        ? queryMonitor({ ...base, scope: 'uk', criteria: patchCriteria }, controller.signal).catch(() => null)
-        : Promise.resolve(null)
-      Promise.all([inside, outside])
-        .then(([res, uk]) => {
+        .then((res) => {
           if (id !== requestId.current) return
-          const clusters = res.clusters ?? []
-          const insideKeys = new Set(clusters.map((c) => c.key))
           setState({
-            clusters,
-            outside: (uk?.clusters ?? []).filter((c) => !insideKeys.has(c.key)),
+            clusters: res.clusters ?? [],
             zoom: viewport.zoom,
             loading: false,
             error: null,
