@@ -10,9 +10,10 @@ import type { DigestReport, DigestSummary } from './types'
  * the deterministic report.
  */
 
-export const DIGEST_PROMPT_VERSION = 'planning-monitor-weekly-v1'
+export const DIGEST_PROMPT_VERSION = 'planning-monitor-weekly-v2'
 export const DIGEST_SCHEMA_VERSION = 'planning-monitor-summary-v1'
 
+const MAX_CAVEATS = 4
 const evidenceRefs = z.array(z.string().regex(/^E\d{1,3}$/)).min(1).max(8)
 export const summarySchema = z
   .object({
@@ -21,7 +22,8 @@ export const summarySchema = z
     residentialTheme: z.string().max(500).nullable(),
     commercialTheme: z.string().max(500).nullable(),
     watchedChanges: z.array(z.object({ text: z.string().min(5).max(400), evidence: evidenceRefs }).strict()).max(5),
-    caveats: z.array(z.string().max(300)).max(4),
+    // Caveats carry no evidence, so extra ones are dropped rather than costing a retry.
+    caveats: z.array(z.string().max(300)).transform((caveats) => caveats.slice(0, MAX_CAVEATS)),
   })
   .strict()
 
@@ -68,7 +70,7 @@ Rules:
 - Where approximateLocation is true, do not describe the site as next to or a set distance from anything.
 - nearSelectedStores true may be described as "near your selected stores"; never give a distance.
 - 150–250 words across all fields. Plain British English. Focus on what changed, why it matters to this patch, and which source supports it.
-- keyChanges: at most five. watchedChanges: only items with watched true. Themes may be null when there is nothing to say.`
+- keyChanges: at most five. watchedChanges: only items with watched true. Themes may be null when there is nothing to say. caveats: at most four short notes.`
 
 export function buildUserPrompt(input: {
   patchName: string
@@ -103,6 +105,8 @@ const BANNED_CLAIMS: Array<[RegExp, string]> = [
   [/\b(has|have) been (built|completed)\b|\bnow open\b|\bwill open\b|\bopening\b/i, 'built or opening'],
 ]
 const CONDITIONAL_TERMS = ['operator', 'occupier', 'tenant']
+// A retried model can copy the rejection reasons into its reply instead of fixing them.
+const VALIDATION_ECHO = /\bmust contain at (most|least)\b|\belement\(s\)|\bcharacter\(s\)|\b(reply|response|output) (was|were) rejected\b|\bnot in the evidence\b|\bunsupported claim\b|\bunknown evidence\b/i
 
 function proseOf(summary: DigestSummary): string[] {
   return [
@@ -148,6 +152,7 @@ export function validateSummary(
   for (const [pattern, label] of BANNED_CLAIMS) {
     if (pattern.test(prose)) reasons.push(`unsupported claim: ${label}`)
   }
+  if (VALIDATION_ECHO.test(prose)) reasons.push('the reply repeats validation feedback')
   const sourceLower = context.items.map((i) => i.description.toLowerCase()).join('\n')
   for (const term of CONDITIONAL_TERMS) {
     if (new RegExp(`\\b${term}s?\\b`, 'i').test(prose) && !sourceLower.includes(term)) reasons.push(`unsupported claim: ${term}`)
@@ -259,7 +264,7 @@ export async function summariseWithModel(input: {
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: input.userPrompt },
             ...(attempt > 1
-              ? [{ role: 'system', content: `Your previous reply was rejected: ${lastReasons.join('; ')}. Reply with only the JSON object and follow every rule.` }]
+              ? [{ role: 'system', content: `Your previous reply had these problems: ${lastReasons.join('; ')}. Write a corrected reply in which none of them remain. Do not mention these problems, the rejection or any checking anywhere in the reply. Reply with only the JSON object and follow every rule.` }]
               : []),
           ],
         }),
