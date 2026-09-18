@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#6C47FF"/><text x="50" y="58" font-size="30" fill="#fff" text-anchor="middle" font-family="sans-serif" font-weight="700">SM</text></svg></template>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#EEECF6;font-family:'Figtree',sans-serif}
+a{color:#6C47FF;text-decoration:none}
+a:hover{color:#4B23C9}
+@keyframes smpulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:72px;padding:72px;font-family:'Figtree',sans-serif;color:#1C1B22">
+
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:960px">
+    <div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.14em;font-size:13px;color:#6C47FF">SITEMATCHER · CHOSEN DIRECTIONS · FLESHED OUT</div>
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:34px">Planning monitor (1a) &amp; Contact brands (1c)</div>
+    <div style="font-size:17px;color:#6B6B78;line-height:1.5">1a expanded to cover UK-wide map, AI summary, full criteria (drawn patch, proximity to store estate, type, dates, brand watch), plus a zoomed market-change view. 1c expanded with the five matching signals. Jump to <a href="#1a">1a monitor</a> · <a href="#1acrit">1a criteria</a> · <a href="#1azoom">1a market change</a> · <a href="#1c">1c hero</a>.</div>
+  </div>
+
+  <!-- ============ MODE 01 · PLANNING MONITOR ============ -->
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.12em;font-size:12px;color:#8A8895">MODE 01</div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px">Planning monitor — find &amp; watch relevant applications</div>
+    </div>
+    <div style="display:flex;gap:56px;flex-wrap:wrap">
+
+      <!-- 1a MONITOR -->
+      <div id="1a" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1a</span>
+          <span style="font-weight:600;color:#4B4A55">Map-first monitor · default view</span>
+        </div>
+        <div style="position:relative;width:1440px;height:920px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#F6F5FB;color:#1C1B22">
+          <!-- topbar -->
+          <div style="position:absolute;top:0;left:0;right:0;height:72px;z-index:30;background:#fff;border-bottom:1px solid #ECEAF3;display:flex;align-items:center;gap:24px;padding:0 22px">
+            <div style="display:flex;align-items:center;gap:11px;width:230px">
+              <div style="width:34px;height:34px;border-radius:10px;background:#6C47FF;display:flex;align-items:center;justify-content:center"><div style="width:13px;height:13px;border:2.5px solid #fff;transform:rotate(45deg);border-radius:3px"></div></div>
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:21px;color:#6C47FF">SiteMatcher</div>
+            </div>
+            <div style="flex:1;max-width:760px;margin:0 auto;height:44px;border:1px solid #E6E3EF;border-radius:12px;display:flex;align-items:center;gap:10px;padding:0 16px;color:#9A98A6;background:#FAFAFD">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <span style="flex:1;font-size:15px;color:#3D3C47;font-weight:500">Leeds</span><span style="font-size:12px;color:#B7B5C2">⌘K</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;width:230px;justify-content:flex-end">
+              <div style="display:flex;align-items:center;gap:8px;background:#6C47FF;color:#fff;font-weight:700;font-size:15px;padding:11px 18px;border-radius:11px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Export</div>
+              <div style="display:flex;align-items:center;gap:4px"><div style="width:38px;height:38px;border-radius:50%;background:#EDE7FF;color:#6C47FF;font-weight:700;display:flex;align-items:center;justify-content:center">D</div><span style="color:#B7B5C2">▾</span></div>
+            </div>
+          </div>
+          <!-- rail -->
+          <div style="position:absolute;top:72px;left:0;bottom:0;width:72px;z-index:30;background:#fff;border-right:1px solid #ECEAF3;display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:8px">
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.5-.8L18 8.7 15.3 6 4.8 16.5 4 20Z"/><path d="M14 7l3 3"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 13l9 5 9-5"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#14121A;color:#fff"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"/><path d="M4 9v11h16V9"/><path d="M9.5 20v-5.5h5V20"/></svg></div>
+            <div style="flex:1"></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1 .8-1 1.6"/><circle cx="12" cy="16.4" r=".7" fill="currentColor" stroke="none"/></svg></div>
+          </div>
+          <!-- map -->
+          <div style="position:absolute;top:72px;left:72px;right:0;bottom:0;overflow:hidden">
+            <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 30% 24%,rgba(72,102,80,.55),transparent 58%),radial-gradient(90% 80% at 74% 74%,rgba(48,74,58,.5),transparent 60%),radial-gradient(70% 70% at 88% 26%,rgba(40,62,84,.45),transparent 60%),repeating-linear-gradient(52deg,rgba(201,150,70,.10) 0 2px,transparent 2px 48px),repeating-linear-gradient(-18deg,rgba(201,150,70,.08) 0 2px,transparent 2px 64px),#0E1522"></div>
+            <!-- store estate rings -->
+            <div style="position:absolute;left:58%;top:52%;width:150px;height:150px;transform:translate(-50%,-50%);border-radius:50%;border:1.5px dashed rgba(52,211,153,.6);background:rgba(52,211,153,.07)"></div>
+            <div style="position:absolute;left:68%;top:40%;width:150px;height:150px;transform:translate(-50%,-50%);border-radius:50%;border:1.5px dashed rgba(52,211,153,.6);background:rgba(52,211,153,.07)"></div>
+            <div style="position:absolute;left:58%;top:52%;width:15px;height:15px;transform:translate(-50%,-50%);border-radius:4px;background:#0EAE73;border:2px solid #fff"></div>
+            <div style="position:absolute;left:68%;top:40%;width:15px;height:15px;transform:translate(-50%,-50%);border-radius:4px;background:#0EAE73;border:2px solid #fff"></div>
+            <!-- drawn patch -->
+            <div style="position:absolute;left:34%;top:24%;width:360px;height:330px;border:2px dashed #9E82FF;background:rgba(139,108,255,.13);border-radius:46% 54% 40% 60%/52% 42% 58% 48%;transform:rotate(-8deg)"></div>
+            <div style="position:absolute;left:35%;top:22%;background:rgba(20,18,26,.72);color:#CDBEFF;font-weight:700;font-size:12px;padding:5px 11px;border-radius:8px;font-family:'Space Grotesk'">LEEDS PATCH</div>
+            <!-- clusters + selected pin -->
+            <div style="position:absolute;left:40%;top:56%;width:40px;height:40px;border-radius:50%;background:#34D399;border:3px solid #fff;color:#08341f;font-family:'Space Grotesk';font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.35)">8</div>
+            <div style="position:absolute;left:56%;top:30%;width:36px;height:36px;border-radius:50%;background:#FBBF24;border:3px solid #fff;color:#3a2a00;font-family:'Space Grotesk';font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.35)">5</div>
+            <div style="position:absolute;left:47%;top:41%;width:20px;height:20px;border-radius:50%;background:#8B6CFF;border:3px solid #fff;box-shadow:0 0 0 6px rgba(139,108,255,.3),0 8px 20px rgba(0,0,0,.4);z-index:6"></div>
+            <div style="position:absolute;left:30%;top:64%;width:13px;height:13px;border-radius:50%;background:#8B6CFF;border:2px solid #fff"></div>
+            <!-- selected app popover -->
+            <div style="position:absolute;left:38%;top:48%;width:320px;z-index:8;background:#fff;border-radius:16px;box-shadow:0 22px 54px -18px rgba(0,0,0,.5);overflow:hidden">
+              <div style="padding:16px 18px 14px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:6px;background:#E7F7EF;color:#1E8A56;font-weight:700;font-size:11px;padding:4px 10px;border-radius:999px">● Approved · 2d ago</span><span style="width:9px;height:9px;border-radius:50%;background:#8B6CFF"></span></div>
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;margin-top:11px">Kirkstall Forge</div>
+                <div style="color:#6B6B78;font-size:13.5px;margin-top:3px">320 dwellings · Residential · 0.8 mi from nearest store</div>
+              </div>
+              <div style="background:#F6F3FF;border-top:1px solid #ECE6FB;padding:14px 18px">
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.1em;color:#6C47FF">MARKET IMPACT</div>
+                <div style="display:flex;gap:16px;margin-top:9px">
+                  <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">+720</div><div style="color:#8A8895;font-size:11.5px">residents by '27</div></div>
+                  <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:#4B23C9">+9%</div><div style="color:#8A8895;font-size:11.5px">catchment</div></div>
+                  <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">+£1.3m</div><div style="color:#8A8895;font-size:11.5px">grocery spend</div></div>
+                </div>
+                <div style="display:flex;gap:9px;margin-top:14px"><span style="flex:1;text-align:center;background:#6C47FF;color:#fff;font-weight:700;font-size:13px;padding:9px;border-radius:10px">View application ↗</span><span style="text-align:center;border:1.5px solid #DAD4EE;color:#4B23C9;font-weight:700;font-size:13px;padding:9px 13px;border-radius:10px">Watch</span></div>
+              </div>
+            </div>
+            <!-- map controls -->
+            <div style="position:absolute;right:22px;top:22px;display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+              <div style="background:#fff;border-radius:11px;box-shadow:0 8px 20px -8px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden"><span style="padding:9px 13px;font-weight:700;font-size:18px;border-bottom:1px solid #EEE">+</span><span style="padding:9px 13px;font-weight:700;font-size:18px">−</span></div>
+              <div style="background:#fff;border-radius:11px;box-shadow:0 8px 20px -8px rgba(0,0,0,.4);padding:9px 13px;font-weight:700;font-size:13px;color:#4B23C9;display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#6C47FF"></span>Market change: On</div>
+            </div>
+            <!-- legend -->
+            <div style="position:absolute;right:22px;bottom:22px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 12px 34px -12px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:9px;min-width:210px">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.1em;color:#8A8895">ON THE MAP</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500"><span style="width:11px;height:11px;border-radius:50%;background:#8B6CFF"></span>Residential ≥50 units</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500"><span style="width:11px;height:11px;border-radius:50%;background:#34D399"></span>Relevant commercial</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500"><span style="width:11px;height:11px;border-radius:50%;background:#FBBF24"></span>Brand-linked</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500"><span style="width:11px;height:11px;border-radius:3px;background:#0EAE73"></span>My store estate</div>
+            </div>
+          </div>
+          <!-- panel -->
+          <div style="position:absolute;top:72px;left:72px;bottom:0;width:426px;z-index:20;background:#fff;border-right:1px solid #ECEAF3;display:flex;flex-direction:column;padding:24px 26px 0;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.14em;font-size:12px;color:#6C47FF">PLANNING MONITOR</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B7B5C2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+            </div>
+            <!-- scope toggle -->
+            <div style="display:flex;background:#F2F0F9;border-radius:11px;padding:4px;margin-top:16px">
+              <span style="flex:1;text-align:center;background:#fff;color:#14121A;font-weight:700;font-size:14px;padding:9px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.06)">My patch</span>
+              <span style="flex:1;text-align:center;color:#8A8895;font-weight:600;font-size:14px;padding:9px">All UK</span>
+            </div>
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:28px;margin-top:16px">Your patch</div>
+            <div style="color:#6B6B78;font-size:14.5px;margin-top:5px;line-height:1.45"><b style="color:#1C1B22">12 new applications</b> match your criteria this week · <b style="color:#1C1B22">3</b> near your stores.</div>
+            <!-- AI card -->
+            <div style="margin-top:16px;border-radius:16px;padding:16px;background:linear-gradient(180deg,#F3EFFF,#FAF8FF);border:1px solid #E7DEFF">
+              <div style="display:flex;align-items:center;gap:7px;font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.1em;color:#6C47FF"><svg width="14" height="14" viewBox="0 0 24 24" fill="#6C47FF"><path d="M12 3l1.7 5.1L19 10l-5.3 1.9L12 17l-1.7-5.1L5 10l5.3-1.9L12 3Z"/></svg>AI SUMMARY · THIS WEEK</div>
+              <div style="font-size:14px;line-height:1.55;color:#2A2833;margin-top:9px">Two big residential schemes — <b>320 homes at Kirkstall</b> and 140 at Headingley — cleared committee, adding ~1,100 residents by 2028. A Bramley foodstore application looks <b>Aldi-linked</b> and sits 1.2 mi from your Pudsey store.</div>
+            </div>
+            <!-- criteria -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
+              <span style="font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.12em;color:#8A8895">YOUR CRITERIA</span>
+              <span style="display:inline-flex;align-items:center;gap:5px;color:#6C47FF;font-weight:700;font-size:13px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 20l3.5-.8L18 8.7 15.3 6 4.8 16.5 4 20Z"/></svg>Edit criteria</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:11px">
+              <span style="display:inline-flex;align-items:center;gap:6px;background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:12.5px;padding:7px 11px;border-radius:999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l6-3 4 3 6-2v13l-6 2-4-3-6 3Z"/></svg>Leeds patch (drawn)</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;background:#EAF8F1;color:#177E4E;font-weight:600;font-size:12.5px;padding:7px 11px;border-radius:999px">◈ Within 3 mi of my estate</span>
+              <span style="background:#F4F3F8;color:#3D3C47;font-weight:600;font-size:12.5px;padding:7px 11px;border-radius:999px">Residential ≥50 units</span>
+              <span style="background:#F4F3F8;color:#3D3C47;font-weight:600;font-size:12.5px;padding:7px 11px;border-radius:999px">Commercial E / A1</span>
+              <span style="background:#F4F3F8;color:#3D3C47;font-weight:600;font-size:12.5px;padding:7px 11px;border-radius:999px">Last 30 days</span>
+              <span style="background:#FEF3E0;color:#B7860B;font-weight:600;font-size:12.5px;padding:7px 11px;border-radius:999px">Brands: Aldi, Greggs</span>
+            </div>
+            <!-- list -->
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.12em;color:#8A8895;margin-top:20px">RELEVANT APPLICATIONS</div>
+            <div style="display:flex;flex-direction:column;gap:0;margin-top:8px;overflow:auto">
+              <div style="display:flex;gap:12px;padding:12px 10px;border-radius:10px;background:#F6F3FF;border:1px solid #ECE6FB"><span style="width:10px;height:10px;border-radius:50%;background:#8B6CFF;margin-top:5px;flex:0 0 auto"></span><div><div style="font-weight:600;font-size:14px">Kirkstall Forge — 320 dwellings</div><div style="color:#8A8895;font-size:12.5px;margin-top:2px">Residential · 0.8 mi · Approved 2d ago</div></div></div>
+              <div style="display:flex;gap:12px;padding:12px 10px;border-bottom:1px solid #F0EEF6"><span style="width:10px;height:10px;border-radius:50%;background:#34D399;margin-top:5px;flex:0 0 auto"></span><div><div style="font-weight:600;font-size:14px">Owlcotes Park — retail unit</div><div style="color:#8A8895;font-size:12.5px;margin-top:2px">Commercial E · 1.4 mi · Validated</div></div></div>
+              <div style="display:flex;gap:12px;padding:12px 10px"><span style="width:10px;height:10px;border-radius:50%;background:#FBBF24;margin-top:5px;flex:0 0 auto"></span><div><div style="font-weight:600;font-size:14px">Bramley — foodstore <span style="color:#B7860B;font-weight:700;font-size:11px">· likely Aldi</span></div><div style="color:#8A8895;font-size:12.5px;margin-top:2px">Retail · 2.1 mi · Pending decision</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1a CRITERIA EDITOR -->
+      <div id="1acrit" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1a</span>
+          <span style="font-weight:600;color:#4B4A55">Set criteria — draw patch, estate proximity, type, dates, brands</span>
+        </div>
+        <div style="position:relative;width:1440px;height:920px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#0E1522;color:#1C1B22">
+          <!-- dimmed map bg -->
+          <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 30% 24%,rgba(72,102,80,.4),transparent 58%),radial-gradient(90% 80% at 74% 74%,rgba(48,74,58,.4),transparent 60%),repeating-linear-gradient(52deg,rgba(201,150,70,.08) 0 2px,transparent 2px 48px),#0E1522"></div>
+          <div style="position:absolute;inset:0;background:rgba(14,10,26,.55)"></div>
+          <!-- modal -->
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1040px;background:#fff;border-radius:22px;box-shadow:0 40px 100px -30px rgba(0,0,0,.6);overflow:hidden;display:flex;flex-direction:column;max-height:840px">
+            <div style="padding:24px 30px;border-bottom:1px solid #EEECF5;display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.12em;font-size:11px;color:#6C47FF">PLANNING MONITOR</div><div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;margin-top:4px">Set your criteria</div></div>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B7B5C2" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </div>
+            <div style="display:flex;flex:1;min-height:0">
+              <!-- left: draw patch -->
+              <div style="width:420px;flex:0 0 auto;border-right:1px solid #EEECF5;padding:22px 24px;display:flex;flex-direction:column">
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:15px">1 · Location</div>
+                <div style="color:#8A8895;font-size:13px;margin-top:3px">Draw your patch, upload a boundary, or search an area.</div>
+                <div style="display:flex;gap:8px;margin-top:14px">
+                  <span style="flex:1;text-align:center;background:#6C47FF;color:#fff;font-weight:700;font-size:13px;padding:9px;border-radius:9px">✎ Draw</span>
+                  <span style="flex:1;text-align:center;border:1.5px solid #E1DCF0;color:#4B4A55;font-weight:700;font-size:13px;padding:9px;border-radius:9px">↑ Upload</span>
+                  <span style="flex:1;text-align:center;border:1.5px solid #E1DCF0;color:#4B4A55;font-weight:700;font-size:13px;padding:9px;border-radius:9px">⌕ Search</span>
+                </div>
+                <div style="position:relative;margin-top:14px;flex:1;min-height:260px;border-radius:14px;overflow:hidden;background:radial-gradient(120% 90% at 40% 30%,rgba(72,102,80,.5),transparent 60%),repeating-linear-gradient(52deg,rgba(201,150,70,.1) 0 2px,transparent 2px 40px),#0E1522">
+                  <div style="position:absolute;left:26%;top:22%;width:210px;height:190px;border:2px dashed #9E82FF;background:rgba(139,108,255,.16);border-radius:46% 54% 40% 60%/52% 42% 58% 48%"></div>
+                  <div style="position:absolute;left:30%;top:24%;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #6C47FF"></div>
+                  <div style="position:absolute;left:58%;top:30%;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #6C47FF"></div>
+                  <div style="position:absolute;left:62%;top:64%;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #6C47FF"></div>
+                  <div style="position:absolute;left:28%;top:60%;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #6C47FF"></div>
+                  <div style="position:absolute;left:16px;bottom:14px;background:rgba(20,18,26,.75);color:#CDBEFF;font-weight:700;font-size:12px;padding:5px 10px;border-radius:8px">Click to add points · double-click to close</div>
+                </div>
+              </div>
+              <!-- right: form -->
+              <div style="flex:1;padding:22px 26px;overflow:auto">
+                <!-- proximity to estate -->
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:15px">2 · Proximity to my store estate</div>
+                <div style="display:flex;gap:12px;margin-top:12px">
+                  <div style="flex:1.4;border:1.5px solid #E1DCF0;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;font-weight:700;color:#9795A4;letter-spacing:.06em">ESTATE</div><div style="font-weight:700;margin-top:2px">My Aldi estate · 12 stores</div></div><span style="color:#B7B5C2">▾</span></div>
+                  <div style="flex:1;border:1.5px solid #E1DCF0;border-radius:12px;padding:12px 14px"><div style="font-size:11px;font-weight:700;color:#9795A4;letter-spacing:.06em">WITHIN</div><div style="font-weight:700;margin-top:2px">3 miles</div></div>
+                </div>
+                <!-- type -->
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-top:22px">3 · Application type</div>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+                  <div style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px"><span style="width:20px;height:20px;border-radius:6px;background:#6C47FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">✓</span>Large residential <span style="color:#8A8895;font-weight:500">— ≥ <b style="color:#4B23C9">50</b> units</span></div>
+                  <div style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px"><span style="width:20px;height:20px;border-radius:6px;background:#6C47FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">✓</span>Relevant commercial <span style="color:#8A8895;font-weight:500">— Class E, A1, retail warehouse</span></div>
+                  <div style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px;color:#8A8895"><span style="width:20px;height:20px;border-radius:6px;border:1.5px solid #D6D2E4"></span>Change of use</div>
+                  <div style="display:flex;align-items:center;gap:11px;font-weight:600;font-size:14px;color:#8A8895"><span style="width:20px;height:20px;border-radius:6px;border:1.5px solid #D6D2E4"></span>Demolition / prior approval</div>
+                </div>
+                <!-- dates -->
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-top:22px">4 · Dates &amp; status</div>
+                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                  <span style="border:1.5px solid #E1DCF0;color:#8A8895;font-weight:700;font-size:13px;padding:8px 13px;border-radius:999px">Last 7 days</span>
+                  <span style="background:#6C47FF;color:#fff;font-weight:700;font-size:13px;padding:8px 13px;border-radius:999px">Last 30 days</span>
+                  <span style="border:1.5px solid #E1DCF0;color:#8A8895;font-weight:700;font-size:13px;padding:8px 13px;border-radius:999px">This year</span>
+                  <span style="border:1.5px solid #E1DCF0;color:#8A8895;font-weight:700;font-size:13px;padding:8px 13px;border-radius:999px">Custom…</span>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                  <span style="background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:12.5px;padding:7px 12px;border-radius:999px">Validated</span>
+                  <span style="background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:12.5px;padding:7px 12px;border-radius:999px">Pending</span>
+                  <span style="background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:12.5px;padding:7px 12px;border-radius:999px">Approved</span>
+                </div>
+                <!-- brands -->
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-top:22px">5 · Brand watch <span style="color:#8A8895;font-weight:500;font-size:13px">— flag applications we believe are linked to a brand</span></div>
+                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+                  <span style="display:inline-flex;align-items:center;gap:7px;background:#FEF3E0;color:#B7860B;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px">Aldi ✕</span>
+                  <span style="display:inline-flex;align-items:center;gap:7px;background:#FEF3E0;color:#B7860B;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px">Greggs ✕</span>
+                  <span style="border:1.5px dashed #D6D2E4;color:#8A8895;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px">+ Add brand</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding:18px 30px;border-top:1px solid #EEECF5;display:flex;align-items:center;justify-content:space-between">
+              <span style="color:#8A8895;font-weight:600;font-size:13.5px">Matching <b style="color:#4B23C9">12 applications</b> right now</span>
+              <div style="display:flex;gap:12px"><span style="border:1.5px solid #E1DCF0;color:#3D3C47;font-weight:700;font-size:14px;padding:12px 20px;border-radius:12px">Cancel</span><span style="background:#6C47FF;color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px">Save &amp; monitor</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1a ZOOMED MARKET CHANGE -->
+      <div id="1azoom" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1a</span>
+          <span style="font-weight:600;color:#4B4A55">Zoomed in — applications in a place &amp; market change</span>
+        </div>
+        <div style="position:relative;width:1440px;height:920px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#0E1522">
+          <!-- dense zoomed map -->
+          <div style="position:absolute;inset:0;background:radial-gradient(90% 80% at 50% 45%,rgba(72,102,80,.55),transparent 70%),repeating-linear-gradient(0deg,rgba(201,150,70,.12) 0 2px,transparent 2px 60px),repeating-linear-gradient(90deg,rgba(201,150,70,.1) 0 2px,transparent 2px 72px),repeating-linear-gradient(38deg,rgba(201,150,70,.14) 0 3px,transparent 3px 140px),#0E1522"></div>
+          <!-- residential build blocks (new) -->
+          <div style="position:absolute;left:30%;top:34%;width:120px;height:90px;background:rgba(139,108,255,.28);border:1.5px solid #9E82FF;border-radius:6px"></div>
+          <div style="position:absolute;left:52%;top:56%;width:90px;height:70px;background:rgba(139,108,255,.28);border:1.5px solid #9E82FF;border-radius:6px"></div>
+          <!-- app pins -->
+          <div style="position:absolute;left:34%;top:36%;display:flex;flex-direction:column;align-items:center"><div style="background:#fff;color:#14121A;font-weight:700;font-size:12px;padding:5px 10px;border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.4);white-space:nowrap">Kirkstall Forge · 320 homes</div><div style="width:16px;height:16px;border-radius:50%;background:#8B6CFF;border:3px solid #fff;margin-top:-2px"></div></div>
+          <div style="position:absolute;left:56%;top:58%;width:14px;height:14px;border-radius:50%;background:#8B6CFF;border:3px solid #fff"></div>
+          <div style="position:absolute;left:66%;top:32%;width:13px;height:13px;border-radius:50%;background:#FBBF24;border:2px solid #fff"></div>
+          <!-- my store -->
+          <div style="position:absolute;left:44%;top:66%;display:flex;flex-direction:column;align-items:center"><div style="background:#0EAE73;color:#fff;font-weight:700;font-size:11px;padding:4px 9px;border-radius:7px;white-space:nowrap">My store · Pudsey</div><div style="width:14px;height:14px;border-radius:4px;background:#0EAE73;border:2px solid #fff;margin-top:2px"></div></div>
+          <!-- topbar minimal -->
+          <div style="position:absolute;top:0;left:0;right:0;height:64px;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.2);display:flex;align-items:center;gap:16px;padding:0 22px">
+            <span style="display:inline-flex;align-items:center;gap:8px;color:#4B23C9;font-weight:700;font-size:14px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>Back to patch</span>
+            <div style="width:1px;height:24px;background:#E6E3EF"></div>
+            <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:#14121A">Kirkstall, Leeds</span>
+            <span style="color:#8A8895;font-weight:600;font-size:13px">1 mile radius · 6 applications</span>
+            <div style="flex:1"></div>
+            <span style="display:inline-flex;align-items:center;gap:7px;background:#6C47FF;color:#fff;font-weight:700;font-size:13px;padding:9px 14px;border-radius:10px"><span style="width:9px;height:9px;border-radius:50%;background:#fff"></span>Residential build impact: On</span>
+          </div>
+          <!-- market change panel -->
+          <div style="position:absolute;right:24px;top:88px;bottom:24px;width:400px;z-index:20;background:#fff;border-radius:18px;box-shadow:0 22px 54px -18px rgba(0,0,0,.5);padding:24px 26px;overflow:auto;display:flex;flex-direction:column">
+            <div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.12em;font-size:11px;color:#6C47FF">MARKET CHANGE</div>
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;margin-top:5px">Kirkstall · next 4 years</div>
+            <div style="color:#6B6B78;font-size:14px;margin-top:5px;line-height:1.45">Based on <b style="color:#1C1B22">460 consented dwellings</b> within 1 mile of your store.</div>
+            <!-- before/after -->
+            <div style="display:flex;gap:12px;margin-top:18px">
+              <div style="flex:1;background:#F5F6FA;border-radius:14px;padding:14px"><div style="color:#8A8895;font-size:12px;font-weight:600">Today</div><div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;margin-top:4px">8,200</div><div style="color:#8A8895;font-size:12px">residents</div></div>
+              <div style="flex:1;background:#F3EFFF;border:1px solid #E4D9FF;border-radius:14px;padding:14px"><div style="color:#6C47FF;font-size:12px;font-weight:700">2028</div><div style="font-family:'Space Grotesk';font-weight:700;font-size:26px;margin-top:4px;color:#4B23C9">9,300</div><div style="color:#8A8895;font-size:12px">+1,100 (+13%)</div></div>
+            </div>
+            <!-- pipeline chart -->
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:13px;margin-top:22px">Dwellings pipeline</div>
+            <div style="display:flex;align-items:flex-end;gap:12px;height:120px;margin-top:14px">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px"><div style="width:100%;height:30px;background:#E3DCFB;border-radius:6px 6px 0 0"></div><span style="font-size:11px;color:#8A8895;font-weight:600">'25</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px"><div style="width:100%;height:58px;background:#C7B8F7;border-radius:6px 6px 0 0"></div><span style="font-size:11px;color:#8A8895;font-weight:600">'26</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px"><div style="width:100%;height:86px;background:#9E82FF;border-radius:6px 6px 0 0"></div><span style="font-size:11px;color:#8A8895;font-weight:600">'27</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px"><div style="width:100%;height:108px;background:#6C47FF;border-radius:6px 6px 0 0"></div><span style="font-size:11px;color:#8A8895;font-weight:600">'28</span></div>
+            </div>
+            <!-- spend -->
+            <div style="margin-top:20px;background:#F6F3FF;border-radius:14px;padding:16px">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.08em;color:#6C47FF">PROJECTED CATCHMENT UPLIFT</div>
+              <div style="display:flex;gap:18px;margin-top:10px">
+                <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">+£4.2m</div><div style="color:#8A8895;font-size:11.5px">annual retail spend</div></div>
+                <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#4B23C9">+9%</div><div style="color:#8A8895;font-size:11.5px">grocery catchment</div></div>
+              </div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="margin-top:18px;background:#6C47FF;color:#fff;font-weight:700;font-size:14px;padding:13px;border-radius:12px;text-align:center">Export area report</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ MODE 02 · CONTACT BRANDS ============ -->
+  <div style="display:flex;flex-direction:column;gap:26px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.12em;font-size:12px;color:#8A8895">MODE 02</div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:26px">Contact brands — who should I call about my empty site?</div>
+    </div>
+    <div style="display:flex;gap:56px;flex-wrap:wrap">
+
+      <!-- 1c HERO -->
+      <div id="1c" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1c</span>
+          <span style="font-weight:600;color:#4B4A55">Bold hero entry + five matching signals</span>
+        </div>
+        <div style="position:relative;width:1440px;height:1560px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#F7F6FC;color:#1C1B22">
+          <!-- rail -->
+          <div style="position:absolute;top:0;left:0;bottom:0;width:72px;z-index:30;background:#fff;border-right:1px solid #ECEAF3;display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:8px">
+            <div style="width:34px;height:34px;border-radius:9px;background:#6C47FF;display:flex;align-items:center;justify-content:center;margin-bottom:8px"><div style="width:11px;height:11px;border:2.5px solid #fff;transform:rotate(45deg);border-radius:2px"></div></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#14121A;color:#fff"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"/><path d="M4 9v11h16V9"/><path d="M9.5 20v-5.5h5V20"/></svg></div>
+            <div style="flex:1"></div>
+            <div style="width:38px;height:38px;border-radius:50%;background:#EDE7FF;color:#6C47FF;font-weight:700;display:flex;align-items:center;justify-content:center">D</div>
+          </div>
+          <!-- content -->
+          <div style="position:absolute;top:0;left:72px;right:0;bottom:0;overflow:hidden">
+            <!-- hero -->
+            <div style="position:relative;min-height:820px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 60px 40px;background:radial-gradient(70% 55% at 50% 40%,#F0EAFF 0%,#F7F6FC 62%)">
+              <div style="position:absolute;left:50%;top:44%;width:820px;height:820px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,transparent 44%,rgba(108,71,255,.10) 45%,transparent 46%),radial-gradient(circle at 50% 50%,#6C47FF 1.4px,transparent 1.6px);background-size:100% 100%,26px 26px;-webkit-mask:radial-gradient(circle,transparent 40%,#000 42%,#000 50%,transparent 52%);mask:radial-gradient(circle,transparent 40%,#000 42%,#000 50%,transparent 52%);opacity:.5"></div>
+              <div style="position:absolute;left:34%;top:26%;width:12px;height:12px;background:#6C47FF;transform:rotate(45deg);border-radius:2px;opacity:.8"></div>
+              <div style="position:absolute;left:66%;top:58%;width:10px;height:10px;background:#9E82FF;transform:rotate(45deg);border-radius:2px;opacity:.7"></div>
+              <div style="position:absolute;left:70%;top:30%;width:8px;height:8px;background:#6C47FF;transform:rotate(45deg);border-radius:2px;opacity:.6"></div>
+
+              <div style="position:relative;font-family:'Space Grotesk';font-weight:700;letter-spacing:.22em;font-size:14px;color:#6C47FF">SITE → BRANDS</div>
+              <h1 style="position:relative;font-family:'Space Grotesk';font-weight:700;font-size:80px;line-height:1.02;margin:20px 0 0;letter-spacing:-.02em;max-width:1000px">Got an empty unit?<br><span style="color:#6C47FF">Meet the brands who want it.</span></h1>
+              <p style="position:relative;font-size:20px;color:#5A5866;line-height:1.55;margin:22px 0 0;max-width:660px">Tell us the size, use class and location. We'll rank the brands most likely to sign — with the evidence, and who to call.</p>
+
+              <div style="position:relative;margin-top:40px;background:#fff;border:1px solid #EAE6F5;border-radius:22px;box-shadow:0 30px 70px -30px rgba(76,35,201,.4);padding:22px;width:940px">
+                <div style="display:flex;gap:14px;align-items:stretch">
+                  <div style="flex:1;text-align:left;border:1.5px solid #E7E3F2;border-radius:14px;padding:13px 16px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#9795A4">SIZE</div><div style="display:flex;align-items:baseline;gap:6px;margin-top:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:24px">14,000</span><span style="color:#8A8895;font-weight:600;font-size:15px">sq ft</span></div></div>
+                  <div style="flex:1;text-align:left;border:1.5px solid #E7E3F2;border-radius:14px;padding:13px 16px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#9795A4">USE CLASS</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:24px">Class E</span><span style="color:#B7B5C2">▾</span></div></div>
+                  <div style="flex:1;text-align:left;border:1.5px solid #E7E3F2;border-radius:14px;padding:13px 16px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#9795A4">LOCATION</div><div style="display:flex;align-items:center;gap:7px;margin-top:4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C47FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg><span style="font-family:'Space Grotesk';font-weight:700;font-size:24px">LS6 2AT</span></div></div>
+                </div>
+                <div style="margin-top:16px;background:#6C47FF;color:#fff;border-radius:14px;padding:17px;font-family:'Space Grotesk';font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center;gap:10px">Match brands <span style="font-size:22px">→</span></div>
+              </div>
+              <div style="position:relative;margin-top:22px;color:#8A8895;font-weight:600;font-size:15px">1,240 acquisitive brands tracked · Updated daily from requirements, news &amp; planning</div>
+            </div>
+            <!-- five signals -->
+            <div style="background:#fff;border-top:1px solid #EEECF5;padding:52px 70px 60px">
+              <div style="text-align:center;max-width:720px;margin:0 auto">
+                <div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.14em;font-size:12px;color:#6C47FF">HOW WE RANK</div>
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;margin-top:10px">Five signals behind every match</div>
+                <div style="color:#6B6B78;font-size:16px;margin-top:8px;line-height:1.5">We combine your site's specs with what we track about each brand — so the ranking is explainable, not a black box.</div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px">
+                <div style="border:1px solid #EEECF5;border-radius:16px;padding:22px">
+                  <div style="width:44px;height:44px;border-radius:12px;background:#F1EEFA;color:#6C47FF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16M4 9h5"/></svg></div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:18px;margin-top:16px">Site-size fit</div>
+                  <div style="color:#6B6B78;font-size:14.5px;margin-top:6px;line-height:1.5">Does the brand's average unit size fit your 14,000 sq ft? We match against their typical footprint.</div>
+                </div>
+                <div style="border:1px solid #EEECF5;border-radius:16px;padding:22px">
+                  <div style="width:44px;height:44px;border-radius:12px;background:#FEF3E0;color:#B7860B;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:18px;margin-top:16px">Acquisitive signals</div>
+                  <div style="color:#6B6B78;font-size:14.5px;margin-top:6px;line-height:1.5">Are they actively growing? Blended from advertised requirements, news articles and planning activity.</div>
+                </div>
+                <div style="border:1px solid #EEECF5;border-radius:16px;padding:22px">
+                  <div style="width:44px;height:44px;border-radius:12px;background:#EAF8F1;color:#177E4E;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8l8-4 8 4v13"/><path d="M4 21h16M9 21v-6h6v6"/></svg></div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:18px;margin-top:16px">Published trading facts</div>
+                  <div style="color:#6B6B78;font-size:14.5px;margin-top:6px;line-height:1.5">Turnover, net assets, filing history and company status, taken straight from Companies House. We show the figures as filed — we don't rate, grade or score a company.</div>
+                </div>
+                <div style="border:1px solid #EEECF5;border-radius:16px;padding:22px">
+                  <div style="width:44px;height:44px;border-radius:12px;background:#F1EEFA;color:#6C47FF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="7" height="11" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg></div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:18px;margin-top:16px">Already trades in your type of location</div>
+                  <div style="color:#6B6B78;font-size:14.5px;margin-top:6px;line-height:1.5">Your site is in an edge-of-town retail park. We count the retail parks the brand already trades in nearby — proof the format works for them.</div>
+                </div>
+                <div style="border:1px solid #EEECF5;border-radius:16px;padding:22px">
+                  <div style="width:44px;height:44px;border-radius:12px;background:#F1EEFA;color:#6C47FF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:18px;margin-top:16px">Distance to nearest store</div>
+                  <div style="color:#6B6B78;font-size:14.5px;margin-top:6px;line-height:1.5">How far is their closest branch? A gap near your site is a strong reason for them to take it.</div>
+                </div>
+                <div style="border-radius:16px;padding:22px;background:linear-gradient(150deg,#6C47FF,#4B23C9);color:#fff;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;line-height:1.2">Every match comes with the receipts</div>
+                  <div style="font-size:14.5px;margin-top:8px;line-height:1.5;color:#E5DBFF">Expand any brand to see the exact evidence — and the acquisitions contact to call.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c MATCHING -->
+      <div id="1cmatch" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1c</span>
+          <span style="font-weight:600;color:#4B4A55">Click "Match brands" → matching</span>
+        </div>
+        <div style="position:relative;width:1440px;height:900px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#0E0A1A;color:#fff">
+          <div style="position:absolute;inset:0;background:radial-gradient(60% 55% at 50% 42%,rgba(108,71,255,.35) 0%,transparent 60%)"></div>
+          <div style="position:absolute;left:50%;top:46%;width:760px;height:760px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 50%,#8B6CFF 1.4px,transparent 1.6px);background-size:24px 24px;-webkit-mask:radial-gradient(circle,transparent 38%,#000 40%,#000 52%,transparent 54%);mask:radial-gradient(circle,transparent 38%,#000 40%,#000 52%,transparent 54%);opacity:.55"></div>
+          <div style="position:absolute;left:50%;top:46%;width:120px;height:120px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid rgba(139,108,255,.6);border-top-color:#fff;animation:smpulse 2s infinite"></div>
+          <div style="position:absolute;left:50%;top:46%;width:40px;height:40px;transform:translate(-50%,-50%);background:#6C47FF;border-radius:10px;display:flex;align-items:center;justify-content:center"><div style="width:14px;height:14px;border:2.5px solid #fff;transform:rotate(45deg);border-radius:3px"></div></div>
+          <div style="position:absolute;left:0;right:0;top:64%;text-align:center;padding:0 40px">
+            <div style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.2em;font-size:13px;color:#B49CFF">MATCHING YOUR SITE</div>
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:44px;margin-top:14px">Scanning 1,240 brands…</div>
+            <div style="color:#B9B3CC;font-size:17px;margin-top:10px">14,000 sq ft · Class E · LS6 2AT</div>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:26px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px"><span style="color:#34D399">✓</span> Site-size fit</span>
+              <span style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px"><span style="color:#34D399">✓</span> Acquisitive signals</span>
+              <span style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px"><span style="width:11px;height:11px;border:2px solid #8B6CFF;border-top-color:transparent;border-radius:50%;display:inline-block"></span> Trading facts</span>
+              <span style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8E88A3;font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px">Same location type</span>
+              <span style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8E88A3;font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px">Nearest store</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c RESULTS -->
+      <div id="1cresults" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1c</span>
+          <span style="font-weight:600;color:#4B4A55">→ Ranked results with evidence &amp; contacts</span>
+        </div>
+        <div style="position:relative;width:1440px;height:1240px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#F4F3FA;color:#1C1B22">
+          <!-- rail -->
+          <div style="position:absolute;top:0;left:0;bottom:0;width:72px;z-index:30;background:#fff;border-right:1px solid #ECEAF3;display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:8px">
+            <div style="width:34px;height:34px;border-radius:9px;background:#6C47FF;display:flex;align-items:center;justify-content:center;margin-bottom:8px"><div style="width:11px;height:11px;border:2.5px solid #fff;transform:rotate(45deg);border-radius:2px"></div></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#14121A;color:#fff"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"/><path d="M4 9v11h16V9"/><path d="M9.5 20v-5.5h5V20"/></svg></div>
+          </div>
+          <!-- summary bar -->
+          <div style="position:absolute;top:0;left:72px;right:0;height:96px;z-index:20;background:#fff;border-bottom:1px solid #ECEAF3;display:flex;align-items:center;gap:18px;padding:0 34px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:20px">23 brands matched</span><span style="background:#E7F7EF;color:#1E8A56;font-weight:700;font-size:12px;padding:4px 10px;border-radius:999px">in 1.2s</span></div>
+              <div style="display:flex;gap:8px">
+                <span style="background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px">14,000 sq ft</span>
+                <span style="background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px">Class E</span>
+                <span style="background:#F1EEFA;color:#4B23C9;font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px">LS6 2AT</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;background:#EAF8F1;color:#177E4E;font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px">◧ Kirkstall Retail Park</span>
+                <span style="border:1px solid #E1DEEC;color:#6B6B78;font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px">Edit site</span>
+              </div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:8px;border:1px solid #E1DEEC;color:#3D3C47;font-weight:600;font-size:14px;padding:10px 15px;border-radius:11px">Sort: Best match <span style="color:#B7B5C2">▾</span></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#6C47FF;color:#fff;font-weight:700;font-size:14px;padding:10px 16px;border-radius:11px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Export list</div>
+          </div>
+          <!-- results -->
+          <div style="position:absolute;top:96px;left:72px;right:0;bottom:0;overflow:auto;padding:24px 34px;display:flex;flex-direction:column;gap:16px">
+
+            <!-- expanded card (Aldi) -->
+            <div style="background:#fff;border:1.5px solid #D9CFFA;border-radius:18px;overflow:hidden;box-shadow:0 16px 40px -22px rgba(76,35,201,.4)">
+              <div style="padding:20px 24px;display:flex;gap:20px;align-items:center">
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#C9C6D6;width:24px">1</div>
+                <div style="width:58px;height:58px;border-radius:14px;background:#0A4C9E;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">Al</div>
+                <div style="width:200px;flex:0 0 auto"><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">Aldi</div><div style="color:#8A8895;font-size:13px;margin-top:2px">Discount grocery · 990 UK stores</div></div>
+                <div style="flex:1;display:flex;gap:9px">
+                  <div style="flex:1;background:#F5FBF7;border:1px solid #DCF0E5;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#1E8A56;letter-spacing:.04em">SIZE FIT</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">Fits ✓</div></div>
+                  <div style="flex:1;background:#FBF7EE;border:1px solid #F0E6CF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#B7860B;letter-spacing:.04em">ACQUISITIVE</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">High</div></div>
+                  <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472;letter-spacing:.04em">TURNOVER</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">£17.9bn</div></div>
+                  <div style="flex:1;background:#EAF8F1;border:1px solid #D3EEDF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#177E4E;letter-spacing:.04em">RETAIL PARKS</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">Trades in 10</div></div>
+                  <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472;letter-spacing:.04em">NEAREST</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">3.1 mi</div></div>
+                </div>
+                <div style="width:56px;height:56px;border-radius:50%;background:conic-gradient(#6C47FF 94%,#EBE7F7 0);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:14px">94%</div></div>
+                <span style="color:#8A8895;font-size:12px;font-weight:600;flex:0 0 auto">Collapse ▴</span>
+              </div>
+              <!-- similar retail spaces band -->
+              <div style="background:#F3FBF6;border-top:1px solid #E2F1E9;padding:16px 24px;display:flex;align-items:center;gap:14px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#EAF8F1;color:#177E4E;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="7" height="11" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg></div>
+                <div style="font-size:14.5px;color:#2A2833;line-height:1.4"><b>Already trades in your type of location.</b> Your site is an <b>edge-of-town retail park</b> unit — Aldi trades in <b style="color:#177E4E">10 other edge-of-town retail parks</b> within 30 miles, including Owlcotes, Crown Point and Kirkstall Bridge.</div>
+              </div>
+              <!-- evidence -->
+              <div style="background:#FAF9FE;border-top:1px solid #EEE9FB;padding:20px 24px;display:grid;grid-template-columns:1fr 1fr 320px;gap:22px">
+                <div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.06em;color:#6C47FF">THE EVIDENCE</div>
+                  <div style="margin-top:12px;display:flex;flex-direction:column;gap:11px">
+                    <div style="display:flex;gap:10px"><span style="color:#B7860B;flex:0 0 auto">◆</span><div style="font-size:13.5px;color:#2A2833;line-height:1.45"><b>12 open requirements</b> — 8k–20k sq ft, Class E, urban edge. Yorkshire flagged as priority region.</div></div>
+                    <div style="display:flex;gap:10px"><span style="color:#B7860B;flex:0 0 auto">📰</span><div style="font-size:13.5px;color:#2A2833;line-height:1.45"><b>3 news mentions</b> (last 90 days) on store-opening programme, +40 UK sites this year.</div></div>
+                    <div style="display:flex;gap:10px"><span style="color:#8B6CFF;flex:0 0 auto">▣</span><div style="font-size:13.5px;color:#2A2833;line-height:1.45"><b>Planning:</b> 5 live applications nationally, 1 within 6 mi (Bramley — likely Aldi).</div></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.06em;color:#177E4E">COMPANIES HOUSE — TRADING FACTS</div>
+                  <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Status</span><b>Active</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Latest turnover</span><b>£17.9bn</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Net assets</span><b>£4.1bn</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Accounts</span><b>Filed on time</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Accounts made up to</span><b>28 Feb 2026</b></div>
+                    <div style="display:flex;align-items:center;gap:7px;margin-top:2px;color:#4B23C9;font-weight:600;font-size:12.5px">View filings on Companies House ↗</div>
+                    <div style="background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:10px 11px;margin-top:6px;color:#5B6472;font-size:11.5px;line-height:1.45">Figures as filed at Companies House, unedited. SiteMatcher does not rate, score or comment on a company's financial standing — including covenant strength. Any view on that is yours to form.</div>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #EAE6F5;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <div style="font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.06em;color:#6C47FF">WHO TO CONTACT</div>
+                    <span style="background:#F1EEFA;color:#4B23C9;font-weight:700;font-size:11px;padding:4px 9px;border-radius:999px">3 on file</span>
+                  </div>
+                  <!-- primary contact: matched to your region -->
+                  <div style="border:1.5px solid #D9CFFA;background:#FAF8FF;border-radius:12px;padding:13px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="background:#EDE7FF;color:#4B23C9;font-weight:700;font-size:10.5px;letter-spacing:.05em;padding:3px 8px;border-radius:999px">COVERS YOUR REGION</span></div>
+                    <div style="display:flex;align-items:center;gap:11px"><div style="width:40px;height:40px;border-radius:50%;background:#EDE7FF;color:#6C47FF;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto">RH</div><div><div style="font-weight:700;font-size:14.5px">Rebecca Hale</div><div style="color:#8A8895;font-size:12.5px">Property Acquisitions — North &amp; Yorkshire</div></div></div>
+                    <div style="margin-top:11px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+                      <div style="display:flex;align-items:center;gap:8px;color:#4B23C9;font-weight:600">✉ r.hale@aldi.co.uk</div>
+                      <div style="display:flex;align-items:center;gap:8px;color:#4B23C9;font-weight:600">☎ 01827 711 812</div>
+                    </div>
+                  </div>
+                  <!-- other contacts -->
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:10px;border:1px solid #EEECF5;border-radius:11px;padding:10px 11px">
+                      <div style="width:32px;height:32px;border-radius:50%;background:#F1F0F6;color:#6B6B78;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">DM</div>
+                      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">Daniel Marsh</div><div style="color:#8A8895;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">National Property Director</div></div>
+                      <span style="color:#4B23C9;font-weight:700;font-size:11.5px;flex:0 0 auto">Details</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;border:1px solid #EEECF5;border-radius:11px;padding:10px 11px">
+                      <div style="width:32px;height:32px;border-radius:50%;background:#F1F0F6;color:#6B6B78;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">◨</div>
+                      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">Property team inbox</div><div style="color:#8A8895;font-size:11.5px">General enquiries · Atherstone HQ</div></div>
+                      <span style="color:#4B23C9;font-weight:700;font-size:11.5px;flex:0 0 auto">Details</span>
+                    </div>
+                  </div>
+                  <div style="background:#6C47FF;color:#fff;font-weight:700;font-size:14px;padding:11px;border-radius:11px;text-align:center">Contact Rebecca Hale</div>
+                  <div style="color:#9795A4;font-size:11.5px;line-height:1.4;text-align:center">Or email all three at once</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- collapsed cards -->
+            <div style="background:#fff;border:1px solid #EEECF5;border-radius:18px;padding:20px 24px;display:flex;gap:20px;align-items:center">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#C9C6D6;width:24px">2</div>
+              <div style="width:58px;height:58px;border-radius:14px;background:#1C1B22;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">Ga</div>
+              <div style="width:200px;flex:0 0 auto"><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">Gail's Bakery</div><div style="color:#8A8895;font-size:13px;margin-top:2px">Premium bakery café · 140 stores</div></div>
+              <div style="flex:1;display:flex;gap:9px">
+                <div style="flex:1;background:#FBF7EE;border:1px solid #F0E6CF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#B7860B">SIZE FIT</div><div style="font-weight:600;font-size:12px;margin-top:3px">Upper end △</div></div>
+                <div style="flex:1;background:#FBF7EE;border:1px solid #F0E6CF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#B7860B">ACQUISITIVE</div><div style="font-weight:600;font-size:12px;margin-top:3px">High</div></div>
+                <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472">TURNOVER</div><div style="font-weight:600;font-size:12px;margin-top:3px">£140m</div></div>
+                <div style="flex:1;background:#EAF8F1;border:1px solid #D3EEDF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#177E4E">RETAIL PARKS</div><div style="font-weight:600;font-size:12px;margin-top:3px">Trades in 2</div></div>
+                <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472">NEAREST</div><div style="font-weight:600;font-size:12px;margin-top:3px">11 mi</div></div>
+              </div>
+              <div style="width:56px;height:56px;border-radius:50%;background:conic-gradient(#6C47FF 88%,#EBE7F7 0);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:14px">88%</div></div>
+              <div style="background:#F1EEFA;color:#4B23C9;font-weight:700;font-size:14px;padding:11px 16px;border-radius:11px;flex:0 0 auto">Contact</div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #EEECF5;border-radius:18px;padding:20px 24px;display:flex;gap:20px;align-items:center">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#C9C6D6;width:24px">3</div>
+              <div style="width:58px;height:58px;border-radius:14px;background:#C8102E;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">SD</div>
+              <div style="width:200px;flex:0 0 auto"><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">Sports Direct</div><div style="color:#8A8895;font-size:13px;margin-top:2px">Sports retail · Frasers Group</div></div>
+              <div style="flex:1;display:flex;gap:9px">
+                <div style="flex:1;background:#F5FBF7;border:1px solid #DCF0E5;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#1E8A56">SIZE FIT</div><div style="font-weight:600;font-size:12px;margin-top:3px">Fits ✓</div></div>
+                <div style="flex:1;background:#F6F6F8;border:1px solid #E6E6EC;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#8A8895">ACQUISITIVE</div><div style="font-weight:600;font-size:12px;margin-top:3px">Medium</div></div>
+                <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472">TURNOVER</div><div style="font-weight:600;font-size:12px;margin-top:3px">£5.6bn</div></div>
+                <div style="flex:1;background:#EAF8F1;border:1px solid #D3EEDF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#177E4E">RETAIL PARKS</div><div style="font-weight:600;font-size:12px;margin-top:3px">Trades in 7</div></div>
+                <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472">NEAREST</div><div style="font-weight:600;font-size:12px;margin-top:3px">1.9 mi</div></div>
+              </div>
+              <div style="width:56px;height:56px;border-radius:50%;background:conic-gradient(#6C47FF 81%,#EBE7F7 0);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:14px">81%</div></div>
+              <div style="background:#F1EEFA;color:#4B23C9;font-weight:700;font-size:14px;padding:11px 16px;border-radius:11px;flex:0 0 auto">Contact</div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #EEECF5;border-radius:18px;padding:20px 24px;display:flex;gap:20px;align-items:center">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#C9C6D6;width:24px">4</div>
+              <div style="width:58px;height:58px;border-radius:14px;background:#00539F;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">Gr</div>
+              <div style="width:200px;flex:0 0 auto"><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">Greggs</div><div style="color:#8A8895;font-size:13px;margin-top:2px">Food-to-go · 2,500 UK stores</div></div>
+              <div style="flex:1;display:flex;gap:9px">
+                <div style="flex:1;background:#FBF7EE;border:1px solid #F0E6CF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#B7860B">SIZE FIT</div><div style="font-weight:600;font-size:12px;margin-top:3px">Larger △</div></div>
+                <div style="flex:1;background:#FBF7EE;border:1px solid #F0E6CF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#B7860B">ACQUISITIVE</div><div style="font-weight:600;font-size:12px;margin-top:3px">High</div></div>
+                <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472">TURNOVER</div><div style="font-weight:600;font-size:12px;margin-top:3px">£2.0bn</div></div>
+                <div style="flex:1;background:#EAF8F1;border:1px solid #D3EEDF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#177E4E">RETAIL PARKS</div><div style="font-weight:600;font-size:12px;margin-top:3px">Trades in 14</div></div>
+                <div style="flex:1;background:#FDF3F3;border:1px solid #F5DADA;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#C0453F">NEAREST</div><div style="font-weight:600;font-size:12px;margin-top:3px">0.6 mi</div></div>
+              </div>
+              <div style="width:56px;height:56px;border-radius:50%;background:conic-gradient(#6C47FF 76%,#EBE7F7 0);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:14px">76%</div></div>
+              <div style="background:#F1EEFA;color:#4B23C9;font-weight:700;font-size:14px;padding:11px 16px;border-radius:11px;flex:0 0 auto">Contact</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c THIN EVIDENCE / EMPTY STATE -->
+      <div id="1cthin" style="display:flex;flex-direction:column;gap:14px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#14121A;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1c</span>
+          <span style="font-weight:600;color:#4B4A55">Sparse brand — card shows only what we can verify, no empty rows</span>
+        </div>
+        <div style="position:relative;width:1440px;height:960px;border-radius:24px;overflow:hidden;box-shadow:0 34px 90px -34px rgba(20,18,26,.4);background:#F4F3FA;color:#1C1B22">
+          <!-- rail -->
+          <div style="position:absolute;top:0;left:0;bottom:0;width:72px;z-index:30;background:#fff;border-right:1px solid #ECEAF3;display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:8px">
+            <div style="width:34px;height:34px;border-radius:9px;background:#6C47FF;display:flex;align-items:center;justify-content:center;margin-bottom:8px"><div style="width:11px;height:11px;border:2.5px solid #fff;transform:rotate(45deg);border-radius:2px"></div></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9795A4"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+            <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#14121A;color:#fff"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"/><path d="M4 9v11h16V9"/><path d="M9.5 20v-5.5h5V20"/></svg></div>
+          </div>
+          <!-- summary bar -->
+          <div style="position:absolute;top:0;left:72px;right:0;height:96px;z-index:20;background:#fff;border-bottom:1px solid #ECEAF3;display:flex;align-items:center;gap:18px;padding:0 34px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:20px">23 brands matched</span><span style="background:#F1EEFA;color:#4B23C9;font-weight:700;font-size:12px;padding:4px 10px;border-radius:999px">showing 14–23</span></div>
+              <div style="color:#8A8895;font-size:13.5px">Lower-ranked brands are matched on size, location type and distance alone.</div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:8px;border:1px solid #E1DEEC;color:#3D3C47;font-weight:600;font-size:14px;padding:10px 15px;border-radius:11px">Sort: Best match <span style="color:#B7B5C2">▾</span></div>
+          </div>
+          <!-- results -->
+          <div style="position:absolute;top:96px;left:72px;right:0;bottom:0;overflow:hidden;padding:24px 34px;display:flex;flex-direction:column;gap:16px">
+
+            <!-- expanded card with no activity data -->
+            <div style="background:#fff;border:1.5px solid #E4E1EE;border-radius:18px;overflow:hidden;box-shadow:0 16px 40px -26px rgba(20,18,26,.28)">
+              <div style="padding:20px 24px;display:flex;gap:20px;align-items:center">
+                <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#C9C6D6;width:24px">17</div>
+                <div style="width:58px;height:58px;border-radius:14px;background:#2F6F4E;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">Fe</div>
+                <div style="width:200px;flex:0 0 auto"><div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">Fettle Home</div><div style="color:#8A8895;font-size:13px;margin-top:2px">Homeware · 22 UK stores</div></div>
+                <div style="flex:1;display:flex;gap:9px">
+                  <div style="flex:1;background:#F5FBF7;border:1px solid #DCF0E5;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#1E8A56;letter-spacing:.04em">SIZE FIT</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">Fits ✓</div></div>
+                  <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472;letter-spacing:.04em">USE CLASS</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">Class E ✓</div></div>
+                  <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472;letter-spacing:.04em">RETAIL PARKS</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">Trades in 1</div></div>
+                  <div style="flex:1;background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:9px 10px"><div style="font-size:10px;font-weight:700;color:#5B6472;letter-spacing:.04em">NEAREST</div><div style="font-weight:600;font-size:12px;margin-top:3px;color:#2A2833">42 mi</div></div>
+                </div>
+                <div style="width:56px;height:56px;border-radius:50%;background:conic-gradient(#C9C6D6 31%,#EFEDF5 0);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:14px;color:#6B6B78">31%</div></div>
+                <span style="color:#8A8895;font-size:12px;font-weight:600;flex:0 0 auto">Collapse ▴</span>
+              </div>
+              <!-- why it still ranks -->
+              <div style="background:#FBFAFE;border-top:1px solid #EEECF5;padding:14px 24px;display:flex;align-items:center;gap:14px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#F1EEFA;color:#6C47FF;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg></div>
+                <div style="font-size:14.5px;color:#2A2833;line-height:1.4"><b>Matched on size, use class and location.</b> Fettle Home's typical unit is 12,000–16,000 sq ft, they hold Class E units, and they already trade in one edge-of-town retail park — Owlcotes, 42 miles away.</div>
+              </div>
+              <!-- no acquisition evidence found -->
+              <div style="background:#fff;border-top:1px solid #EEECF5;padding:14px 24px;display:flex;align-items:center;gap:14px">
+                <div style="width:38px;height:38px;border-radius:10px;background:#F4F3F9;color:#8A8895;display:flex;align-items:center;justify-content:center;flex:0 0 auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg></div>
+                <div style="font-size:14.5px;color:#2A2833;line-height:1.45">We could not find any evidence that Fettle Home is acquiring at the moment. If you represent the brand, please contact <b style="color:#4B23C9">rob@sitematcher.co.uk</b> to update our details</div>
+              </div>
+              <!-- evidence: empty states -->
+              <div style="background:#FAF9FE;border-top:1px solid #EEE9FB;padding:20px 24px;display:grid;grid-template-columns:1fr 320px;gap:22px">
+                <div>
+                  <div style="font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.06em;color:#177E4E">COMPANIES HOUSE — PUBLISHED FACTS</div>
+                  <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Status</span><b>Active</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Latest turnover</span><b style="color:#9795A4">Not disclosed</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Net assets</span><b style="color:#9795A4">Not disclosed</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13.5px"><span style="color:#8A8895">Accounts</span><b>Small-company exemption</b></div>
+                    <div style="display:flex;align-items:center;gap:7px;margin-top:2px;color:#4B23C9;font-weight:600;font-size:12.5px">View filings on Companies House ↗</div>
+                    <div style="background:#F5F6FA;border:1px solid #E6E8EF;border-radius:10px;padding:10px 11px;margin-top:6px;color:#5B6472;font-size:11.5px;line-height:1.45">Small companies aren't required to file turnover. A blank here means nothing is published — not that the figures are poor. SiteMatcher does not rate or score financial standing.</div>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #EAE6F5;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <div style="font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.06em;color:#6C47FF">WHO TO CONTACT</div>
+                    <span style="background:#F6F6F8;color:#8A8895;font-weight:700;font-size:11px;padding:4px 9px;border-radius:999px">none on file</span>
+                  </div>
+                  <div style="border:1px dashed #DEDAEC;border-radius:12px;padding:14px;text-align:center">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#F4F3F9;color:#B7B5C2;display:flex;align-items:center;justify-content:center;margin:0 auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg></div>
+                    <div style="font-weight:700;font-size:13.5px;margin-top:9px">No named acquisitions contact</div>
+                    <div style="color:#8A8895;font-size:12.5px;margin-top:5px;line-height:1.45">We only list contacts we can verify. For this brand we hold the registered office and switchboard only.</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+                    <div style="display:flex;align-items:center;gap:8px;color:#4B23C9;font-weight:600">☎ 0161 402 1188 (switchboard)</div>
+                    <div style="display:flex;align-items:center;gap:8px;color:#6B6B78">◨ Unit 4, Ardwick Green, Manchester</div>
+                  </div>
+                  <div style="border:1.5px solid #D9CFFA;color:#4B23C9;font-weight:700;font-size:14px;padding:11px;border-radius:11px;text-align:center">Request a contact</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- end-of-list state -->
+            <div style="background:#fff;border:1px dashed #DEDAEC;border-radius:18px;padding:26px;text-align:center">
+              <div style="font-family:'Space Grotesk';font-weight:700;font-size:16px">That's every brand that fits your unit</div>
+              <div style="color:#8A8895;font-size:13.5px;margin-top:6px;line-height:1.5">Widen the size range or use class to see more, or save this site and we'll alert you when a new requirement matches it.</div>
+              <div style="display:flex;gap:10px;justify-content:center;margin-top:16px">
+                <div style="background:#6C47FF;color:#fff;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:11px">Alert me on new matches</div>
+                <div style="border:1px solid #E1DEEC;color:#3D3C47;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:11px">Widen criteria</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>

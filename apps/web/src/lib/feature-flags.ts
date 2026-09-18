@@ -72,3 +72,11 @@ export function isPlanningMonitorAiEnabled(): Promise<boolean> {
 export function isPlanningMonitorEmailEnabled(): Promise<boolean> {
   return isFeatureEnabled(PLANNING_MONITOR_EMAIL_FLAG)
 }
+
+// Brand Matcher (SiteMatcher unified workspace, site -> brands mode). Off by default; the
+// migration 20261019000000_brand_matcher.sql seeds the row. The API enforces it independently.
+export const BRAND_MATCHER_FLAG = 'brand_matcher_enabled'
+
+export function isBrandMatcherEnabled(): Promise<boolean> {
+  return isFeatureEnabled(BRAND_MATCHER_FLAG)
+}

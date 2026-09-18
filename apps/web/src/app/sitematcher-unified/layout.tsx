@@ -7,10 +7,12 @@ import {
   isAutoParkingEnabled,
   isRetailCentreGapsEnabled,
   isPlanningMonitorEnabled,
+  isBrandMatcherEnabled,
 } from '@/lib/feature-flags'
 import { AutoParkingFlagProvider } from './lib/auto-parking-flag-context'
 import { RetailCentreFlagProvider } from './lib/retail-centre-flag-context'
 import { PlanningMonitorFlagProvider } from './lib/planning-monitor-flag-context'
+import { BrandMatcherFlagProvider } from './lib/brand-matcher-flag-context'
 
 export default async function UnifiedWorkspaceLayout({
   children,
@@ -36,17 +38,19 @@ export default async function UnifiedWorkspaceLayout({
   // Sub-feature kill-switch: resolved once per request here (server) and
   // bridged to the client tree via context — the real Plus enforcement for
   // Auto parking still happens server-side on save (see the sketches API).
-  const [autoParkingEnabled, retailCentreGapsEnabled, planningMonitorEnabled] = await Promise.all([
-    isAutoParkingEnabled(),
-    isRetailCentreGapsEnabled(),
-    isPlanningMonitorEnabled(),
-  ])
+  const [autoParkingEnabled, retailCentreGapsEnabled, planningMonitorEnabled, brandMatcherEnabled] =
+    await Promise.all([
+      isAutoParkingEnabled(),
+      isRetailCentreGapsEnabled(),
+      isPlanningMonitorEnabled(),
+      isBrandMatcherEnabled(),
+    ])
 
   return (
     <AutoParkingFlagProvider enabled={autoParkingEnabled}>
       <RetailCentreFlagProvider enabled={retailCentreGapsEnabled}>
         <PlanningMonitorFlagProvider enabled={planningMonitorEnabled}>
-          {children}
+          <BrandMatcherFlagProvider enabled={brandMatcherEnabled}>{children}</BrandMatcherFlagProvider>
         </PlanningMonitorFlagProvider>
       </RetailCentreFlagProvider>
     </AutoParkingFlagProvider>

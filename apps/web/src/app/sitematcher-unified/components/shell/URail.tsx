@@ -1,11 +1,12 @@
 'use client'
 
-import { MapPin, Search, PenTool, Layers, HelpCircle, ClipboardList } from 'lucide-react'
+import { MapPin, Search, PenTool, Layers, HelpCircle, ClipboardList, Store } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import type { WorkspaceMode } from '../../types/unified-workspace'
 import { usePlanningMonitorEnabled } from '../../lib/planning-monitor-flag-context'
 import { usePlanningMonitorStore } from '../../lib/stores/planning-monitor-store'
+import { useBrandMatcherEnabled } from '../../lib/brand-matcher-flag-context'
 
 // Requirements mode is deferred in v1 (see plan). Directory is a full-pane, map-less mode.
 const MODES: { id: WorkspaceMode; label: string; Icon: typeof MapPin }[] = [
@@ -17,12 +18,20 @@ const MODES: { id: WorkspaceMode; label: string; Icon: typeof MapPin }[] = [
 
 // Offered only while the Planning Monitor flag is on.
 const PLANNING_MODE = { id: 'planning' as const, label: 'Planning monitor', Icon: ClipboardList }
+// Offered only while the Brand Matcher flag is on.
+const BRAND_MATCHER_MODE = { id: 'brand-matcher' as const, label: 'Brand Matcher', Icon: Store }
 
 export function URail() {
   const view = useWorkspaceStore((s) => s.view)
   const setMode = useWorkspaceStore((s) => s.setMode)
   const planningEnabled = usePlanningMonitorEnabled()
-  const modes = planningEnabled ? [...MODES.slice(0, 3), PLANNING_MODE, MODES[3]] : MODES
+  const brandMatcherEnabled = useBrandMatcherEnabled()
+  const modes = [
+    ...MODES.slice(0, 3),
+    ...(planningEnabled ? [PLANNING_MODE] : []),
+    ...(brandMatcherEnabled ? [BRAND_MATCHER_MODE] : []),
+    MODES[3],
+  ]
   // Drawing a patch takes over the view: the other modes grey out until it is saved or cancelled.
   const drawingPatch = usePlanningMonitorStore((s) => view === 'planning' && s.drawing != null)
 

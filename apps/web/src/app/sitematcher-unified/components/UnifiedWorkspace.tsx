@@ -50,6 +50,8 @@ import {
   usePlanningDeepLink,
 } from './shell/planning/PlanningMode'
 import { usePlanningMonitorEnabled } from '../lib/planning-monitor-flag-context'
+import { useBrandMatcherEnabled } from '../lib/brand-matcher-flag-context'
+import { BrandMatcherMode } from './shell/brand-matcher/BrandMatcherMode'
 
 // Radius used when reading the landscape around a selected built-up area
 // (the Assess dropped-point radius comes from the store instead).
@@ -94,6 +96,9 @@ export function UnifiedWorkspace() {
   const planningEnabled = usePlanningMonitorEnabled()
   // The flag is also enforced by every Planning API; a stale deep link cannot open a disabled mode.
   const isPlanning = view === 'planning' && planningEnabled
+  // Same rule for Brand Matcher: its API enforces the flag too.
+  const brandMatcherEnabled = useBrandMatcherEnabled()
+  const isBrandMatcher = view === 'brand-matcher' && brandMatcherEnabled
   usePlanningDeepLink()
 
   // Keep the sketch store's tier access in sync so CAD interaction is unlocked.
@@ -512,6 +517,8 @@ export function UnifiedWorkspace() {
         */}
         {isDirectory ? (
           <UDirectory />
+        ) : isBrandMatcher ? (
+          <BrandMatcherMode />
         ) : (
           <>
         {isSketch ? (
