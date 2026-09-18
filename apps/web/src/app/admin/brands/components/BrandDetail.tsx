@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label'
 import { ImageUpload } from '@/components/ui/image-upload'
 import { normalizeDomain, validateDomain } from '@/lib/clearbit-logo'
 import { FloorAreasSection } from './FloorAreasSection'
+import { CompaniesHouseSection } from './CompaniesHouseSection'
 
-type Tab = 'details' | 'stores' | 'floor-areas' | 'requirements' | 'contacts' | 'agents' | 'activity'
+type Tab = 'details' | 'stores' | 'floor-areas' | 'requirements' | 'contacts' | 'agents' | 'activity' | 'companies-house'
 
 interface BrandData {
   id: string
@@ -36,6 +37,7 @@ const TABS: { key: Tab; label: string }[] = [
   // Directory-only sections.
   { key: 'agents', label: 'Agents' },
   { key: 'activity', label: 'Activity' },
+  { key: 'companies-house', label: 'Companies House' },
 ]
 
 async function uploadLogo(file: File): Promise<string> {
@@ -121,6 +123,7 @@ export function BrandDetail({ brandId }: { brandId: string }) {
       {tab === 'contacts' && <ContactsSection brandId={brandId} onSaved={load} />}
       {tab === 'agents' && <AgentsSection brandId={brandId} />}
       {tab === 'activity' && <ActivitySection brandId={brandId} />}
+      {tab === 'companies-house' && <CompaniesHouseSection brandId={brandId} brandName={brand.name} />}
     </div>
   )
 }

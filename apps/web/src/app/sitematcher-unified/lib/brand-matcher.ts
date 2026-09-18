@@ -371,8 +371,11 @@ const SIZE_PILL: Record<SizeFitState, { value: string; tone: SignalTone; mark: '
   smaller: { value: 'Smaller', tone: 'amber', mark: '△' },
 }
 
-export function turnoverValue(facts: TradingFacts): string {
-  return facts.turnover == null ? 'Not disclosed' : formatMoney(facts.turnover)
+// null when there is nothing verifiable to put on the pill (figures not read yet).
+export function turnoverValue(facts: TradingFacts): string | null {
+  if (facts.turnover.status === 'filed') return formatMoney(facts.turnover.value)
+  if (facts.turnover.status === 'not_published') return 'Not disclosed'
+  return null
 }
 
 export function buildPills(m: BrandMatch, query: Pick<BrandMatcherQuery, 'useClass'>): Pill[] {
@@ -406,9 +409,10 @@ export function buildPills(m: BrandMatch, query: Pick<BrandMatcherQuery, 'useCla
       tone: m.acquisitive.level === 'high' ? 'amber' : 'neutral',
     })
   }
-  if (m.tradingFacts) {
+  const turnover = m.tradingFacts ? turnoverValue(m.tradingFacts) : null
+  if (turnover) {
     // Always neutral: a trading fact is never coloured green or red.
-    pills.push({ key: 'turnover', label: 'Turnover', value: turnoverValue(m.tradingFacts), tone: 'neutral' })
+    pills.push({ key: 'turnover', label: 'Turnover', value: turnover, tone: 'neutral' })
   }
   if (m.locationType) {
     const n = m.locationType.count

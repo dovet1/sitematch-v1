@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePlusAccess, directoryAdminClient, formatCategory } from '@/lib/directory'
 import { isBrandMatcherEnabled } from '@/lib/feature-flags'
 import { sqFtFromM2 } from '@/app/sitematcher-unified/lib/size-filter'
+import { factsRowToTradingFacts } from '@/lib/companies-house/facts'
+import type { CompanyFactsRow } from '@/lib/companies-house/types'
 import {
   assembleMatches,
   LOCATION_TYPE_RADIUS_MILES,
@@ -23,6 +25,7 @@ import {
   type BrandMatcherSite,
   type BrandMatcherStats,
   type BrandMatcherUseClass,
+  type TradingFacts,
 } from '@/app/sitematcher-unified/types/brand-matcher'
 
 export const dynamic = 'force-dynamic'
@@ -32,7 +35,7 @@ export const dynamic = 'force-dynamic'
 // Everything here is read from live tables — requirements, EPC floor-area profiles, stores,
 // GeoDS retail centres, curated brand activity, approved planning brand signals and contacts.
 // Nothing is synthesised: a signal with no source is left out of the card, not filled in.
-// Companies House trading facts have no source yet, so none are sent (the UI hides them).
+// Companies House facts come only from an admin-confirmed brand -> company link.
 
 const MIN_SQFT = 100
 const MAX_SQFT = 500_000
@@ -230,6 +233,28 @@ async function loadPlanningCounts(db: Db): Promise<Map<string, number>> {
   return new Map(Array.from(devs, ([id, set]) => [id, set.size]))
 }
 
+// Companies House facts for brands whose trading company an admin has confirmed. Never scored.
+async function loadTradingFacts(db: Db): Promise<Map<string, TradingFacts>> {
+  const rows = await selectAll<{
+    brand_id: string
+    company_facts: CompanyFactsRow | null
+  }>(() =>
+    db
+      .from('brand_companies')
+      .select(
+        'brand_id, company_facts(company_number, company_name, company_status, registered_office, ' +
+          'last_accounts_made_up_to, last_accounts_type, accounts_overdue, turnover, turnover_status, ' +
+          'net_assets, net_assets_status, fetched_at)'
+      )
+      .order('brand_id')
+  )
+  const map = new Map<string, TradingFacts>()
+  for (const r of rows) {
+    if (r.company_facts) map.set(r.brand_id, factsRowToTradingFacts(r.company_facts))
+  }
+  return map
+}
+
 async function loadBrands(db: Db): Promise<RawBrand[]> {
   const { data, error } = await db.rpc('directory_brand_cards')
   if (error) throw error
@@ -368,7 +393,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo] =
+    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts] =
       await Promise.all([
         loadBrands(db),
         loadEstateRanges(db),
@@ -377,6 +402,7 @@ export async function POST(request: NextRequest) {
         loadNews(db),
         loadPlanningCounts(db),
         loadGeo(db, site),
+        loadTradingFacts(db),
       ])
 
     const { matches, considered } = assembleMatches({
@@ -389,6 +415,7 @@ export async function POST(request: NextRequest) {
       news,
       planningCounts,
       geo,
+      tradingFacts,
     })
 
     const payload: BrandMatcherResponse = { site, query, matches, considered }

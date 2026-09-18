@@ -1,0 +1,73 @@
+{
+  "accounts": {
+    "accounting_reference_date": {
+      "day": "31",
+      "month": "12"
+    },
+    "last_accounts": {
+      "made_up_to": "2024-12-31",
+      "period_end_on": "2024-12-31",
+      "period_start_on": "2024-01-01",
+      "type": "group"
+    },
+    "next_accounts": {
+      "due_on": "2026-09-30",
+      "overdue": false,
+      "period_end_on": "2025-12-31",
+      "period_start_on": "2025-01-01"
+    },
+    "next_due": "2026-09-30",
+    "next_made_up_to": "2025-12-31",
+    "overdue": false
+  },
+  "can_file": true,
+  "company_name": "ALDI STORES LIMITED",
+  "company_number": "02321869",
+  "company_status": "active",
+  "confirmation_statement": {
+    "last_made_up_to": "2026-05-15",
+    "next_due": "2027-05-29",
+    "next_made_up_to": "2027-05-15",
+    "overdue": false
+  },
+  "date_of_creation": "1988-11-25",
+  "etag": "a0b28d9a0d23ff929af3d3d12d29d8d59f31c66a",
+  "has_been_liquidated": false,
+  "has_charges": false,
+  "has_insolvency_history": false,
+  "jurisdiction": "england-wales",
+  "last_full_members_list_date": "2016-05-15",
+  "links": {
+    "persons_with_significant_control_statements": "/company/02321869/persons-with-significant-control-statements",
+    "self": "/company/02321869",
+    "charges": "/company/02321869/charges",
+    "filing_history": "/company/02321869/filing-history",
+    "officers": "/company/02321869/officers"
+  },
+  "previous_company_names": [
+    {
+      "ceased_on": "1989-02-13",
+      "effective_from": "1988-12-22",
+      "name": "ALDI LIMITED"
+    },
+    {
+      "ceased_on": "1988-12-22",
+      "effective_from": "1988-11-25",
+      "name": "CLOUDHUNT LIMITED"
+    }
+  ],
+  "registered_office_address": {
+    "address_line_1": "Holly Lane",
+    "address_line_2": "Atherstone",
+    "locality": "Warwickshire",
+    "postal_code": "CV9 2SQ"
+  },
+  "registered_office_is_in_dispute": false,
+  "sic_codes": [
+    "47110",
+    "70100"
+  ],
+  "type": "ltd",
+  "undeliverable_registered_office_address": false,
+  "has_super_secure_pscs": false
+}

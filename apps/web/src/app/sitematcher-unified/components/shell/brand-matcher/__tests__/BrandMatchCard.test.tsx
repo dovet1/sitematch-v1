@@ -154,20 +154,54 @@ describe('BrandMatchCard — sparse brand', () => {
 })
 
 describe('BrandMatchCard — Companies House facts (when present)', () => {
-  it('shows filed figures neutrally with the legal disclaimer', () => {
+  const facts = {
+    companyNumber: '02321869',
+    companyName: 'ALDI STORES LIMITED',
+    status: 'Active',
+    accountsType: 'Group accounts',
+    accountsMadeUpTo: '2024-12-31',
+    accountsOverdue: false,
+    registeredOffice: 'Holly Lane, Atherstone, Warwickshire, CV9 2SQ',
+    turnover: { status: 'unread' as const },
+    netAssets: { status: 'unread' as const },
+    fetchedAt: '2026-09-18T00:00:00.000Z',
+  }
+
+  it('shows register facts without implying figures were not filed', () => {
+    renderCard({ ...rich, tradingFacts: facts })
+    expect(screen.getByText('Companies House — published facts')).toBeInTheDocument()
+    expect(screen.getByText('ALDI STORES LIMITED · 02321869')).toBeInTheDocument()
+    expect(screen.getByText('Filed on time')).toBeInTheDocument()
+    expect(screen.getByText('31 Dec 2024')).toBeInTheDocument()
+    // Unread figures: no row, no pill, and never "Not disclosed".
+    expect(screen.queryByText('Latest turnover')).not.toBeInTheDocument()
+    expect(screen.queryByText('Turnover')).not.toBeInTheDocument()
+    expect(screen.queryByText('Not disclosed')).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/SiteMatcher does not rate, score or comment on a company.s financial standing — including covenant strength/)
+    ).toBeInTheDocument()
+  })
+
+  it('shows filed figures neutrally', () => {
     renderCard({
       ...rich,
-      tradingFacts: {
-        companyNumber: '02321869', status: 'Active', turnover: 17.9e9, netAssets: 4.1e9,
-        accountsNote: 'Filed on time', accountsMadeUpTo: '28 Feb 2026', smallCompanyExemption: false,
-      },
+      tradingFacts: { ...facts, turnover: { status: 'filed', value: 17.9e9 }, netAssets: { status: 'filed', value: 4.1e9 } },
     })
     const pill = screen.getByText('Turnover').parentElement as HTMLElement
     expect(within(pill).getByText('£17.9bn')).toBeInTheDocument()
     expect(pill.className).toContain('bg-[#F5F6FA]')
     expect(screen.getByText('Companies House — trading facts')).toBeInTheDocument()
-    expect(
-      screen.getByText(/SiteMatcher does not rate, score or comment on a company.s financial standing — including covenant strength/)
-    ).toBeInTheDocument()
+  })
+
+  it('uses the small-company note only when turnover is genuinely not published', () => {
+    renderCard({ ...sparse, tradingFacts: { ...facts, turnover: { status: 'not_published' } } })
+    expect(screen.getAllByText('Not disclosed').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Small companies aren.t required to file turnover/)).toBeInTheDocument()
+  })
+
+  it('offers the registered office when there is no named contact', () => {
+    renderCard({ ...sparse, tradingFacts: facts })
+    expect(screen.getByText(/we hold the registered office only/)).toBeInTheDocument()
+    expect(screen.getByText('Holly Lane, Atherstone, Warwickshire, CV9 2SQ')).toBeInTheDocument()
   })
 })

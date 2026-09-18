@@ -1,0 +1,802 @@
+[
+  {
+    "company_number": "02774693",
+    "title": "TK MAXX",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1992-12-17"
+  },
+  {
+    "company_number": "03026299",
+    "title": "TJX EUROPE BUYING (DEUTSCHLAND) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-02-24"
+  },
+  {
+    "company_number": "03094828",
+    "title": "TJX UK",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-08-18"
+  },
+  {
+    "company_number": "13720629",
+    "title": "13720629 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "50 Clarendon Road, Watford, England, WD17 1TX",
+    "date_of_creation": "2021-11-03"
+  },
+  {
+    "company_number": "09156201",
+    "title": "THE TK MAXX AND HOMESENSE FOUNDATION",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "2014-07-31"
+  },
+  {
+    "company_number": "13329894",
+    "title": "TKYS MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Elite House, 70 Warwick Street, Birmingham, England, B12 0NL",
+    "date_of_creation": "2021-04-12"
+  },
+  {
+    "company_number": "03094829",
+    "title": "TJX EUROPE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-08-18"
+  },
+  {
+    "company_number": "14231324",
+    "title": "A&K MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "3 Salcombe Drive, Glenfield, Leicester, England, LE3 8AG",
+    "date_of_creation": "2022-07-13"
+  },
+  {
+    "company_number": "15886570",
+    "title": "APPLE PRO MAXX LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "18 Maclaren Drive, Manchester, England, M8 4HB",
+    "date_of_creation": "2024-08-08"
+  },
+  {
+    "company_number": "13391178",
+    "title": "ARNOLD ARMSTRONG LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 4, 113, King Lane Leeds King Lane, Leeds, England, LS17 5BP",
+    "date_of_creation": "2021-05-12"
+  },
+  {
+    "company_number": "11843079",
+    "title": "AT MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "3 Chester Street, London, England, SW1X 7BB",
+    "date_of_creation": "2019-02-22"
+  },
+  {
+    "company_number": "15864456",
+    "title": "AUTO MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Beldham House, Parr Road, Stanmore, England, HA7 1NP",
+    "date_of_creation": "2024-07-29"
+  },
+  {
+    "company_number": "15996108",
+    "title": "BLACK MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "3a Westfield Road, Birmingham, United Kingdom, B15 3XA",
+    "date_of_creation": "2024-10-03"
+  },
+  {
+    "company_number": "16831285",
+    "title": "BLUE STONE MAXX (BSM) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "71-75 Shelton Street, Covent Garden, London, United Kingdom, WC2H 9JQ",
+    "date_of_creation": "2025-11-04"
+  },
+  {
+    "company_number": "12962576",
+    "title": "CAPTAIN MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "21 Hamilton Drive, Tividale, Oldbury, England, B69 3JS",
+    "date_of_creation": "2020-10-20"
+  },
+  {
+    "company_number": "15754230",
+    "title": "DR MAXX NUTRITION LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "79 College Road, Worqcompany, D#73, Harrow, United Kingdom, HA1 1BD",
+    "date_of_creation": "2024-06-01"
+  },
+  {
+    "company_number": "11280499",
+    "title": "ECO MAXX LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "6th Floor, Amp House, Dingwall Road, Croydon, Surrey, United Kingdom, CR0 2LX",
+    "date_of_creation": "2018-03-28"
+  },
+  {
+    "company_number": "15551135",
+    "title": "EUROPA MAXXI LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "25 Horsegate Gardens, Chatteris, England, PE16 6NH",
+    "date_of_creation": "2024-03-09"
+  },
+  {
+    "company_number": "16527195",
+    "title": "FASHION MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office 77 60 Tottenham Court Road, Fitzrovia, London, United Kingdom, W1T 2EW",
+    "date_of_creation": "2025-06-18"
+  },
+  {
+    "company_number": "11938745",
+    "title": "FOOD MAXX LTD",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "Fts Recovery Ltd, Ground Floor, Baird House, Seebeck Place, Knowlhill, Milton Keynes, MK5 8FR",
+    "date_of_creation": "2019-04-10"
+  },
+  {
+    "company_number": "02774693",
+    "title": "TK MAXX",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1992-12-17"
+  },
+  {
+    "company_number": "09156201",
+    "title": "THE TK MAXX AND HOMESENSE FOUNDATION",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "2014-07-31"
+  },
+  {
+    "company_number": "13720629",
+    "title": "13720629 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "50 Clarendon Road, Watford, England, WD17 1TX",
+    "date_of_creation": "2021-11-03"
+  },
+  {
+    "company_number": "13329894",
+    "title": "TKYS MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Elite House, 70 Warwick Street, Birmingham, England, B12 0NL",
+    "date_of_creation": "2021-04-12"
+  },
+  {
+    "company_number": "10779974",
+    "title": "MAXX STORES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "14 - 18 City Road, Cardiff, United Kingdom, CF24 3DL",
+    "date_of_creation": "2017-05-19"
+  },
+  {
+    "company_number": "13749170",
+    "title": "TKS CONVENIENCE STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "154 Fitzwarren Street, Salford, Manchester, England, M6 5RS",
+    "date_of_creation": "2021-11-17"
+  },
+  {
+    "company_number": "16509450",
+    "title": "TKS STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "35-37 High Street, Polegate, England, BN26 5AB",
+    "date_of_creation": "2025-06-10"
+  },
+  {
+    "company_number": "13699413",
+    "title": "TK STORES (PVT) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 10, Victoria Apartments, 167a-170, Kings Street, Great Yarmouth, England, NR30 2PA",
+    "date_of_creation": "2021-10-22"
+  },
+  {
+    "company_number": "14350213",
+    "title": "RN BUILDERS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Stonegate Road, Bradford, England, BD10 8BU",
+    "date_of_creation": "2022-09-12"
+  },
+  {
+    "company_number": "13476576",
+    "title": "TK SHOPS & STORES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "170 Abbey Hills Road, Oldhum, United Kingdom, OL8 2DQ",
+    "date_of_creation": "2021-06-25"
+  },
+  {
+    "company_number": "05688216",
+    "title": "TKC RETAIL STORES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "The Rear Buffer Depot Badminton Road, Acton Turville, Badminton, Avon, GL9 1HE",
+    "date_of_creation": "2006-01-26"
+  },
+  {
+    "company_number": "03026299",
+    "title": "TJX EUROPE BUYING (DEUTSCHLAND) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-02-24"
+  },
+  {
+    "company_number": "03094829",
+    "title": "TJX EUROPE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-08-18"
+  },
+  {
+    "company_number": "03094828",
+    "title": "TJX UK",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-08-18"
+  },
+  {
+    "company_number": "14231324",
+    "title": "A&K MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "3 Salcombe Drive, Glenfield, Leicester, England, LE3 8AG",
+    "date_of_creation": "2022-07-13"
+  },
+  {
+    "company_number": "15886570",
+    "title": "APPLE PRO MAXX LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "18 Maclaren Drive, Manchester, England, M8 4HB",
+    "date_of_creation": "2024-08-08"
+  },
+  {
+    "company_number": "13391178",
+    "title": "ARNOLD ARMSTRONG LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 4, 113, King Lane Leeds King Lane, Leeds, England, LS17 5BP",
+    "date_of_creation": "2021-05-12"
+  },
+  {
+    "company_number": "11843079",
+    "title": "AT MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "3 Chester Street, London, England, SW1X 7BB",
+    "date_of_creation": "2019-02-22"
+  },
+  {
+    "company_number": "15864456",
+    "title": "AUTO MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Beldham House, Parr Road, Stanmore, England, HA7 1NP",
+    "date_of_creation": "2024-07-29"
+  },
+  {
+    "company_number": "15996108",
+    "title": "BLACK MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "3a Westfield Road, Birmingham, United Kingdom, B15 3XA",
+    "date_of_creation": "2024-10-03"
+  },
+  {
+    "company_number": "02774693",
+    "title": "TK MAXX",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1992-12-17"
+  },
+  {
+    "company_number": "09156201",
+    "title": "THE TK MAXX AND HOMESENSE FOUNDATION",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "2014-07-31"
+  },
+  {
+    "company_number": "13720629",
+    "title": "13720629 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "50 Clarendon Road, Watford, England, WD17 1TX",
+    "date_of_creation": "2021-11-03"
+  },
+  {
+    "company_number": "13329894",
+    "title": "TKYS MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Elite House, 70 Warwick Street, Birmingham, England, B12 0NL",
+    "date_of_creation": "2021-04-12"
+  },
+  {
+    "company_number": "16656242",
+    "title": "LY MAXX RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "16 Mill Lane, Cheshunt, Waltham Cross, England, EN8 0JH",
+    "date_of_creation": "2025-08-18"
+  },
+  {
+    "company_number": "12920549",
+    "title": "MAXXI RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "137 Keppoch Street, Cardiff, Wales, CF24 3JU",
+    "date_of_creation": "2020-10-01"
+  },
+  {
+    "company_number": "11255497",
+    "title": "MAXX RETAIL SOLUTIONS EUROPE LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "185 Park Street 5th Floor, 185 Park Street, London, United Kingdom, SE1 9DY",
+    "date_of_creation": "2018-03-14"
+  },
+  {
+    "company_number": "09506205",
+    "title": "MAXX RETAIL LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "8 Shaw Park Business Village Shaw Park Business Village, Shaw Road, Wolverhampton, England, WV10 9LE",
+    "date_of_creation": "2015-03-24"
+  },
+  {
+    "company_number": "16633242",
+    "title": "TKG RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "22 Donaldson Drive, Peterborough, England, PE4 7XH",
+    "date_of_creation": "2025-08-06"
+  },
+  {
+    "company_number": "15250258",
+    "title": "TKK RETAIL LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "128 City Road, London, United Kingdom, EC1V 2NX",
+    "date_of_creation": "2023-10-31"
+  },
+  {
+    "company_number": "09840297",
+    "title": "TK MAG RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "56 Yeading Lane, Hayes, Middlesex, United Kingdom, UB4 0EX",
+    "date_of_creation": "2015-10-26"
+  },
+  {
+    "company_number": "SC452287",
+    "title": "TK RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "113 Mid Street, Fraserburgh, AB43 9JP",
+    "date_of_creation": "2013-06-13"
+  },
+  {
+    "company_number": "13571108",
+    "title": "TK RETAILER LTD",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "Suite 4, Second Floor, Aus Bore House, 19-25 Manchester Road, Wilmslow, Cheshire, SK9 1BQ",
+    "date_of_creation": "2021-08-17"
+  },
+  {
+    "company_number": "17381417",
+    "title": "TK RETAIL INVESTMENTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "50 Old Park Road South, Enfield, England, EN2 7DB",
+    "date_of_creation": "2026-08-04"
+  },
+  {
+    "company_number": "06010117",
+    "title": "TK RETAIL PROPERTY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "37/38 South Molton Street London South Molton Street, London, England, W1K 5RL",
+    "date_of_creation": "2006-11-27"
+  },
+  {
+    "company_number": "15381922",
+    "title": "TKT RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "19 The Croft, Wembley, United Kingdom, HA0 3EQ",
+    "date_of_creation": "2024-01-02"
+  },
+  {
+    "company_number": "12710397",
+    "title": "TKS RETAIL LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "47 Eldon Road, London, United Kingdom, N22 5DX",
+    "date_of_creation": "2020-07-01"
+  },
+  {
+    "company_number": "13920508",
+    "title": "TK RETAIL MERCHANT SERVICES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "7 Stable Croft, West Bromwich, West Midlands, United Kingdom, B71 3SQ",
+    "date_of_creation": "2022-02-16"
+  },
+  {
+    "company_number": "SC203912",
+    "title": "EDRINGTON EUROPEAN TRAVEL RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "100 Queen Street, Glasgow, Scotland, G1 3DN",
+    "date_of_creation": "2000-02-14"
+  },
+  {
+    "company_number": "13324935",
+    "title": "RETAIL TK LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "71-75 Shelton Street, London, Greater London, United Kingdom, WC2H 9JQ",
+    "date_of_creation": "2021-04-09"
+  },
+  {
+    "company_number": "02774693",
+    "title": "TK MAXX",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1992-12-17"
+  },
+  {
+    "company_number": "09156201",
+    "title": "THE TK MAXX AND HOMESENSE FOUNDATION",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "2014-07-31"
+  },
+  {
+    "company_number": "13720629",
+    "title": "13720629 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "50 Clarendon Road, Watford, England, WD17 1TX",
+    "date_of_creation": "2021-11-03"
+  },
+  {
+    "company_number": "13329894",
+    "title": "TKYS MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Elite House, 70 Warwick Street, Birmingham, England, B12 0NL",
+    "date_of_creation": "2021-04-12"
+  },
+  {
+    "company_number": "03026299",
+    "title": "TJX EUROPE BUYING (DEUTSCHLAND) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-02-24"
+  },
+  {
+    "company_number": "07346821",
+    "title": "TKG RESTAURANTS LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "66 Crest Drive, Enfield, England, EN3 5QE",
+    "date_of_creation": "2010-08-16"
+  },
+  {
+    "company_number": "03094829",
+    "title": "TJX EUROPE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-08-18"
+  },
+  {
+    "company_number": "03094828",
+    "title": "TJX UK",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-08-18"
+  },
+  {
+    "company_number": "14231324",
+    "title": "A&K MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "3 Salcombe Drive, Glenfield, Leicester, England, LE3 8AG",
+    "date_of_creation": "2022-07-13"
+  },
+  {
+    "company_number": "15886570",
+    "title": "APPLE PRO MAXX LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "18 Maclaren Drive, Manchester, England, M8 4HB",
+    "date_of_creation": "2024-08-08"
+  },
+  {
+    "company_number": "13391178",
+    "title": "ARNOLD ARMSTRONG LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 4, 113, King Lane Leeds King Lane, Leeds, England, LS17 5BP",
+    "date_of_creation": "2021-05-12"
+  },
+  {
+    "company_number": "11843079",
+    "title": "AT MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "3 Chester Street, London, England, SW1X 7BB",
+    "date_of_creation": "2019-02-22"
+  },
+  {
+    "company_number": "15864456",
+    "title": "AUTO MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Beldham House, Parr Road, Stanmore, England, HA7 1NP",
+    "date_of_creation": "2024-07-29"
+  },
+  {
+    "company_number": "15996108",
+    "title": "BLACK MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "3a Westfield Road, Birmingham, United Kingdom, B15 3XA",
+    "date_of_creation": "2024-10-03"
+  },
+  {
+    "company_number": "16831285",
+    "title": "BLUE STONE MAXX (BSM) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "71-75 Shelton Street, Covent Garden, London, United Kingdom, WC2H 9JQ",
+    "date_of_creation": "2025-11-04"
+  },
+  {
+    "company_number": "12962576",
+    "title": "CAPTAIN MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "21 Hamilton Drive, Tividale, Oldbury, England, B69 3JS",
+    "date_of_creation": "2020-10-20"
+  },
+  {
+    "company_number": "15754230",
+    "title": "DR MAXX NUTRITION LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "79 College Road, Worqcompany, D#73, Harrow, United Kingdom, HA1 1BD",
+    "date_of_creation": "2024-06-01"
+  },
+  {
+    "company_number": "11280499",
+    "title": "ECO MAXX LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "6th Floor, Amp House, Dingwall Road, Croydon, Surrey, United Kingdom, CR0 2LX",
+    "date_of_creation": "2018-03-28"
+  },
+  {
+    "company_number": "15551135",
+    "title": "EUROPA MAXXI LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "25 Horsegate Gardens, Chatteris, England, PE16 6NH",
+    "date_of_creation": "2024-03-09"
+  },
+  {
+    "company_number": "16527195",
+    "title": "FASHION MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office 77 60 Tottenham Court Road, Fitzrovia, London, United Kingdom, W1T 2EW",
+    "date_of_creation": "2025-06-18"
+  },
+  {
+    "company_number": "02774693",
+    "title": "TK MAXX",
+    "company_status": "active",
+    "company_type": "private-unlimited",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1992-12-17"
+  },
+  {
+    "company_number": "09156201",
+    "title": "THE TK MAXX AND HOMESENSE FOUNDATION",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "2014-07-31"
+  },
+  {
+    "company_number": "13720629",
+    "title": "13720629 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "50 Clarendon Road, Watford, England, WD17 1TX",
+    "date_of_creation": "2021-11-03"
+  },
+  {
+    "company_number": "13329894",
+    "title": "TKYS MAXX LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Elite House, 70 Warwick Street, Birmingham, England, B12 0NL",
+    "date_of_creation": "2021-04-12"
+  },
+  {
+    "company_number": "03026299",
+    "title": "TJX EUROPE BUYING (DEUTSCHLAND) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "73 Clarendon Road, Watford, Hertfordshire, United Kingdom, WD17 1TX",
+    "date_of_creation": "1995-02-24"
+  },
+  {
+    "company_number": "SC865478",
+    "title": "MAXXAM V SC UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "39 B Summerfield Terrace, Aberdeen, Scotland, AB24 5JE",
+    "date_of_creation": "2025-10-07"
+  },
+  {
+    "company_number": "12303406",
+    "title": "MAXXAM-V UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "45 Park Grove, London, England, E15 3QT",
+    "date_of_creation": "2019-11-07"
+  },
+  {
+    "company_number": "17059426",
+    "title": "MAXXCON UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Grange Court, Old Ruislip Road, Northolt, United Kingdom, UB5 6QH",
+    "date_of_creation": "2026-02-27"
+  },
+  {
+    "company_number": "07643905",
+    "title": "MAXXER UK LTD.",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Westgate Chambers, Staple Gardens, Winchester, Hampshire, England, SO23 8SR",
+    "date_of_creation": "2011-05-23"
+  },
+  {
+    "company_number": "12857915",
+    "title": "MAXX FIGHT UK LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "51 Front Street, Tynemouth, North Shields, England, NE30 4BX",
+    "date_of_creation": "2020-09-04"
+  },
+  {
+    "company_number": "08373870",
+    "title": "MAXXIA (UK) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "One St Peter's Square, Manchester, United Kingdom, M2 3DE",
+    "date_of_creation": "2013-01-24"
+  },
+  {
+    "company_number": "16292809",
+    "title": "MAXXI BRANDS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "14 Netherton Road, Manchester, England, M14 7FN",
+    "date_of_creation": "2025-03-05"
+  },
+  {
+    "company_number": "16807430",
+    "title": "MAXXISAVER UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Pinella House, Unit 10 Fieldings Road, Hertfordshire, United Kingdom, EN8 9TL",
+    "date_of_creation": "2025-10-24"
+  },
+  {
+    "company_number": "01205689",
+    "title": "MAXXIS INTERNATIONAL (UK) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Carr Road, Felixstowe, Suffolk, IP11 3RX",
+    "date_of_creation": "1975-04-02"
+  },
+  {
+    "company_number": "08510637",
+    "title": "MAXXI UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Clarence House, 35 Clarence Street, Market Harborough, Leicestershire, LE16 7NE",
+    "date_of_creation": "2013-04-30"
+  },
+  {
+    "company_number": "08382168",
+    "title": "MAXXTON UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Albany House, Claremont Lane, Esher, Surrey, England, KT10 9FQ",
+    "date_of_creation": "2013-01-30"
+  },
+  {
+    "company_number": "13555915",
+    "title": "MAXXTRADER SYSTEMS UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "5th Floor York House, 23 Kingsway, London, United Kingdom, WC2B 6UJ",
+    "date_of_creation": "2021-08-09"
+  },
+  {
+    "company_number": "14247820",
+    "title": "MAXX UK HOLDINGS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "233 High Street, London, Greater London, England, W3 9BY",
+    "date_of_creation": "2022-07-21"
+  },
+  {
+    "company_number": "SC768780",
+    "title": "MAXX-V UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "39 Summerfield Terrace, Aberdeen, Scotland, AB24 5JE",
+    "date_of_creation": "2023-05-10"
+  },
+  {
+    "company_number": "13089546",
+    "title": "UK MAXX LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "71 Ashgrove Road, Ilford, England, IG3 9XF",
+    "date_of_creation": "2020-12-18"
+  }
+]

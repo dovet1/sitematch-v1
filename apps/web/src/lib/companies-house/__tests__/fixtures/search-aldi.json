@@ -1,0 +1,802 @@
+[
+  {
+    "company_number": "02333320",
+    "title": "ALDI LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1989-01-09"
+  },
+  {
+    "company_number": "BR026552",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed",
+    "company_type": "uk-establishment",
+    "address_snippet": "Aldi Uk National Head Office And Atherstone Distribution Centre, Atherstone, Holly Lane, CV9 2SQ",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "FC041434",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "36-40 Mintarder Strasse, Mulheim An Der Ruhr, 45481, Germany",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "04272661",
+    "title": "ALDI JD LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2001-08-17"
+  },
+  {
+    "company_number": "05042237",
+    "title": "ALDI JD PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c, Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2004-02-12"
+  },
+  {
+    "company_number": "12039490",
+    "title": "ALDI JD RESIDENTIAL PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "12 Mayfield Road, London, England, W3 9HQ",
+    "date_of_creation": "2019-06-07"
+  },
+  {
+    "company_number": "16972607",
+    "title": "ALDI PLUMBING AND HEATING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "197 Village Way, Beckenham, England, BR3 3NN",
+    "date_of_creation": "2026-01-19"
+  },
+  {
+    "company_number": "16858740",
+    "title": "ALDIS & CO CARPENTRY LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "149 Watling Street South, Church Stretton, United Kingdom, SY6 7BJ",
+    "date_of_creation": "2025-11-16"
+  },
+  {
+    "company_number": "11736662",
+    "title": "ALDIS & MAY LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1 Duck Corner, Hollesley, Woodbridge, Suffolk, United Kingdom, IP12 3QS",
+    "date_of_creation": "2018-12-20"
+  },
+  {
+    "company_number": "11871860",
+    "title": "ALDIS BUILDERS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "4 Firth Wood Avenue, Baildon, Shipley, England, BD17 5FA",
+    "date_of_creation": "2019-03-09"
+  },
+  {
+    "company_number": "14367468",
+    "title": "ALDIS BUSINESS CONSULTANCY LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "56 King Street, Leicester, England, LE1 6RL",
+    "date_of_creation": "2022-09-21"
+  },
+  {
+    "company_number": "12567662",
+    "title": "ALDIS CLOSE UPKEEP COMPANY LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "Pinewood, Norwich Road, Cromer, England, NR27 0HG",
+    "date_of_creation": "2020-04-22"
+  },
+  {
+    "company_number": "15999353",
+    "title": "ALDIS CONSTRUCTION LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "89 Ash Grove, London, England, N13 5AW",
+    "date_of_creation": "2024-10-04"
+  },
+  {
+    "company_number": "17229111",
+    "title": "ALDIS HOUSE FREEHOLD MANAGEMENT CO. LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1 Aldis House, 15 Green Lane, Northwood, United Kingdom, HA6 2BW",
+    "date_of_creation": "2026-05-19"
+  },
+  {
+    "company_number": "08046456",
+    "title": "ALDIS INVESTMENTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Third Floor, 20 Old Bailey, London, EC4M 7AN",
+    "date_of_creation": "2012-04-26"
+  },
+  {
+    "company_number": "09033105",
+    "title": "ALDIS LAW LIMITED",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "2nd Floor, Shaw House, 3 Tunsgate, Guildford, Surrey, GU1 3QT",
+    "date_of_creation": "2014-05-09"
+  },
+  {
+    "company_number": "17131431",
+    "title": "ALDIS MECHANICAL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Systems House Rhs Office 4, 1st Floor, 5 Horndon Industrial Park, West Horndon, United Kingdom, CM13 3XL",
+    "date_of_creation": "2026-04-01"
+  },
+  {
+    "company_number": "04382617",
+    "title": "ALDIS MOTORS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Aldis Motors Aldis Garage, 8 Stone Hill Way, Cromer, Norfolk, England, NR27 9JW",
+    "date_of_creation": "2002-02-27"
+  },
+  {
+    "company_number": "00407004",
+    "title": "ALDIS OF BARKING LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Orbital House, 20 Eastern Road, Romford, Essex, United Kingdom, RM1 3PJ",
+    "date_of_creation": "1946-03-27"
+  },
+  {
+    "company_number": "11622574",
+    "title": "ALDIS SUPPLY & SUPPORT SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "14 De Quincey Road, London, United Kingdom, N17 7DL",
+    "date_of_creation": "2018-10-15"
+  },
+  {
+    "company_number": "02321869",
+    "title": "ALDI STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1988-11-25"
+  },
+  {
+    "company_number": "NF003489",
+    "title": "ALDI STORES LIMITED",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "38 Church Lane, Belfast, BT1 4QH",
+    "date_of_creation": "1999-10-06"
+  },
+  {
+    "company_number": "00905059",
+    "title": "ALDI STORES (ASHBY) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "14 Park Row, Nottingham, Nottinghamshire, NG1 6GR",
+    "date_of_creation": "1967-05-02"
+  },
+  {
+    "company_number": "06517417",
+    "title": "ALDI STORES GENERAL PARTNER LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, United Kingdom, CV9 2SQ",
+    "date_of_creation": "2008-02-28"
+  },
+  {
+    "company_number": "03142233",
+    "title": "ALDI STORES (HONITON) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1995-12-29"
+  },
+  {
+    "company_number": "02396225",
+    "title": "ALDI FOOD STORES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1989-06-19"
+  },
+  {
+    "company_number": "17320174",
+    "title": "ALAA ALDIN LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "13 Alderwood Road, West Cross, Swansea, Wales, SA3 5JD",
+    "date_of_creation": "2026-07-04"
+  },
+  {
+    "company_number": "02333320",
+    "title": "ALDI LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1989-01-09"
+  },
+  {
+    "company_number": "01738358",
+    "title": "ALDIA LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "1983-07-11"
+  },
+  {
+    "company_number": "BR026552",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed",
+    "company_type": "uk-establishment",
+    "address_snippet": "Aldi Uk National Head Office And Atherstone Distribution Centre, Atherstone, Holly Lane, CV9 2SQ",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "FC041434",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "36-40 Mintarder Strasse, Mulheim An Der Ruhr, 45481, Germany",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "08168276",
+    "title": "ALDIA (HOLDINGS) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "2012-08-03"
+  },
+  {
+    "company_number": "17166897",
+    "title": "ALDIANA YACHT LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "195a Kenton Road, Kenton, Harrow, United Kingdom, HA3 0HD",
+    "date_of_creation": "2026-04-19"
+  },
+  {
+    "company_number": "14701566",
+    "title": "ALDIAN GROUP LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 14701566 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2023-03-02"
+  },
+  {
+    "company_number": "08787254",
+    "title": "ALDIA TECHNOLOGIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office Gold, Building 7, Floor 5 566 Chiswick High Road, Chiswick Business Park, London, England, W4 5YG",
+    "date_of_creation": "2013-11-22"
+  },
+  {
+    "company_number": "07915882",
+    "title": "ALDICE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "82 St. John Street, London, EC1M 4JN",
+    "date_of_creation": "2012-01-19"
+  },
+  {
+    "company_number": "SC096116",
+    "title": "ALDIE DEVELOPMENTS LIMITED",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "Bruntsfield House, 6 Bruntsfield Terrace, Edinburgh, EH10 4EX",
+    "date_of_creation": "1985-11-26"
+  },
+  {
+    "company_number": "14536906",
+    "title": "ALDIEN LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "16 Little Grebe Road, Bishops Cleeve, Cheltenham, England, GL52 8HP",
+    "date_of_creation": "2022-12-12"
+  },
+  {
+    "company_number": "16661234",
+    "title": "ALDIHNAYN LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 16661234 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2025-08-20"
+  },
+  {
+    "company_number": "04272661",
+    "title": "ALDI JD LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2001-08-17"
+  },
+  {
+    "company_number": "LP012793",
+    "title": "ARLP LIMITED PARTNERSHIP",
+    "company_status": "active",
+    "company_type": "limited-partnership",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "2008-03-05"
+  },
+  {
+    "company_number": "17320174",
+    "title": "ALAA ALDIN LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "13 Alderwood Road, West Cross, Swansea, Wales, SA3 5JD",
+    "date_of_creation": "2026-07-04"
+  },
+  {
+    "company_number": "02333320",
+    "title": "ALDI LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1989-01-09"
+  },
+  {
+    "company_number": "01738358",
+    "title": "ALDIA LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "1983-07-11"
+  },
+  {
+    "company_number": "BR026552",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed",
+    "company_type": "uk-establishment",
+    "address_snippet": "Aldi Uk National Head Office And Atherstone Distribution Centre, Atherstone, Holly Lane, CV9 2SQ",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "FC041434",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "36-40 Mintarder Strasse, Mulheim An Der Ruhr, 45481, Germany",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "08168276",
+    "title": "ALDIA (HOLDINGS) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "2012-08-03"
+  },
+  {
+    "company_number": "17166897",
+    "title": "ALDIANA YACHT LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "195a Kenton Road, Kenton, Harrow, United Kingdom, HA3 0HD",
+    "date_of_creation": "2026-04-19"
+  },
+  {
+    "company_number": "14701566",
+    "title": "ALDIAN GROUP LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 14701566 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2023-03-02"
+  },
+  {
+    "company_number": "08787254",
+    "title": "ALDIA TECHNOLOGIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office Gold, Building 7, Floor 5 566 Chiswick High Road, Chiswick Business Park, London, England, W4 5YG",
+    "date_of_creation": "2013-11-22"
+  },
+  {
+    "company_number": "07915882",
+    "title": "ALDICE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "82 St. John Street, London, EC1M 4JN",
+    "date_of_creation": "2012-01-19"
+  },
+  {
+    "company_number": "SC096116",
+    "title": "ALDIE DEVELOPMENTS LIMITED",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "Bruntsfield House, 6 Bruntsfield Terrace, Edinburgh, EH10 4EX",
+    "date_of_creation": "1985-11-26"
+  },
+  {
+    "company_number": "14536906",
+    "title": "ALDIEN LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "16 Little Grebe Road, Bishops Cleeve, Cheltenham, England, GL52 8HP",
+    "date_of_creation": "2022-12-12"
+  },
+  {
+    "company_number": "16661234",
+    "title": "ALDIHNAYN LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 16661234 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2025-08-20"
+  },
+  {
+    "company_number": "04272661",
+    "title": "ALDI JD LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2001-08-17"
+  },
+  {
+    "company_number": "05042237",
+    "title": "ALDI JD PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c, Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2004-02-12"
+  },
+  {
+    "company_number": "12039490",
+    "title": "ALDI JD RESIDENTIAL PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "12 Mayfield Road, London, England, W3 9HQ",
+    "date_of_creation": "2019-06-07"
+  },
+  {
+    "company_number": "17027999",
+    "title": "ALDIK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "86-88 Woodgrange Road, London, England, E7 0EW",
+    "date_of_creation": "2026-02-11"
+  },
+  {
+    "company_number": "16434060",
+    "title": "ALDILA PICTURES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Apartment 9 Apartment 9, 214 Bermondsey Street, London, United Kingdom, SE1 3TQ",
+    "date_of_creation": "2025-05-07"
+  },
+  {
+    "company_number": "13513609",
+    "title": "ALDIMASHQI (KENSINGTON) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "168 Kensington High Street, London, England, W8 7RG",
+    "date_of_creation": "2021-07-15"
+  },
+  {
+    "company_number": "17320174",
+    "title": "ALAA ALDIN LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "13 Alderwood Road, West Cross, Swansea, Wales, SA3 5JD",
+    "date_of_creation": "2026-07-04"
+  },
+  {
+    "company_number": "02333320",
+    "title": "ALDI LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1989-01-09"
+  },
+  {
+    "company_number": "01738358",
+    "title": "ALDIA LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "1983-07-11"
+  },
+  {
+    "company_number": "BR026552",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed",
+    "company_type": "uk-establishment",
+    "address_snippet": "Aldi Uk National Head Office And Atherstone Distribution Centre, Atherstone, Holly Lane, CV9 2SQ",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "FC041434",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "36-40 Mintarder Strasse, Mulheim An Der Ruhr, 45481, Germany",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "08168276",
+    "title": "ALDIA (HOLDINGS) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "2012-08-03"
+  },
+  {
+    "company_number": "17166897",
+    "title": "ALDIANA YACHT LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "195a Kenton Road, Kenton, Harrow, United Kingdom, HA3 0HD",
+    "date_of_creation": "2026-04-19"
+  },
+  {
+    "company_number": "14701566",
+    "title": "ALDIAN GROUP LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 14701566 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2023-03-02"
+  },
+  {
+    "company_number": "08787254",
+    "title": "ALDIA TECHNOLOGIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office Gold, Building 7, Floor 5 566 Chiswick High Road, Chiswick Business Park, London, England, W4 5YG",
+    "date_of_creation": "2013-11-22"
+  },
+  {
+    "company_number": "07915882",
+    "title": "ALDICE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "82 St. John Street, London, EC1M 4JN",
+    "date_of_creation": "2012-01-19"
+  },
+  {
+    "company_number": "SC096116",
+    "title": "ALDIE DEVELOPMENTS LIMITED",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "Bruntsfield House, 6 Bruntsfield Terrace, Edinburgh, EH10 4EX",
+    "date_of_creation": "1985-11-26"
+  },
+  {
+    "company_number": "14536906",
+    "title": "ALDIEN LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "16 Little Grebe Road, Bishops Cleeve, Cheltenham, England, GL52 8HP",
+    "date_of_creation": "2022-12-12"
+  },
+  {
+    "company_number": "16661234",
+    "title": "ALDIHNAYN LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 16661234 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2025-08-20"
+  },
+  {
+    "company_number": "04272661",
+    "title": "ALDI JD LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2001-08-17"
+  },
+  {
+    "company_number": "05042237",
+    "title": "ALDI JD PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c, Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2004-02-12"
+  },
+  {
+    "company_number": "12039490",
+    "title": "ALDI JD RESIDENTIAL PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "12 Mayfield Road, London, England, W3 9HQ",
+    "date_of_creation": "2019-06-07"
+  },
+  {
+    "company_number": "17027999",
+    "title": "ALDIK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "86-88 Woodgrange Road, London, England, E7 0EW",
+    "date_of_creation": "2026-02-11"
+  },
+  {
+    "company_number": "16434060",
+    "title": "ALDILA PICTURES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Apartment 9 Apartment 9, 214 Bermondsey Street, London, United Kingdom, SE1 3TQ",
+    "date_of_creation": "2025-05-07"
+  },
+  {
+    "company_number": "13513609",
+    "title": "ALDIMASHQI (KENSINGTON) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "168 Kensington High Street, London, England, W8 7RG",
+    "date_of_creation": "2021-07-15"
+  },
+  {
+    "company_number": "10781964",
+    "title": "ALDIMER LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "12 Market Place Flat 3, London, England, W3 6QS",
+    "date_of_creation": "2017-05-22"
+  },
+  {
+    "company_number": "04331577",
+    "title": "ALDINE SHIPPING (UK) LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "5th Floor Portman House, 2 Portman Street, London, W1H 6DU",
+    "date_of_creation": "2001-11-29"
+  },
+  {
+    "company_number": "11389843",
+    "title": "ALDIFAIQ COMPANY UK LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Flat B, 122 Camden Road, London, United Kingdom, NW1 9EE",
+    "date_of_creation": "2018-05-31"
+  },
+  {
+    "company_number": "11235120",
+    "title": "ALDIFAIG COMPANY UK LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "122 Flat B, 122 Camden Road, London, Great London, United Kingdom, NW1 9EE",
+    "date_of_creation": "2018-03-05"
+  },
+  {
+    "company_number": "17320174",
+    "title": "ALAA ALDIN LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "13 Alderwood Road, West Cross, Swansea, Wales, SA3 5JD",
+    "date_of_creation": "2026-07-04"
+  },
+  {
+    "company_number": "02333320",
+    "title": "ALDI LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Holly Lane, Atherstone, Warwickshire, CV9 2SQ",
+    "date_of_creation": "1989-01-09"
+  },
+  {
+    "company_number": "01738358",
+    "title": "ALDIA LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "1983-07-11"
+  },
+  {
+    "company_number": "BR026552",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed",
+    "company_type": "uk-establishment",
+    "address_snippet": "Aldi Uk National Head Office And Atherstone Distribution Centre, Atherstone, Holly Lane, CV9 2SQ",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "FC041434",
+    "title": "ALDI AHEAD GMBH",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "36-40 Mintarder Strasse, Mulheim An Der Ruhr, 45481, Germany",
+    "date_of_creation": "2022-01-01"
+  },
+  {
+    "company_number": "08168276",
+    "title": "ALDIA (HOLDINGS) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Queen Anne House, 15 Thames Street, Hampton, England, TW12 2EW",
+    "date_of_creation": "2012-08-03"
+  },
+  {
+    "company_number": "17166897",
+    "title": "ALDIANA YACHT LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "195a Kenton Road, Kenton, Harrow, United Kingdom, HA3 0HD",
+    "date_of_creation": "2026-04-19"
+  },
+  {
+    "company_number": "14701566",
+    "title": "ALDIAN GROUP LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 14701566 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2023-03-02"
+  },
+  {
+    "company_number": "08787254",
+    "title": "ALDIA TECHNOLOGIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office Gold, Building 7, Floor 5 566 Chiswick High Road, Chiswick Business Park, London, England, W4 5YG",
+    "date_of_creation": "2013-11-22"
+  },
+  {
+    "company_number": "07915882",
+    "title": "ALDICE LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "82 St. John Street, London, EC1M 4JN",
+    "date_of_creation": "2012-01-19"
+  },
+  {
+    "company_number": "SC096116",
+    "title": "ALDIE DEVELOPMENTS LIMITED",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "Bruntsfield House, 6 Bruntsfield Terrace, Edinburgh, EH10 4EX",
+    "date_of_creation": "1985-11-26"
+  },
+  {
+    "company_number": "14536906",
+    "title": "ALDIEN LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "16 Little Grebe Road, Bishops Cleeve, Cheltenham, England, GL52 8HP",
+    "date_of_creation": "2022-12-12"
+  },
+  {
+    "company_number": "16661234",
+    "title": "ALDIHNAYN LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "4385, 16661234 - COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2025-08-20"
+  },
+  {
+    "company_number": "04272661",
+    "title": "ALDI JD LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2001-08-17"
+  },
+  {
+    "company_number": "05042237",
+    "title": "ALDI JD PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 1c, Fairview Estate, Acton Lane, London, NW10 7PB",
+    "date_of_creation": "2004-02-12"
+  },
+  {
+    "company_number": "12039490",
+    "title": "ALDI JD RESIDENTIAL PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "12 Mayfield Road, London, England, W3 9HQ",
+    "date_of_creation": "2019-06-07"
+  },
+  {
+    "company_number": "17027999",
+    "title": "ALDIK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "86-88 Woodgrange Road, London, England, E7 0EW",
+    "date_of_creation": "2026-02-11"
+  }
+]

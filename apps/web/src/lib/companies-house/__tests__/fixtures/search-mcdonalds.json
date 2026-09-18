@@ -1,0 +1,799 @@
+[
+  {
+    "company_number": "SC598200",
+    "title": "MCDONALD'S LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Westlea Perth Road, Abernethy, Perth, United Kingdom, PH2 9LW",
+    "date_of_creation": "2018-05-25"
+  },
+  {
+    "company_number": "12978156",
+    "title": "MCDONALD'S BADMINTON ACADEMY LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "2 Foxleaze, Cricklade, Swindon, England, SN6 6ND",
+    "date_of_creation": "2020-10-27"
+  },
+  {
+    "company_number": "NI732758",
+    "title": "MCDONALD SCAFFOLDING LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "39 Carrigart Manor, Tullygally, Craigavon, Northern Ireland, BT65 5ES",
+    "date_of_creation": "2025-08-29"
+  },
+  {
+    "company_number": "SC094717",
+    "title": "MCDONALD SCAFFOLDING (SERVICES) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Rosskeen Old Manse, Invergordon, Ross-Shire, United Kingdom, IV18 0PR",
+    "date_of_creation": "1985-08-14"
+  },
+  {
+    "company_number": "15904667",
+    "title": "MCDONALDS CHILDREN'S HOME LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "148 Cranbrook Road, Ilford, Essex, England, IG1 4LZ",
+    "date_of_creation": "2024-08-19"
+  },
+  {
+    "company_number": "08180586",
+    "title": "MCDONALDS CONSULTANTS LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Suite 500 Unit 2, 94a Wycliffe Road, Northampton, NN1 5JF",
+    "date_of_creation": "2012-08-15"
+  },
+  {
+    "company_number": "02986139",
+    "title": "MCDONALD'S COSTA LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Roadchef House, Norton Canes Msa, Betty's Lane, Norton Canes, Cannock Staffordshire, WS11 9UX",
+    "date_of_creation": "1994-11-02"
+  },
+  {
+    "company_number": "07644534",
+    "title": "MCDONALD SERVICES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "65 Bell Road, Sittingbourne, England, ME10 4DS",
+    "date_of_creation": "2011-05-24"
+  },
+  {
+    "company_number": "08797898",
+    "title": "MCDONALDS FLOWER HOUSE LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Artisans' House, 7 Queensbridge, Northampton, Northamptonshire, United Kingdom, NN4 7BF",
+    "date_of_creation": "2013-12-02"
+  },
+  {
+    "company_number": "OE016227",
+    "title": "MCDONALD'S GLOBAL MARKETS LLC",
+    "company_status": "registered",
+    "company_type": "registered-overseas-entity",
+    "address_snippet": "251 Little Falls Drive, Wilmington, New Castle County, Delaware, United States, 19808",
+    "date_of_creation": "2023-01-21"
+  },
+  {
+    "company_number": "10699392",
+    "title": "MCDONALD SIMMONDS CONSULTING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "22 Millbank, Northampton, United Kingdom, NN3 5HJ",
+    "date_of_creation": "2017-03-30"
+  },
+  {
+    "company_number": "CS004769",
+    "title": "MCDONALD'S IN THE COMMUNITY FOUNDATION",
+    "company_type": "scottish-charitable-incorporated-organisation"
+  },
+  {
+    "company_number": "13777445",
+    "title": "MCDONALD SIPP TRUSTEES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1 Lindrick Way, Barlborough, Chesterfield, United Kingdom, S43 4XE",
+    "date_of_creation": "2021-12-02"
+  },
+  {
+    "company_number": "02923382",
+    "title": "MCDONALD'S MARKETING CO-OPERATIVE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "11-59 High Road, East Finchley, London, N2 8AW",
+    "date_of_creation": "1994-04-27"
+  },
+  {
+    "company_number": "06976090",
+    "title": "MCDONALDSPHARM LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "C/O Cmb Partnership Limited 7 Wey Court, Mary Road, Guildford, United Kingdom, GU1 4QU",
+    "date_of_creation": "2009-07-29"
+  },
+  {
+    "company_number": "16982717",
+    "title": "MCDONALDS PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "St James' Hall, Mill Road, Lancing, West Sussex, England, BN15 0PT",
+    "date_of_creation": "2026-01-23"
+  },
+  {
+    "company_number": "OC303157",
+    "title": "MCDONALD'S REAL ESTATE LLP",
+    "company_status": "active",
+    "company_type": "llp",
+    "address_snippet": "11-59 High Road, East Finchley, London, N2 8AW",
+    "date_of_creation": "2002-10-11"
+  },
+  {
+    "company_number": "04459056",
+    "title": "MCDONALD'S REAL ESTATE COMPANY NO.1 LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11-59 High Road, East Finchley, London, N2 8AW",
+    "date_of_creation": "2002-06-12"
+  },
+  {
+    "company_number": "04459588",
+    "title": "MCDONALD'S REAL ESTATE COMPANY NO.2 LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11-59 High Road, East Finchley, London, N2 8AW",
+    "date_of_creation": "2002-06-12"
+  },
+  {
+    "company_number": "SC202572",
+    "title": "MCDONALDS RESIDENTIAL CARE HOMES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1 Cambuslang Court, Glasgow, Scotland, G32 8FH",
+    "date_of_creation": "1999-12-22"
+  },
+  {
+    "company_number": "15230642",
+    "title": "AAA CONVENIENT STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "52 Corry Drive, London, England, SW9 8QT",
+    "date_of_creation": "2023-10-24"
+  },
+  {
+    "company_number": "17329275",
+    "title": "AA AND KK STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "407 Yardley Green Road, Bordesley Green, Birmingham, England, B9 5JJ",
+    "date_of_creation": "2026-07-08"
+  },
+  {
+    "company_number": "14665235",
+    "title": "AADHRI CONVENIENCE STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "18 Surrey Road, Norton, Stockton-On-Tees, England, TS20 2QZ",
+    "date_of_creation": "2023-02-15"
+  },
+  {
+    "company_number": "10308267",
+    "title": "A.A GENERAL STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "63 Ruskin Avenue, Manchester, United Kingdom, M14 4DG",
+    "date_of_creation": "2016-08-02"
+  },
+  {
+    "company_number": "16455837",
+    "title": "AAHMED M STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1560 Office 26 Highfield, Stratford Road, Hall Green, Birmingham, United Kingdom, B28 9HA",
+    "date_of_creation": "2025-05-18"
+  },
+  {
+    "company_number": "15531230",
+    "title": "AA INDUSTRY STORES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "167-169 Great Portland Street, London, England, W1W 5PF",
+    "date_of_creation": "2024-02-29"
+  },
+  {
+    "company_number": "16321154",
+    "title": "AAIRAH STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 15 Bradleigh Avenue, Grays, England, RM17 5UL",
+    "date_of_creation": "2025-03-17"
+  },
+  {
+    "company_number": "16383538",
+    "title": "A&A RETAIL STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "205 Edgware Road, London, England, NW9 6LP",
+    "date_of_creation": "2025-04-12"
+  },
+  {
+    "company_number": "SC788829",
+    "title": "A&A STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "33 Scotstoun Road, Cowie, Stirling, Stirlingshire, Scotland, FK7 7AL",
+    "date_of_creation": "2023-11-10"
+  },
+  {
+    "company_number": "11695771",
+    "title": "A & C STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "61 Froghall Road, Cheadle, Stoke-On-Trent, Stafforshire, United Kingdom, ST10 1JR",
+    "date_of_creation": "2018-11-26"
+  },
+  {
+    "company_number": "16150289",
+    "title": "A & D CONVENIENCE STORES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "167 Fosse Road South, Leicester, England, LE3 0FX",
+    "date_of_creation": "2024-12-23"
+  },
+  {
+    "company_number": "08880717",
+    "title": "A & D STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Office 10, Suite 1, Fourth Floor, Congress House, Lyon Road, Harrow, England, HA1 2EN",
+    "date_of_creation": "2014-02-06"
+  },
+  {
+    "company_number": "11127800",
+    "title": "A & D STORES RAVENSHEAD LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Bridge House, 9 - 13 Holbrook Lane, Coventry, United Kingdom, CV6 4AD",
+    "date_of_creation": "2017-12-29"
+  },
+  {
+    "company_number": "04439210",
+    "title": "A & E FURNITURE STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Capital House 272 Manchester Road, Droylsden, Manchester, M43 6PW",
+    "date_of_creation": "2002-05-15"
+  },
+  {
+    "company_number": "13774724",
+    "title": "A&G ONLINE STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "62 Bunyan Close, Norwich, Norwich, England, NR7 0UZ",
+    "date_of_creation": "2021-11-30"
+  },
+  {
+    "company_number": "16467912",
+    "title": "A&G STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Leecroft House, 56 Campo Lane, Sheffield, England, S1 2EG",
+    "date_of_creation": "2025-05-22"
+  },
+  {
+    "company_number": "11574387",
+    "title": "A & H STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "35 St. Saviours Road, Reading, England, RG1 6EJ",
+    "date_of_creation": "2018-09-18"
+  },
+  {
+    "company_number": "16818248",
+    "title": "A & I CONVENIENCE STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "462 Dudley Road, Birmingham, England, B18 4HF",
+    "date_of_creation": "2025-10-29"
+  },
+  {
+    "company_number": "11738154",
+    "title": "A & L CONVENIENCE STORES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "176 Thorns Road, Brierley Hill, England, DY5 2JY",
+    "date_of_creation": "2018-12-21"
+  },
+  {
+    "company_number": "04530637",
+    "title": "A. & L. STORES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "2 The Hornbeams, Little Oakley, Dovercourt, Essex, CO12 5NL",
+    "date_of_creation": "2002-09-10"
+  },
+  {
+    "company_number": "17130058",
+    "title": "AAAM RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "25 Kent Avenue, Slough, United Kingdom, SL1 3AB",
+    "date_of_creation": "2026-03-31"
+  },
+  {
+    "company_number": "SC613330",
+    "title": "AAA RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "211b Main Street, Bellshill, Scotland, ML4 1AJ",
+    "date_of_creation": "2018-11-12"
+  },
+  {
+    "company_number": "17298548",
+    "title": "AAA RETAIL LONDON LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "58 High Street, Pinner, United Kingdom, HA5 5PZ",
+    "date_of_creation": "2026-06-24"
+  },
+  {
+    "company_number": "12151225",
+    "title": "AAA RETAIL SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "209 The Heights, Northolt, England, UB5 4BX",
+    "date_of_creation": "2019-08-12"
+  },
+  {
+    "company_number": "SC876617",
+    "title": "AAAT RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "6 Barry Road, Carnoustie, United Kingdom, DD7 7QL",
+    "date_of_creation": "2026-01-26"
+  },
+  {
+    "company_number": "15915393",
+    "title": "AADHIRAN WHOLESALE LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "21, Grays Corner Ley Street, Ilford, England, IG2 7RQ",
+    "date_of_creation": "2024-08-23"
+  },
+  {
+    "company_number": "15536380",
+    "title": "AADHI RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "78 Station Road, Westbury, England, BA13 3JN",
+    "date_of_creation": "2024-03-02"
+  },
+  {
+    "company_number": "16669334",
+    "title": "AADHITYAN RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "111 Whitefoot Lane, Bromley, England, BR1 5SB",
+    "date_of_creation": "2025-08-24"
+  },
+  {
+    "company_number": "16716314",
+    "title": "AADHYA RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Falt 5 Deanborough House, Hawkhurst, United Kingdom, TN18 4JX",
+    "date_of_creation": "2025-09-15"
+  },
+  {
+    "company_number": "16273843",
+    "title": "AAD RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1 Darras Drive, North Shields, United Kingdom, NE29 8RW",
+    "date_of_creation": "2025-02-25"
+  },
+  {
+    "company_number": "14266556",
+    "title": "AADVIK RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "9 Highfield Avenue, Hanham, Bristol, United Kingdom, BS15 3RA",
+    "date_of_creation": "2022-08-01"
+  },
+  {
+    "company_number": "SC629415",
+    "title": "AADYA RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "201 Kingsknowe Road North, Edinburgh, Scotland, EH14 2ED",
+    "date_of_creation": "2019-05-02"
+  },
+  {
+    "company_number": "09058975",
+    "title": "AAE RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "38-40 Prior Deram Walk, Canley, Coventry, CV4 8FT",
+    "date_of_creation": "2014-05-28"
+  },
+  {
+    "company_number": "SC734233",
+    "title": "AAF RETAIL LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Nisa, 161 Foulford Road, Cowdenbeath, Fife, Scotland, KY4 9AU",
+    "date_of_creation": "2022-05-31"
+  },
+  {
+    "company_number": "16316606",
+    "title": "AAIRA RETAIL LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "108 Pilling Lane, Chorley, Lancashire, England, PR7 3EE",
+    "date_of_creation": "2025-03-14"
+  },
+  {
+    "company_number": "14530912",
+    "title": "AAJ RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "6 Wonersh Way, Sutton, Surrey, United Kingdom, SM2 7LX",
+    "date_of_creation": "2022-12-08"
+  },
+  {
+    "company_number": "14962572",
+    "title": "AAJ RETAIL TRADING LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "14 Priest Avenue, Canterbury, England, CT2 8PJ",
+    "date_of_creation": "2023-06-26"
+  },
+  {
+    "company_number": "15253746",
+    "title": "AAM RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "7 Blackfen Road, Sidcup, England, DA15 8QD",
+    "date_of_creation": "2023-11-01"
+  },
+  {
+    "company_number": "16857542",
+    "title": "A&AA RETAIL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "25 The Grove, London, England, NW11 9SJ",
+    "date_of_creation": "2025-11-14"
+  },
+  {
+    "company_number": "08124118",
+    "title": "A & A RETAIL LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "66 Nicoll Road, London, NW10 9AS",
+    "date_of_creation": "2012-06-29"
+  },
+  {
+    "company_number": "01002769",
+    "title": "MCDONALD'S RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11/59 High Road, East Finchley, London, N2 8AW",
+    "date_of_creation": "1971-02-18"
+  },
+  {
+    "company_number": "07052614",
+    "title": "MCDONALD'S RESTAURANTS PENSIONS TRUSTEE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "11-59 High Road, East Finchley, London, United Kingdom, N2 8AW",
+    "date_of_creation": "2009-10-21"
+  },
+  {
+    "company_number": "NF002994",
+    "title": "MCDONALDS RESTAURANTS LIMITED",
+    "company_status": "closed-on",
+    "company_type": "oversea-company",
+    "address_snippet": "C/O Carson Mcdowel Solicitors, Murray House, Murray Street, Belfast, BT1 6DN",
+    "date_of_creation": "1991-07-19"
+  },
+  {
+    "company_number": "NI704165",
+    "title": "A & A RESTAURANTS (2023) LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Office 1 Townsend Enterprise Park, Townsend Street, Belfast, Northern Ireland, BT13 2ES",
+    "date_of_creation": "2023-11-02"
+  },
+  {
+    "company_number": "09892898",
+    "title": "A & A THAI RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "8 St Mary's Street, Ely, Cambridgeshire, England, CB7 4ES",
+    "date_of_creation": "2015-11-27"
+  },
+  {
+    "company_number": "17208576",
+    "title": "A&B RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "37 Upland Road, Oldham, United Kingdom, OL8 1BA",
+    "date_of_creation": "2026-05-09"
+  },
+  {
+    "company_number": "10507850",
+    "title": "A & C RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "C/O Latest Consultancy Uk Ltd, 176, Franciscan Road, London, England, SW17 8HH",
+    "date_of_creation": "2016-12-02"
+  },
+  {
+    "company_number": "11041654",
+    "title": "A&G RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "4385, 11041654: COMPANIES HOUSE DEFAULT ADDRESS, Cardiff, CF14 8LH",
+    "date_of_creation": "2017-11-01"
+  },
+  {
+    "company_number": "09799363",
+    "title": "A&H RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "23 Tolpaide House Hotspur Street, London, United Kingdom, SE11 6TP",
+    "date_of_creation": "2015-09-29"
+  },
+  {
+    "company_number": "14695399",
+    "title": "A & J RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "La Petite Petanque, Cambridge Square Gardens, Southend On Sea, Essex, England, SS1 1EY",
+    "date_of_creation": "2023-02-28"
+  },
+  {
+    "company_number": "10301386",
+    "title": "A&K RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "145 Gosport Road, Fareham, Hampshire, England, PO16 0PZ",
+    "date_of_creation": "2016-07-28"
+  },
+  {
+    "company_number": "04437266",
+    "title": "A & L RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "The Accounting Centre Limited 736 High Road, North Finchley, London, United Kingdom, N12 9QD",
+    "date_of_creation": "2002-05-13"
+  },
+  {
+    "company_number": "SC585129",
+    "title": "A & R RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "283 Sauchiehall Street, Glasgow, Scotland, G2 3HQ",
+    "date_of_creation": "2018-01-09"
+  },
+  {
+    "company_number": "04289561",
+    "title": "A & S RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Mcdonald's Restaurant, Grove Lane, Smethwick, England, B66 2SF",
+    "date_of_creation": "2001-09-18"
+  },
+  {
+    "company_number": "16585362",
+    "title": "A & T RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "60 Noble Way, Solihull, United Kingdom, B90 4JF",
+    "date_of_creation": "2025-07-16"
+  },
+  {
+    "company_number": "09733440",
+    "title": "A & W RESTAURANTS LIMITED",
+    "company_status": "liquidation",
+    "company_type": "ltd",
+    "address_snippet": "3 The Courtyard Harris Business Park, Hanbury Road, Stoke Prior, Bromsgrove, B60 4DJ",
+    "date_of_creation": "2015-08-14"
+  },
+  {
+    "company_number": "17389670",
+    "title": "AATHRA RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Broad House, 1 The Broadway, Old Hatfield, Hertfordshire, England, AL9 5BG",
+    "date_of_creation": "2026-08-10"
+  },
+  {
+    "company_number": "12199359",
+    "title": "ABC RESTAURANTS LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "5 Dalebury Place, Hounslow, England, TW5 0DA",
+    "date_of_creation": "2019-09-10"
+  },
+  {
+    "company_number": "08517705",
+    "title": "ABERGAVENNY RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 17 Mill Street Ind Est, Abergavenny, NP7 5HE",
+    "date_of_creation": "2013-05-07"
+  },
+  {
+    "company_number": "SC047171",
+    "title": "A.B.G. (CONTINENTAL( RESTAURANTS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "4/5 Turnberry House 175 West George Street, Glasgow, Scotland, G2 2LB",
+    "date_of_creation": "1970-01-05"
+  },
+  {
+    "company_number": "10271908",
+    "title": "AAA ACCELERATORS GROUP UK LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "2nd Floor Arcadia House, 15 Forlease Road, Maidenhead, SL6 1RX",
+    "date_of_creation": "2016-07-11"
+  },
+  {
+    "company_number": "12854836",
+    "title": "AAA ADVANCED DRIVERS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "4 Clews Road, United Kingdom, Redditch, Worcestershire, United Kingdom, B98 7ST",
+    "date_of_creation": "2020-09-03"
+  },
+  {
+    "company_number": "10839299",
+    "title": "AAA & CO (UK) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "46 Sunningdale Avenue, Coventry, England, CV6 4BZ",
+    "date_of_creation": "2017-06-28"
+  },
+  {
+    "company_number": "09597546",
+    "title": "AAAA SERVICES (UK) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "142-143 Parrock Street, Gravesend, England, DA12 1EY",
+    "date_of_creation": "2015-05-19"
+  },
+  {
+    "company_number": "08709895",
+    "title": "AAA CARS (UK) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "132 Newhouse Crescent, Watford, WD25 7HY",
+    "date_of_creation": "2013-09-30"
+  },
+  {
+    "company_number": "05842589",
+    "title": "AA ACCOUNTANCY SERVICES (UK) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "North London Business Park Building 3, Office No:223, Oakleigh Road South, London, England, N11 1GN",
+    "date_of_creation": "2006-06-09"
+  },
+  {
+    "company_number": "06829142",
+    "title": "AA ACCOUNTANTS (UK) LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "66 Brook Road, Speedwell, Bristol, Avon, BS5 7TE",
+    "date_of_creation": "2009-02-24"
+  },
+  {
+    "company_number": "11937364",
+    "title": "AAA COFFEE SHOP UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "88 Lyndhurst Avenue, Liverpool, Merseyside, England, L18 8AR",
+    "date_of_creation": "2019-04-10"
+  },
+  {
+    "company_number": "08577994",
+    "title": "AAA FINANCIAL SERVICES (UK) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "225 Marsh Wall, Office 10, 3rd Floor , Angel House, London, England, E14 9FW",
+    "date_of_creation": "2013-06-20"
+  },
+  {
+    "company_number": "13679841",
+    "title": "AAA FURNITURE UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "9-11 Bradbury Street, Dewsbury, England, WF13 3AU",
+    "date_of_creation": "2021-10-14"
+  },
+  {
+    "company_number": "16818347",
+    "title": "AAAG UK HOLDCO LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Squire Patton Boggs (Uk) Llp (Ref: Csu), 19 Cornwall Street, Birmingham, England, B3 2DX",
+    "date_of_creation": "2025-10-29"
+  },
+  {
+    "company_number": "16138637",
+    "title": "AAA IMPEX (UK) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "318 Barking Road, London, England, E13 8HL",
+    "date_of_creation": "2024-12-16"
+  },
+  {
+    "company_number": "12881523",
+    "title": "AAA I SERVICES (UK) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "1a Victoria Road, London, England, E18 1LJ",
+    "date_of_creation": "2020-09-15"
+  },
+  {
+    "company_number": "17281887",
+    "title": "AAAMGROUP UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "145 Middleton Road, Morden, England, SM4 6RH",
+    "date_of_creation": "2026-06-18"
+  },
+  {
+    "company_number": "14327855",
+    "title": "AA&S BARGAINS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "91 Birchdene Drive, London, England, SE28 8RN",
+    "date_of_creation": "2022-08-31"
+  },
+  {
+    "company_number": "13392250",
+    "title": "AA & TRADERS UK LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "1035 Chadwell Heath High Road, Romford, England, RM6 4AU",
+    "date_of_creation": "2021-05-12"
+  },
+  {
+    "company_number": "07236259",
+    "title": "AA ANODISING UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Unit 8a, Snaygill Industrial Estate, Keighley Road, Skipton, North Yorkshire, United Kingdom, BD23 2QR",
+    "date_of_creation": "2010-04-27"
+  },
+  {
+    "company_number": "08843287",
+    "title": "AAA POLY UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Phoenix House, 2 Huddersfield Road, Stalybridge, England, SK15 2QA",
+    "date_of_creation": "2014-01-13"
+  },
+  {
+    "company_number": "08056442",
+    "title": "AAA PRIME SOURCE UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Knight Chadwick, 243 Elgin Avenue, London, England, W9 1NJ",
+    "date_of_creation": "2012-05-03"
+  },
+  {
+    "company_number": "15901643",
+    "title": "AAA PRODUCTIONS UK LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "31 Tankerton Road, Surbiton, England, KT6 7LF",
+    "date_of_creation": "2024-08-16"
+  }
+]

@@ -20,6 +20,7 @@ import type {
   BrandMatcherContact,
   BrandMatcherSite,
   RequirementEvidence,
+  TradingFacts,
 } from '../../types/brand-matcher'
 
 let seq = 0
@@ -222,6 +223,19 @@ const baseMatch = (over: Partial<BrandMatch>): BrandMatch => ({
   ...over,
 })
 
+const chFacts: TradingFacts = {
+  companyNumber: '00000001',
+  companyName: 'BRAND LIMITED',
+  status: 'Active',
+  accountsType: null,
+  accountsMadeUpTo: null,
+  accountsOverdue: false,
+  registeredOffice: null,
+  turnover: { status: 'unread' },
+  netAssets: { status: 'unread' },
+  fetchedAt: '2026-09-18T00:00:00.000Z',
+}
+
 describe('scoreMatch', () => {
   it('is the sum of the parts shown as pills', () => {
     const m = baseMatch({
@@ -238,8 +252,9 @@ describe('scoreMatch', () => {
   })
   it('never scores trading facts', () => {
     const facts = {
-      companyNumber: '1', status: 'Active', turnover: 1e10, netAssets: 1e9,
-      accountsNote: null, accountsMadeUpTo: null, smallCompanyExemption: false,
+      ...chFacts,
+      turnover: { status: 'filed' as const, value: 1e10 },
+      netAssets: { status: 'filed' as const, value: 1e9 },
     }
     expect(scoreMatch(baseMatch({ tradingFacts: facts })).score).toBe(scoreMatch(baseMatch({})).score)
   })
@@ -263,14 +278,15 @@ describe('buildPills', () => {
     expect(pills.find((p) => p.key === 'useClass')?.value).toBe('Class E')
     expect(pills.find((p) => p.key === 'locationType')).toMatchObject({ label: 'retail parks', value: 'Trades in 1', tone: 'green' })
   })
+  it('shows no turnover pill while figures are unread', () => {
+    const pills = buildPills(baseMatch({ tradingFacts: chFacts }), { useClass: 'E' })
+    expect(pills.find((p) => p.key === 'turnover')).toBeUndefined()
+  })
   it('colours a very near store red and turnover always neutral', () => {
     const pills = buildPills(
       baseMatch({
         nearest: { miles: 0.6, storeName: 'Greggs Headingley', town: 'Leeds' },
-        tradingFacts: {
-          companyNumber: '1', status: 'Active', turnover: null, netAssets: null,
-          accountsNote: null, accountsMadeUpTo: null, smallCompanyExemption: true,
-        },
+        tradingFacts: { ...chFacts, turnover: { status: 'not_published' } },
       }),
       { useClass: 'E' }
     )

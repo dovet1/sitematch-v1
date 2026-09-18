@@ -1,0 +1,802 @@
+[
+  {
+    "company_number": "00502851",
+    "title": "GREGGS PLC",
+    "company_status": "active",
+    "company_type": "plc",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1951-12-29"
+  },
+  {
+    "company_number": "SC702856",
+    "title": "GREGGS ACADEMIC SERVICES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Collynie Farm, Methlick, Ellon, Scotland, AB41 7EB",
+    "date_of_creation": "2021-06-29"
+  },
+  {
+    "company_number": "16546851",
+    "title": "GREGGS CARGO AND LOGISTICS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11 Cygnet Court Holly Lane, Smethwick, West Midlands, England, B66 1QQ",
+    "date_of_creation": "2025-06-27"
+  },
+  {
+    "company_number": "09888584",
+    "title": "GREGGS CARPENTRY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Warren Close, Brandon, England, IP27 0EE",
+    "date_of_creation": "2015-11-25"
+  },
+  {
+    "company_number": "11736174",
+    "title": "GREGGS GARDENING SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "75 Cautley Drive, Killinghall, Harrogate, England, HG3 2DJ",
+    "date_of_creation": "2018-12-20"
+  },
+  {
+    "company_number": "07457158",
+    "title": "GREGG'S GARDENS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Burbles Cottage Carr Bog Farm, Ridge Lane Silsden, Keighley, West Yorkshire, BD20 9JG",
+    "date_of_creation": "2010-12-01"
+  },
+  {
+    "company_number": "SC779227",
+    "title": "GREGG'S GRAPHICS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "27 North Bridge Street, Hawick, United Kingdom, TD9 9BD",
+    "date_of_creation": "2023-08-16"
+  },
+  {
+    "company_number": "00382128",
+    "title": "GREGGS (LEASING) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1943-08-09"
+  },
+  {
+    "company_number": "15530289",
+    "title": "GREGGS NO.1 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Business Suite, 1 Spring Pool, Warwick, England, CV34 4UP",
+    "date_of_creation": "2024-02-28"
+  },
+  {
+    "company_number": "07506736",
+    "title": "GREGGS 1978 PENSION SCHEME TRUSTEE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "Greggs House Quorum Business Park, Benton Lane, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2011-01-26"
+  },
+  {
+    "company_number": "16480334",
+    "title": "GREGGS PLASTERING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "320 Firecrest Court, Warrington, United Kingdom, WA1 1RG",
+    "date_of_creation": "2025-05-28"
+  },
+  {
+    "company_number": "00205042",
+    "title": "GREGGS PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1925-04-03"
+  },
+  {
+    "company_number": "NI034655",
+    "title": "GREGG'S QUAY MANAGEMENT COMPANY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Charles White (Ni) Ltd 561 Upper Newtownards Road, Belfast, Belfast, United Kingdom, BT4 3LP",
+    "date_of_creation": "1998-08-12"
+  },
+  {
+    "company_number": "15099836",
+    "title": "GREGG'S RELIABLE DISPATCH LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "29 Castlereagh Street, Sunderland, England, SR3 1HL",
+    "date_of_creation": "2023-08-28"
+  },
+  {
+    "company_number": "15376892",
+    "title": "GREGG'S TAILORED HANDS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "32b Willis Pearson Avenue, Bilston, England, WV14 8DA",
+    "date_of_creation": "2023-12-30"
+  },
+  {
+    "company_number": "17410015",
+    "title": "GREGGS TRAVEL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "54 Chairborough Road, High Wycombe, England, HP12 3HJ",
+    "date_of_creation": "2026-08-19"
+  },
+  {
+    "company_number": "11536315",
+    "title": "GREGGS TRUCKING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 2, Starkey House, 19 Linthorpe Avenue, Wembley, England, HA0 2FX",
+    "date_of_creation": "2018-08-24"
+  },
+  {
+    "company_number": "03475726",
+    "title": "GREGGS TRUSTEES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1997-12-03"
+  },
+  {
+    "company_number": "15027994",
+    "title": "GREGGS (CENTRAL) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "49 Bedford Street, London, England, WC2E 9HA",
+    "date_of_creation": "2023-07-25"
+  },
+  {
+    "company_number": "SC660044",
+    "title": "GREGG'S HOUSE LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Suite 14 98 Woodlands Road, Glasgow, Scotland, G3 6HB",
+    "date_of_creation": "2020-04-28"
+  },
+  {
+    "company_number": "00502851",
+    "title": "GREGGS PLC",
+    "company_status": "active",
+    "company_type": "plc",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1951-12-29"
+  },
+  {
+    "company_number": "SC702856",
+    "title": "GREGGS ACADEMIC SERVICES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Collynie Farm, Methlick, Ellon, Scotland, AB41 7EB",
+    "date_of_creation": "2021-06-29"
+  },
+  {
+    "company_number": "16546851",
+    "title": "GREGGS CARGO AND LOGISTICS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11 Cygnet Court Holly Lane, Smethwick, West Midlands, England, B66 1QQ",
+    "date_of_creation": "2025-06-27"
+  },
+  {
+    "company_number": "09888584",
+    "title": "GREGGS CARPENTRY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Warren Close, Brandon, England, IP27 0EE",
+    "date_of_creation": "2015-11-25"
+  },
+  {
+    "company_number": "13675794",
+    "title": "THE GREGGS FOUNDATION TRUSTEE",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "Greggs House, Q9 Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2021-10-13"
+  },
+  {
+    "company_number": "11736174",
+    "title": "GREGGS GARDENING SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "75 Cautley Drive, Killinghall, Harrogate, England, HG3 2DJ",
+    "date_of_creation": "2018-12-20"
+  },
+  {
+    "company_number": "07457158",
+    "title": "GREGG'S GARDENS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Burbles Cottage Carr Bog Farm, Ridge Lane Silsden, Keighley, West Yorkshire, BD20 9JG",
+    "date_of_creation": "2010-12-01"
+  },
+  {
+    "company_number": "SC779227",
+    "title": "GREGG'S GRAPHICS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "27 North Bridge Street, Hawick, United Kingdom, TD9 9BD",
+    "date_of_creation": "2023-08-16"
+  },
+  {
+    "company_number": "00382128",
+    "title": "GREGGS (LEASING) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1943-08-09"
+  },
+  {
+    "company_number": "15530289",
+    "title": "GREGGS NO.1 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Business Suite, 1 Spring Pool, Warwick, England, CV34 4UP",
+    "date_of_creation": "2024-02-28"
+  },
+  {
+    "company_number": "07506736",
+    "title": "GREGGS 1978 PENSION SCHEME TRUSTEE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "Greggs House Quorum Business Park, Benton Lane, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2011-01-26"
+  },
+  {
+    "company_number": "16480334",
+    "title": "GREGGS PLASTERING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "320 Firecrest Court, Warrington, United Kingdom, WA1 1RG",
+    "date_of_creation": "2025-05-28"
+  },
+  {
+    "company_number": "00205042",
+    "title": "GREGGS PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1925-04-03"
+  },
+  {
+    "company_number": "NI034655",
+    "title": "GREGG'S QUAY MANAGEMENT COMPANY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Charles White (Ni) Ltd 561 Upper Newtownards Road, Belfast, Belfast, United Kingdom, BT4 3LP",
+    "date_of_creation": "1998-08-12"
+  },
+  {
+    "company_number": "15099836",
+    "title": "GREGG'S RELIABLE DISPATCH LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "29 Castlereagh Street, Sunderland, England, SR3 1HL",
+    "date_of_creation": "2023-08-28"
+  },
+  {
+    "company_number": "15376892",
+    "title": "GREGG'S TAILORED HANDS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "32b Willis Pearson Avenue, Bilston, England, WV14 8DA",
+    "date_of_creation": "2023-12-30"
+  },
+  {
+    "company_number": "17410015",
+    "title": "GREGGS TRAVEL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "54 Chairborough Road, High Wycombe, England, HP12 3HJ",
+    "date_of_creation": "2026-08-19"
+  },
+  {
+    "company_number": "11536315",
+    "title": "GREGGS TRUCKING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 2, Starkey House, 19 Linthorpe Avenue, Wembley, England, HA0 2FX",
+    "date_of_creation": "2018-08-24"
+  },
+  {
+    "company_number": "03475726",
+    "title": "GREGGS TRUSTEES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1997-12-03"
+  },
+  {
+    "company_number": "15027994",
+    "title": "GREGGS (CENTRAL) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "49 Bedford Street, London, England, WC2E 9HA",
+    "date_of_creation": "2023-07-25"
+  },
+  {
+    "company_number": "00502851",
+    "title": "GREGGS PLC",
+    "company_status": "active",
+    "company_type": "plc",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1951-12-29"
+  },
+  {
+    "company_number": "SC702856",
+    "title": "GREGGS ACADEMIC SERVICES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Collynie Farm, Methlick, Ellon, Scotland, AB41 7EB",
+    "date_of_creation": "2021-06-29"
+  },
+  {
+    "company_number": "16546851",
+    "title": "GREGGS CARGO AND LOGISTICS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11 Cygnet Court Holly Lane, Smethwick, West Midlands, England, B66 1QQ",
+    "date_of_creation": "2025-06-27"
+  },
+  {
+    "company_number": "09888584",
+    "title": "GREGGS CARPENTRY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Warren Close, Brandon, England, IP27 0EE",
+    "date_of_creation": "2015-11-25"
+  },
+  {
+    "company_number": "13675794",
+    "title": "THE GREGGS FOUNDATION TRUSTEE",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "Greggs House, Q9 Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2021-10-13"
+  },
+  {
+    "company_number": "11736174",
+    "title": "GREGGS GARDENING SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "75 Cautley Drive, Killinghall, Harrogate, England, HG3 2DJ",
+    "date_of_creation": "2018-12-20"
+  },
+  {
+    "company_number": "07457158",
+    "title": "GREGG'S GARDENS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Burbles Cottage Carr Bog Farm, Ridge Lane Silsden, Keighley, West Yorkshire, BD20 9JG",
+    "date_of_creation": "2010-12-01"
+  },
+  {
+    "company_number": "SC779227",
+    "title": "GREGG'S GRAPHICS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "27 North Bridge Street, Hawick, United Kingdom, TD9 9BD",
+    "date_of_creation": "2023-08-16"
+  },
+  {
+    "company_number": "00382128",
+    "title": "GREGGS (LEASING) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1943-08-09"
+  },
+  {
+    "company_number": "15530289",
+    "title": "GREGGS NO.1 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Business Suite, 1 Spring Pool, Warwick, England, CV34 4UP",
+    "date_of_creation": "2024-02-28"
+  },
+  {
+    "company_number": "07506736",
+    "title": "GREGGS 1978 PENSION SCHEME TRUSTEE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "Greggs House Quorum Business Park, Benton Lane, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2011-01-26"
+  },
+  {
+    "company_number": "16480334",
+    "title": "GREGGS PLASTERING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "320 Firecrest Court, Warrington, United Kingdom, WA1 1RG",
+    "date_of_creation": "2025-05-28"
+  },
+  {
+    "company_number": "00205042",
+    "title": "GREGGS PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1925-04-03"
+  },
+  {
+    "company_number": "NI034655",
+    "title": "GREGG'S QUAY MANAGEMENT COMPANY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Charles White (Ni) Ltd 561 Upper Newtownards Road, Belfast, Belfast, United Kingdom, BT4 3LP",
+    "date_of_creation": "1998-08-12"
+  },
+  {
+    "company_number": "15099836",
+    "title": "GREGG'S RELIABLE DISPATCH LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "29 Castlereagh Street, Sunderland, England, SR3 1HL",
+    "date_of_creation": "2023-08-28"
+  },
+  {
+    "company_number": "15376892",
+    "title": "GREGG'S TAILORED HANDS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "32b Willis Pearson Avenue, Bilston, England, WV14 8DA",
+    "date_of_creation": "2023-12-30"
+  },
+  {
+    "company_number": "17410015",
+    "title": "GREGGS TRAVEL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "54 Chairborough Road, High Wycombe, England, HP12 3HJ",
+    "date_of_creation": "2026-08-19"
+  },
+  {
+    "company_number": "11536315",
+    "title": "GREGGS TRUCKING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 2, Starkey House, 19 Linthorpe Avenue, Wembley, England, HA0 2FX",
+    "date_of_creation": "2018-08-24"
+  },
+  {
+    "company_number": "03475726",
+    "title": "GREGGS TRUSTEES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1997-12-03"
+  },
+  {
+    "company_number": "15027994",
+    "title": "GREGGS (CENTRAL) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "49 Bedford Street, London, England, WC2E 9HA",
+    "date_of_creation": "2023-07-25"
+  },
+  {
+    "company_number": "00502851",
+    "title": "GREGGS PLC",
+    "company_status": "active",
+    "company_type": "plc",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1951-12-29"
+  },
+  {
+    "company_number": "SC702856",
+    "title": "GREGGS ACADEMIC SERVICES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Collynie Farm, Methlick, Ellon, Scotland, AB41 7EB",
+    "date_of_creation": "2021-06-29"
+  },
+  {
+    "company_number": "16546851",
+    "title": "GREGGS CARGO AND LOGISTICS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11 Cygnet Court Holly Lane, Smethwick, West Midlands, England, B66 1QQ",
+    "date_of_creation": "2025-06-27"
+  },
+  {
+    "company_number": "09888584",
+    "title": "GREGGS CARPENTRY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Warren Close, Brandon, England, IP27 0EE",
+    "date_of_creation": "2015-11-25"
+  },
+  {
+    "company_number": "13675794",
+    "title": "THE GREGGS FOUNDATION TRUSTEE",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "Greggs House, Q9 Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2021-10-13"
+  },
+  {
+    "company_number": "11736174",
+    "title": "GREGGS GARDENING SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "75 Cautley Drive, Killinghall, Harrogate, England, HG3 2DJ",
+    "date_of_creation": "2018-12-20"
+  },
+  {
+    "company_number": "07457158",
+    "title": "GREGG'S GARDENS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Burbles Cottage Carr Bog Farm, Ridge Lane Silsden, Keighley, West Yorkshire, BD20 9JG",
+    "date_of_creation": "2010-12-01"
+  },
+  {
+    "company_number": "SC779227",
+    "title": "GREGG'S GRAPHICS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "27 North Bridge Street, Hawick, United Kingdom, TD9 9BD",
+    "date_of_creation": "2023-08-16"
+  },
+  {
+    "company_number": "00382128",
+    "title": "GREGGS (LEASING) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1943-08-09"
+  },
+  {
+    "company_number": "15530289",
+    "title": "GREGGS NO.1 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Business Suite, 1 Spring Pool, Warwick, England, CV34 4UP",
+    "date_of_creation": "2024-02-28"
+  },
+  {
+    "company_number": "07506736",
+    "title": "GREGGS 1978 PENSION SCHEME TRUSTEE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "Greggs House Quorum Business Park, Benton Lane, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2011-01-26"
+  },
+  {
+    "company_number": "16480334",
+    "title": "GREGGS PLASTERING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "320 Firecrest Court, Warrington, United Kingdom, WA1 1RG",
+    "date_of_creation": "2025-05-28"
+  },
+  {
+    "company_number": "00205042",
+    "title": "GREGGS PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1925-04-03"
+  },
+  {
+    "company_number": "NI034655",
+    "title": "GREGG'S QUAY MANAGEMENT COMPANY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Charles White (Ni) Ltd 561 Upper Newtownards Road, Belfast, Belfast, United Kingdom, BT4 3LP",
+    "date_of_creation": "1998-08-12"
+  },
+  {
+    "company_number": "15099836",
+    "title": "GREGG'S RELIABLE DISPATCH LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "29 Castlereagh Street, Sunderland, England, SR3 1HL",
+    "date_of_creation": "2023-08-28"
+  },
+  {
+    "company_number": "15376892",
+    "title": "GREGG'S TAILORED HANDS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "32b Willis Pearson Avenue, Bilston, England, WV14 8DA",
+    "date_of_creation": "2023-12-30"
+  },
+  {
+    "company_number": "17410015",
+    "title": "GREGGS TRAVEL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "54 Chairborough Road, High Wycombe, England, HP12 3HJ",
+    "date_of_creation": "2026-08-19"
+  },
+  {
+    "company_number": "11536315",
+    "title": "GREGGS TRUCKING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 2, Starkey House, 19 Linthorpe Avenue, Wembley, England, HA0 2FX",
+    "date_of_creation": "2018-08-24"
+  },
+  {
+    "company_number": "03475726",
+    "title": "GREGGS TRUSTEES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1997-12-03"
+  },
+  {
+    "company_number": "15027994",
+    "title": "GREGGS (CENTRAL) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "49 Bedford Street, London, England, WC2E 9HA",
+    "date_of_creation": "2023-07-25"
+  },
+  {
+    "company_number": "16546851",
+    "title": "GREGGS CARGO AND LOGISTICS UK LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "11 Cygnet Court Holly Lane, Smethwick, West Midlands, England, B66 1QQ",
+    "date_of_creation": "2025-06-27"
+  },
+  {
+    "company_number": "07644079",
+    "title": "GREGGSTREET CONTRACTS (UK) LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "23 Langdale Road, Sale, Greater Manchester, England, M33 4EN",
+    "date_of_creation": "2011-05-23"
+  },
+  {
+    "company_number": "00502851",
+    "title": "GREGGS PLC",
+    "company_status": "active",
+    "company_type": "plc",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1951-12-29"
+  },
+  {
+    "company_number": "SC702856",
+    "title": "GREGGS ACADEMIC SERVICES LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Collynie Farm, Methlick, Ellon, Scotland, AB41 7EB",
+    "date_of_creation": "2021-06-29"
+  },
+  {
+    "company_number": "09888584",
+    "title": "GREGGS CARPENTRY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "48 Warren Close, Brandon, England, IP27 0EE",
+    "date_of_creation": "2015-11-25"
+  },
+  {
+    "company_number": "13675794",
+    "title": "THE GREGGS FOUNDATION TRUSTEE",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc-limited-exemption",
+    "address_snippet": "Greggs House, Q9 Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2021-10-13"
+  },
+  {
+    "company_number": "11736174",
+    "title": "GREGGS GARDENING SERVICES LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "75 Cautley Drive, Killinghall, Harrogate, England, HG3 2DJ",
+    "date_of_creation": "2018-12-20"
+  },
+  {
+    "company_number": "07457158",
+    "title": "GREGG'S GARDENS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Burbles Cottage Carr Bog Farm, Ridge Lane Silsden, Keighley, West Yorkshire, BD20 9JG",
+    "date_of_creation": "2010-12-01"
+  },
+  {
+    "company_number": "SC779227",
+    "title": "GREGG'S GRAPHICS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "27 North Bridge Street, Hawick, United Kingdom, TD9 9BD",
+    "date_of_creation": "2023-08-16"
+  },
+  {
+    "company_number": "00382128",
+    "title": "GREGGS (LEASING) LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1943-08-09"
+  },
+  {
+    "company_number": "15530289",
+    "title": "GREGGS NO.1 LTD",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Business Suite, 1 Spring Pool, Warwick, England, CV34 4UP",
+    "date_of_creation": "2024-02-28"
+  },
+  {
+    "company_number": "07506736",
+    "title": "GREGGS 1978 PENSION SCHEME TRUSTEE LIMITED",
+    "company_status": "active",
+    "company_type": "private-limited-guarant-nsc",
+    "address_snippet": "Greggs House Quorum Business Park, Benton Lane, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "2011-01-26"
+  },
+  {
+    "company_number": "16480334",
+    "title": "GREGGS PLASTERING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "320 Firecrest Court, Warrington, United Kingdom, WA1 1RG",
+    "date_of_creation": "2025-05-28"
+  },
+  {
+    "company_number": "00205042",
+    "title": "GREGGS PROPERTIES LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1925-04-03"
+  },
+  {
+    "company_number": "NI034655",
+    "title": "GREGG'S QUAY MANAGEMENT COMPANY LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Charles White (Ni) Ltd 561 Upper Newtownards Road, Belfast, Belfast, United Kingdom, BT4 3LP",
+    "date_of_creation": "1998-08-12"
+  },
+  {
+    "company_number": "15099836",
+    "title": "GREGG'S RELIABLE DISPATCH LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "29 Castlereagh Street, Sunderland, England, SR3 1HL",
+    "date_of_creation": "2023-08-28"
+  },
+  {
+    "company_number": "15376892",
+    "title": "GREGG'S TAILORED HANDS LIMITED",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "32b Willis Pearson Avenue, Bilston, England, WV14 8DA",
+    "date_of_creation": "2023-12-30"
+  },
+  {
+    "company_number": "17410015",
+    "title": "GREGGS TRAVEL LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "54 Chairborough Road, High Wycombe, England, HP12 3HJ",
+    "date_of_creation": "2026-08-19"
+  },
+  {
+    "company_number": "11536315",
+    "title": "GREGGS TRUCKING LTD",
+    "company_status": "active",
+    "company_type": "ltd",
+    "address_snippet": "Flat 2, Starkey House, 19 Linthorpe Avenue, Wembley, England, HA0 2FX",
+    "date_of_creation": "2018-08-24"
+  },
+  {
+    "company_number": "03475726",
+    "title": "GREGGS TRUSTEES LIMITED",
+    "company_status": "dissolved",
+    "company_type": "ltd",
+    "address_snippet": "Greggs House, Quorum Business Park, Newcastle Upon Tyne, United Kingdom, NE12 8BU",
+    "date_of_creation": "1997-12-03"
+  }
+]

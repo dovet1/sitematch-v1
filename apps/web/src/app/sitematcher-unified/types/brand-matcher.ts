@@ -91,17 +91,26 @@ export interface NearestStoreSignal {
   town: string | null
 }
 
-// Companies House trading facts. No integration exists yet (see handoff "Compliance"), so
-// the route always sends null today; the card renders the column only when this is set.
-// These figures NEVER contribute to the score.
+// A filed figure. 'unread' (we have not read the accounts) and 'not_published' (the filing
+// carries no figure) are different facts: only 'not_published' may be shown as "Not disclosed".
+export type FiledFigure =
+  | { status: 'filed'; value: number }
+  | { status: 'not_published' }
+  | { status: 'unread' }
+
+// Companies House facts for the brand's admin-confirmed UK trading company. Register facts
+// shown as filed — NEVER scored, rated or coloured.
 export interface TradingFacts {
   companyNumber: string
+  companyName: string
   status: string | null
-  turnover: number | null
-  netAssets: number | null
-  accountsNote: string | null
+  accountsType: string | null
   accountsMadeUpTo: string | null
-  smallCompanyExemption: boolean
+  accountsOverdue: boolean
+  registeredOffice: string | null
+  turnover: FiledFigure
+  netAssets: FiledFigure
+  fetchedAt: string
 }
 
 export interface BrandMatcherContact {

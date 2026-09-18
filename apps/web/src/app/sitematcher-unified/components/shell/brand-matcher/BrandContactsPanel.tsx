@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, useState } from 'react'
-import { ChevronDown, Inbox, Mail, Phone, UserRound } from 'lucide-react'
+import { Building2, ChevronDown, Inbox, Mail, Phone, UserRound } from 'lucide-react'
 import { initialsFor } from '../directory/UDirectoryPrimitives'
 import { CONTACT_CORRECTIONS_EMAIL } from '../../../lib/brand-matcher'
 import type { BrandMatcherContact, BrandMatcherContacts } from '../../../types/brand-matcher'
@@ -21,8 +21,14 @@ function mailto(emails: string[], subject: string): string {
 
 export const BrandContactsPanel = forwardRef<
   HTMLDivElement,
-  { brandName: string; contacts: BrandMatcherContacts; subject: string }
->(function BrandContactsPanel({ brandName, contacts, subject }, ref) {
+  {
+    brandName: string
+    contacts: BrandMatcherContacts
+    // From Companies House, for the no-contact state.
+    registeredOffice: string | null
+    subject: string
+  }
+>(function BrandContactsPanel({ brandName, contacts, registeredOffice, subject }, ref) {
   const [showAll, setShowAll] = useState(false)
   const { primary, others, total, coversRegion } = contacts
 
@@ -42,8 +48,15 @@ export const BrandContactsPanel = forwardRef<
           <div className="mt-2.5 text-[13.5px] font-semibold text-sm-ink">No named acquisitions contact</div>
           <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
             We only list contacts we can verify.
+            {registeredOffice && ' For this brand we hold the registered office only.'}
           </p>
         </div>
+        {registeredOffice && (
+          <p className="mt-3 flex items-start gap-1.5 text-[12.5px] text-sm-ink2">
+            <Building2 size={13} className="mt-0.5 flex-shrink-0 text-sm-ink3" />
+            {registeredOffice}
+          </p>
+        )}
         <a
           href={mailto([CONTACT_CORRECTIONS_EMAIL], `Contact request: ${brandName}`)}
           className="mt-4 flex w-full items-center justify-center rounded-xl border border-sm-violet py-2.5 text-[13.5px] font-semibold text-sm-violet-deep transition-colors hover:bg-sm-violet-tint-soft"

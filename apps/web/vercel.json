@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/planning-monitor",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-company-facts",
+      "schedule": "30 5 * * 1"
     }
   ],
   "functions": {
@@ -61,6 +65,9 @@
       "maxDuration": 300
     },
     "app/api/cron/planning-monitor/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/refresh-company-facts/route.ts": {
       "maxDuration": 300
     }
   },

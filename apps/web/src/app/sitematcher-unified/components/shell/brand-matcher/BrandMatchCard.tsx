@@ -19,9 +19,11 @@ import type {
   BrandMatch,
   BrandMatcherQuery,
   BrandMatcherSite,
+  FiledFigure,
   RequirementEvidence,
   TradingFacts,
 } from '../../../types/brand-matcher'
+import { companiesHouseUrl } from '@/lib/companies-house/facts'
 import { BrandContactsPanel } from './BrandContactsPanel'
 import { Kicker, numberWord, ScoreRing, SignalPill } from './BrandMatcherUi'
 
@@ -193,6 +195,7 @@ export function BrandMatchCard({
               ref={contactsRef}
               brandName={match.name}
               contacts={match.contacts}
+              registeredOffice={match.tradingFacts?.registeredOffice ?? null}
               subject={subject}
             />
           </div>
@@ -348,31 +351,54 @@ function EvidenceRow({ icon, children }: { icon: React.ReactNode; children: Reac
   )
 }
 
-// Companies House column. Renders only when facts exist (none do until the CH integration
-// lands). Copy below is legal-reviewed — do not paraphrase.
+function formatDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+function figureText(f: FiledFigure): string | null {
+  if (f.status === 'filed') return formatMoney(f.value)
+  if (f.status === 'not_published') return 'Not disclosed'
+  return null // not read yet: say nothing rather than imply nothing was filed
+}
+
+// Companies House column for the brand's admin-confirmed trading company. Figures as filed,
+// all neutral. Disclaimer copy is legal-reviewed — do not paraphrase.
 function TradingFactsColumn({ facts }: { facts: TradingFacts }) {
-  const published = facts.turnover == null
+  const hasFigures = facts.turnover.status === 'filed' || facts.netAssets.status === 'filed'
   const rows: [string, string | null][] = [
     ['Status', facts.status],
-    ['Latest turnover', facts.turnover == null ? 'Not disclosed' : formatMoney(facts.turnover)],
-    ['Net assets', facts.netAssets == null ? 'Not disclosed' : formatMoney(facts.netAssets)],
-    ['Accounts', facts.smallCompanyExemption ? 'Small-company exemption' : facts.accountsNote],
-    ['Accounts made up to', facts.accountsMadeUpTo],
+    ['Latest turnover', figureText(facts.turnover)],
+    ['Net assets', figureText(facts.netAssets)],
+    [
+      'Accounts',
+      facts.accountsOverdue ? 'Overdue' : facts.accountsMadeUpTo ? 'Filed on time' : 'None filed yet',
+    ],
+    ['Accounts type', facts.accountsType],
+    ['Accounts made up to', facts.accountsMadeUpTo ? formatDate(facts.accountsMadeUpTo) : null],
   ]
   return (
     <div>
       <Kicker tone="green">
-        {published ? 'Companies House — published facts' : 'Companies House — trading facts'}
+        {hasFigures ? 'Companies House — trading facts' : 'Companies House — published facts'}
       </Kicker>
-      <dl className="mt-3 space-y-1.5">
+      <p className="mt-2 text-[12.5px] text-sm-ink3">
+        {facts.companyName} · {facts.companyNumber}
+      </p>
+      <dl className="mt-2.5 space-y-1.5">
         {rows
-          .filter(([, v]) => v != null)
+          .filter((r): r is [string, string] => r[1] != null)
           .map(([k, v]) => (
             <div key={k} className="flex items-baseline justify-between gap-4 text-[13.5px]">
               <dt className="text-sm-ink3">{k}</dt>
               <dd
                 className={
-                  v === 'Not disclosed' ? 'font-medium text-sm-ink3' : 'font-semibold text-sm-ink'
+                  'text-right ' +
+                  (v === 'Not disclosed' ? 'font-medium text-sm-ink3' : 'font-semibold text-sm-ink')
                 }
               >
                 {v}
@@ -381,7 +407,7 @@ function TradingFactsColumn({ facts }: { facts: TradingFacts }) {
           ))}
       </dl>
       <a
-        href={`https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(facts.companyNumber)}/filing-history`}
+        href={companiesHouseUrl(facts.companyNumber, 'filing-history')}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-sm-violet-deep hover:underline"
@@ -390,9 +416,9 @@ function TradingFactsColumn({ facts }: { facts: TradingFacts }) {
         <ExternalLink size={12} />
       </a>
       <p className="mt-3 rounded-lg border border-sm-border bg-[#F8F7FC] px-3 py-2.5 text-[11.5px] leading-relaxed text-sm-ink2">
-        {published
+        {facts.turnover.status === 'not_published'
           ? "Small companies aren't required to file turnover. A blank here means nothing is published — not that the figures are poor. SiteMatcher does not rate or score financial standing."
-          : 'Figures as filed at Companies House, unedited. SiteMatcher does not rate, score or comment on a company’s financial standing — including covenant strength. Any view on that is yours to form.'}
+          : 'Figures as filed at Companies House, unedited. SiteMatcher does not rate, score or comment on a company\u2019s financial standing — including covenant strength. Any view on that is yours to form.'}
       </p>
     </div>
   )
