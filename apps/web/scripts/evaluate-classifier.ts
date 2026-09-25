@@ -125,14 +125,6 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  const { data: apps, error } = await db
-    .from('planning_applications').select('provider_id,raw').eq('intelligence_tier', true)
-    // Ordered so that --limit takes the SAME records every time. Without this, Postgres is
-    // free to return any order and two limited runs would not be comparable.
-    .order('provider_id', { ascending: true })
-  if (error) throw error
-  const records = (apps ?? []).map((a) => ({ id: a.provider_id as string, raw: a.raw as PlotaApplication }))
-
   const { data: labelRows, error: labelError } = await db
     .from('planning_label_submissions')
     .select('labeller,record_id,relevance,creates_commercial_space,dwelling_count,submitted_at')
@@ -147,7 +139,16 @@ async function main() {
       dwellings: r.dwelling_count === null || r.dwelling_count === undefined ? null : Number(r.dwelling_count),
     })
   }
-  console.log(`${labels.size} label(s) from "${LABELLER}" across ${records.length} tier records`)
+  const { data: apps, error } = await db
+    // Only the labelled records. The tier outgrew the 1,000-row read cap in September 2026, and
+    // an unfiltered read silently scored 3 of the 164 labels.
+    .from('planning_applications').select('provider_id,raw').in('provider_id', [...labels.keys()])
+    // Ordered so that --limit takes the SAME records every time. Without this, Postgres is
+    // free to return any order and two limited runs would not be comparable.
+    .order('provider_id', { ascending: true })
+  if (error) throw error
+  const records = (apps ?? []).map((a) => ({ id: a.provider_id as string, raw: a.raw as PlotaApplication }))
+  console.log(`${labels.size} label(s) from "${LABELLER}", ${records.length} of them found`)
 
   let cache: Cached
   if (scoreOnly) {
