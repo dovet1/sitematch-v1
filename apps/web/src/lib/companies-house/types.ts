@@ -42,6 +42,22 @@ export interface ChCompanyProfile {
   }
 }
 
+export interface ChFilingItem {
+  type?: string
+  date?: string
+  description?: string
+  description_values?: { made_up_date?: string }
+  links?: { self?: string; document_metadata?: string }
+}
+
+export interface ChDocumentMetadata {
+  pages?: number
+  resources?: Record<string, unknown>
+}
+
+// 'filed': read from iXBRL tags. 'extracted': read by a model from a scanned (PDF-only) filing.
+export type FigureStatus = 'filed' | 'extracted' | 'not_published' | 'unread'
+
 // A company_facts row, as stored.
 export interface CompanyFactsRow {
   company_number: string
@@ -56,10 +72,14 @@ export interface CompanyFactsRow {
   accounts_overdue: boolean
   next_accounts_due: string | null
   turnover: number | null
-  turnover_status: 'filed' | 'not_published' | 'unread'
+  turnover_status: FigureStatus
   net_assets: number | null
-  net_assets_status: 'filed' | 'not_published' | 'unread'
+  net_assets_status: FigureStatus
   figures_period_end: string | null
+  // Set for 'extracted' figures: the 1-based PDF page each was read from, and the model that read it.
+  turnover_page: number | null
+  net_assets_page: number | null
+  figures_model: string | null
   profile: ChCompanyProfile
   fetched_at: string
 }

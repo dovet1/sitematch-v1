@@ -244,7 +244,7 @@ async function loadTradingFacts(db: Db): Promise<Map<string, TradingFacts>> {
       .select(
         'brand_id, company_facts(company_number, company_name, company_status, registered_office, ' +
           'last_accounts_made_up_to, last_accounts_type, accounts_overdue, turnover, turnover_status, ' +
-          'net_assets, net_assets_status, fetched_at)'
+          'net_assets, net_assets_status, turnover_page, net_assets_page, fetched_at)'
       )
       .order('brand_id')
   )

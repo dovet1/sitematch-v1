@@ -191,6 +191,21 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     expect(within(pill).getByText('£17.9bn')).toBeInTheDocument()
     expect(pill.className).toContain('bg-[#F5F6FA]')
     expect(screen.getByText('Companies House — trading facts')).toBeInTheDocument()
+    expect(screen.queryByText(/scanned accounts/)).not.toBeInTheDocument()
+  })
+
+  it('says where figures read from scanned accounts came from', () => {
+    renderCard({
+      ...rich,
+      tradingFacts: {
+        ...facts,
+        turnover: { status: 'extracted', value: 8_986_000, page: 11 },
+        netAssets: { status: 'extracted', value: -3_461_000, page: 12 },
+      },
+    })
+    const pill = screen.getByText('Turnover').parentElement as HTMLElement
+    expect(within(pill).getByText('£9m')).toBeInTheDocument()
+    expect(screen.getByText(/Read automatically from scanned accounts \(PDF p\. 11, p\. 12\)/)).toBeInTheDocument()
   })
 
   it('uses the small-company note only when turnover is genuinely not published', () => {

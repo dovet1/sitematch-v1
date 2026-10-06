@@ -373,7 +373,7 @@ const SIZE_PILL: Record<SizeFitState, { value: string; tone: SignalTone; mark: '
 
 // null when there is nothing verifiable to put on the pill (figures not read yet).
 export function turnoverValue(facts: TradingFacts): string | null {
-  if (facts.turnover.status === 'filed') return formatMoney(facts.turnover.value)
+  if (facts.turnover.status === 'filed' || facts.turnover.status === 'extracted') return formatMoney(facts.turnover.value)
   if (facts.turnover.status === 'not_published') return 'Not disclosed'
   return null
 }

@@ -361,7 +361,7 @@ function formatDate(iso: string): string {
 }
 
 function figureText(f: FiledFigure): string | null {
-  if (f.status === 'filed') return formatMoney(f.value)
+  if (f.status === 'filed' || f.status === 'extracted') return formatMoney(f.value)
   if (f.status === 'not_published') return 'Not disclosed'
   return null // not read yet: say nothing rather than imply nothing was filed
 }
@@ -369,7 +369,12 @@ function figureText(f: FiledFigure): string | null {
 // Companies House column for the brand's admin-confirmed trading company. Figures as filed,
 // all neutral. Disclaimer copy is legal-reviewed — do not paraphrase.
 function TradingFactsColumn({ facts }: { facts: TradingFacts }) {
-  const hasFigures = facts.turnover.status === 'filed' || facts.netAssets.status === 'filed'
+  const read = (f: FiledFigure) => f.status === 'filed' || f.status === 'extracted'
+  const hasFigures = read(facts.turnover) || read(facts.netAssets)
+  // Figures a model read from a scanned filing: say so, and where, so they can be checked.
+  const scannedPages = [facts.turnover, facts.netAssets]
+    .map((f) => (f.status === 'extracted' ? f.page : null))
+    .filter((p): p is number => p != null)
   const rows: [string, string | null][] = [
     ['Status', facts.status],
     ['Latest turnover', figureText(facts.turnover)],
@@ -406,6 +411,16 @@ function TradingFactsColumn({ facts }: { facts: TradingFacts }) {
             </div>
           ))}
       </dl>
+      {scannedPages.length > 0 && (
+        <p className="mt-2 text-[11.5px] text-sm-ink3">
+          Read automatically from scanned accounts (PDF{' '}
+          {Array.from(new Set(scannedPages))
+            .sort((a, b) => a - b)
+            .map((p) => `p. ${p}`)
+            .join(', ')}
+          ). Check against the filing.
+        </p>
+      )}
       <a
         href={companiesHouseUrl(facts.companyNumber, 'filing-history')}
         target="_blank"

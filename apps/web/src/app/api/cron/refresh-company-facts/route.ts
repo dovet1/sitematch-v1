@@ -6,9 +6,10 @@ import { refreshCompanyFacts } from '@/lib/companies-house/service'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-// Companies House allows 600 requests per 5 minutes; one profile fetch per company, spaced so
-// a full run stays well under that and inside the function's 300s.
-const SPACING_MS = 450
+// Companies House allows 600 requests per 5 minutes. A company costs one profile fetch, plus
+// up to three more (filings, document metadata, document) when new accounts are read; the
+// spacing keeps even that worst case under the limit. A run cut short resumes next week.
+const SPACING_MS = 1_200
 const BUDGET_MS = 270_000
 
 /**

@@ -98,9 +98,11 @@ export function formatAddress(a: ChAddress | undefined): string | null {
 
 const isoDate = (d: string | undefined): string | null => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? d.slice(0, 10) : null)
 
-// Figures stay 'unread': the profile carries no turnover or balance sheet, and the accounts
-// parser that would read them has not been built. Inferring "not published" from the accounts
-// type would be a guess, and "Not disclosed" must only ever mean the filing has no figure.
+// Figures start 'unread': the profile carries no turnover or balance sheet. refreshCompanyFacts
+// reads them from the accounts filing: iXBRL tags where present (accounts.ts), otherwise a model
+// reading of the scanned PDF (scanned-accounts.ts). Inferring "not published"
+// from the accounts type would be a guess, and "Not disclosed" must only ever mean the filing
+// has no figure.
 export function profileToFactsRow(profile: ChCompanyProfile, fetchedAt = new Date().toISOString()): CompanyFactsRow {
   const last = profile.accounts?.last_accounts
   return {
@@ -120,6 +122,9 @@ export function profileToFactsRow(profile: ChCompanyProfile, fetchedAt = new Dat
     net_assets: null,
     net_assets_status: 'unread',
     figures_period_end: null,
+    turnover_page: null,
+    net_assets_page: null,
+    figures_model: null,
     profile,
     fetched_at: fetchedAt,
   }
@@ -139,10 +144,16 @@ type FactsFields = Pick<
   | 'net_assets'
   | 'net_assets_status'
   | 'fetched_at'
->
+> &
+  Partial<Pick<CompanyFactsRow, 'turnover_page' | 'net_assets_page'>>
 
-function figure(value: number | null, status: CompanyFactsRow['turnover_status']): TradingFacts['turnover'] {
+function figure(
+  value: number | null,
+  status: CompanyFactsRow['turnover_status'],
+  page: number | null | undefined
+): TradingFacts['turnover'] {
   if (status === 'filed' && value != null) return { status: 'filed', value: Number(value) }
+  if (status === 'extracted' && value != null) return { status: 'extracted', value: Number(value), page: page ?? null }
   if (status === 'not_published') return { status: 'not_published' }
   return { status: 'unread' }
 }
@@ -156,8 +167,8 @@ export function factsRowToTradingFacts(row: FactsFields): TradingFacts {
     accountsMadeUpTo: row.last_accounts_made_up_to,
     accountsOverdue: row.accounts_overdue,
     registeredOffice: row.registered_office,
-    turnover: figure(row.turnover, row.turnover_status),
-    netAssets: figure(row.net_assets, row.net_assets_status),
+    turnover: figure(row.turnover, row.turnover_status, row.turnover_page),
+    netAssets: figure(row.net_assets, row.net_assets_status, row.net_assets_page),
     fetchedAt: row.fetched_at,
   }
 }

@@ -71,6 +71,15 @@ describe('factsRowToTradingFacts', () => {
     expect(facts.turnover).toEqual({ status: 'filed', value: 17_900_000_000 })
     expect(facts.netAssets).toEqual({ status: 'not_published' })
   })
+  it('passes extracted figures through with the page they were read from', () => {
+    const facts = factsRowToTradingFacts({
+      ...base,
+      turnover: 8_986_000,
+      turnover_status: 'extracted',
+      turnover_page: 11,
+    })
+    expect(facts.turnover).toEqual({ status: 'extracted', value: 8_986_000, page: 11 })
+  })
   it('humanises unknown codes and drops the "no type" placeholder', () => {
     expect(statusLabel('voluntary-arrangement')).toBe('Voluntary arrangement')
     expect(statusLabel('some-new-status')).toBe('Some new status')

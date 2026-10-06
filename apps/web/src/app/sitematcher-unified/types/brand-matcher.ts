@@ -95,6 +95,8 @@ export interface NearestStoreSignal {
 // carries no figure) are different facts: only 'not_published' may be shown as "Not disclosed".
 export type FiledFigure =
   | { status: 'filed'; value: number }
+  // Read by a model from scanned accounts; page is the PDF page it came from.
+  | { status: 'extracted'; value: number; page: number | null }
   | { status: 'not_published' }
   | { status: 'unread' }
 
