@@ -7,6 +7,8 @@
  * Needs migrations 20261007000000 and 20261008000000. Run from apps/web:
  *   ../../node_modules/.bin/tsx scripts/run-family-lookups.ts --councils=a,b [--prioritise] [--limit=10]
  *   ../../node_modules/.bin/tsx scripts/run-family-lookups.ts --councils=a,b --limit=50 --allowance=300 --commit
+ * --retry-archive re-queues lookups that failed because Plota refused an archive id; a lookup whose
+ * only follow-ons are archive records fetches its original by council and reference instead.
  * Agreed pilot (14 Sep 2026): South Norfolk Broadland, Wandsworth and Glasgow, 300 requests from October.
  */
 import { loadEnvConfig } from '@next/env'
@@ -30,11 +32,14 @@ async function main() {
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
   if (args.has('prioritise')) console.log(JSON.stringify({ prioritised: await prioritiseFamilyLookups(db as never, councils) }))
 
-  const client = commit ? new PlotaClient(process.env.PLOTA_API_KEY ?? '') : { associated: () => { throw new Error('dry run') } }
-  const result = await runFamilyLookups(db as never, client as never, { limit, monthlyAllowance: allowance, councils, commit })
+  const dryRun = () => { throw new Error('dry run') }
+  const client = commit ? new PlotaClient(process.env.PLOTA_API_KEY ?? '') : { associated: dryRun, findByReference: dryRun }
+  const result = await runFamilyLookups(db as never, client as never, {
+    limit, monthlyAllowance: allowance, councils, commit, retryArchiveFailures: args.has('retry-archive'),
+  })
   console.log(JSON.stringify({
     commit, usedThisMonthBefore: result.usedThisMonthBefore, requestsMade: result.requestsMade, stoppedFor: result.stoppedFor,
-    planned: result.planned, stored: result.stored, failures: result.failures,
+    planned: result.planned, stored: result.stored, originals: result.originals, failures: result.failures,
   }, null, 2))
 }
 

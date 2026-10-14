@@ -1,4 +1,4 @@
-import type { PlotaFamily, PlotaPage, SearchSpec } from './types'
+import type { PlotaApplication, PlotaFamily, PlotaPage, SearchSpec } from './types'
 
 export const PLOTA_BASE_URL = 'https://api.plota.co.uk/v1'
 export const PLOTA_INTERNAL_MONTHLY_LIMIT = 15_000
@@ -116,6 +116,20 @@ export class PlotaClient {
       throw new PlotaError('Plota returned an invalid family shape', 502, usage.requestId, null)
     }
     return { family, usage }
+  }
+
+  /**
+   * One application by its council reference, archive records included. Archive ids (`h_…`) cannot be
+   * fetched or asked for their family; Plota's answer is to search by council and reference
+   * (verified 14 October 2026: 2022/1835 at Wandsworth returns its full archive record).
+   */
+  async findByReference(
+    council: string, reference: string, options: { signal?: AbortSignal } = {}
+  ): Promise<{ application: PlotaApplication | null; usage: PlotaUsageHeaders }> {
+    const { page, usage } = await this.search({ council, reference, limit: '5' }, options)
+    const wanted = reference.replace(/\s+/g, '').toUpperCase()
+    const application = page.data.find(row => row.reference.replace(/\s+/g, '').toUpperCase() === wanted) ?? null
+    return { application, usage }
   }
 
   private async get(path: string, options: { signal?: AbortSignal }): Promise<{ body: unknown; usage: PlotaUsageHeaders }> {

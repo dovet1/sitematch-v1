@@ -18,6 +18,10 @@ import type { PlotaApplication, PlotaFamily, PlotaFamilyMember } from './types'
  */
 
 export const FAMILY_ENDPOINT = '/v1/applications/:id/associated'
+/** An original fetched by council and reference, because its family cannot be asked for by archive id. */
+export const REFERENCE_ENDPOINT = '/v1/applications?council&reference'
+const ARCHIVE_ID = /^h_/
+const ARCHIVE_REFUSAL = /historical \(archive\) record id/i
 
 export interface LookupRow {
   id: string
@@ -339,6 +343,63 @@ export async function recheckPendingConflicts(
   return results
 }
 
+export interface StoredOriginalResult {
+  lookupId: string
+  parentReference: string
+  applicationId: string
+  providerId: string
+  followOnsAttached: number
+}
+
+/**
+ * Stores an original fetched by reference and attaches the follow-ons waiting for it, which closes
+ * every lookup it answers. The lookup that fetched it is closed here: it was processing, which the
+ * attaching function leaves alone.
+ */
+export async function storeOriginal(
+  db: PlanningAdminClient,
+  input: { lookup: LookupRow; application: PlotaApplication; admitToTier?: boolean }
+): Promise<StoredOriginalResult> {
+  const council = input.lookup.authority_slug
+  type Original = { id: string; reference: string; description: string | null; procedure: string | null }
+  const columns = 'id,reference,description,procedure'
+  // The original may already be stored under another archive id (Wandsworth 2025/2541); a council
+  // holds one record per reference, so that record is the original.
+  const { data: existing, error: existingError } = await db.from('planning_applications').select(columns)
+    .eq('authority_slug', council).eq('reference_normalised', normaliseReference(input.application.reference)).limit(1).maybeSingle()
+  if (existingError) throw existingError
+  let original = existing as Original | null
+  if (!original) {
+    const row = storageRowFor({ ...input.application, retrieved_via: 'reference' } as PlotaApplication, { admitToTier: input.admitToTier ?? false })
+    const { error } = await db.from('planning_applications').upsert([row], { onConflict: 'provider,provider_id', ignoreDuplicates: true })
+    if (error) throw error
+    const { data: stored, error: storedError } = await db.from('planning_applications').select(columns)
+      .eq('provider', 'plota').eq('provider_id', input.application.id).single()
+    if (storedError) throw storedError
+    original = stored as Original
+  }
+
+  const { error: resolveError } = await db.rpc('planning_resolve_family_parents', { p_rows: [{
+    id: original.id, authority_slug: council, reference_normalised: normaliseReference(original.reference),
+    reference_core: canHeadFamily(original) ? referenceCore(original.reference)?.core ?? null : null,
+  }] })
+  if (resolveError) throw resolveError
+  // The function returns the lookups it closed, not the links it attached; count those directly.
+  const { count: attached, error: attachedError } = await db.from('planning_application_links').select('id', { count: 'exact', head: true })
+    .eq('parent_application_id', original.id).is('removed_at', null)
+  if (attachedError) throw attachedError
+
+  const now = new Date().toISOString()
+  const { error: closeError } = await db.from('planning_family_lookups').update({
+    status: 'resolved_locally', fetched_at: now, last_error: null, updated_at: now,
+  }).eq('id', input.lookup.id)
+  if (closeError) throw closeError
+  return {
+    lookupId: input.lookup.id, parentReference: input.lookup.parent_reference, applicationId: original.id,
+    providerId: input.application.id, followOnsAttached: attached ?? 0,
+  }
+}
+
 export interface FamilyLookupRunOptions {
   /** Hard cap on requests in this run. */
   limit: number
@@ -347,6 +408,8 @@ export interface FamilyLookupRunOptions {
   councils?: string[]
   /** Without commit the run only reports which families it would fetch. */
   commit: boolean
+  /** Re-queue lookups that failed only because Plota refused an archive id, to fetch by reference. */
+  retryArchiveFailures?: boolean
   admitToTier?: boolean
 }
 
@@ -355,6 +418,8 @@ export interface FamilyLookupRunResult {
   planned: Array<{ lookupId: string; council: string; parentReference: string; via: string | null }>
   requestsMade: number
   stored: StoredFamilyResult[]
+  /** Originals fetched by reference because their only follow-ons are archive records. */
+  originals: StoredOriginalResult[]
   failures: Array<{ lookupId: string; parentReference: string; error: string }>
   stoppedFor: 'allowance' | 'reserve' | 'rate_limit' | null
 }
@@ -377,13 +442,13 @@ async function childToAsk(db: PlanningAdminClient, lookup: LookupRow): Promise<s
 }
 
 export async function runFamilyLookups(
-  db: PlanningAdminClient, client: Pick<PlotaClient, 'associated'>, options: FamilyLookupRunOptions
+  db: PlanningAdminClient, client: Pick<PlotaClient, 'associated' | 'findByReference'>, options: FamilyLookupRunOptions
 ): Promise<FamilyLookupRunResult> {
   const monthStart = new Date()
   monthStart.setUTCDate(1)
   monthStart.setUTCHours(0, 0, 0, 0)
   const { count: used, error: usedError } = await db.from('planning_provider_usage').select('id', { count: 'exact', head: true })
-    .eq('provider', 'plota').eq('endpoint', FAMILY_ENDPOINT).gte('occurred_at', monthStart.toISOString())
+    .eq('provider', 'plota').in('endpoint', [FAMILY_ENDPOINT, REFERENCE_ENDPOINT]).gte('occurred_at', monthStart.toISOString())
   if (usedError) throw usedError
   const { data: allowance, error: allowanceError } = await db.from('planning_provider_usage')
     .select('monthly_remaining').eq('provider', 'plota').gte('occurred_at', monthStart.toISOString())
@@ -391,11 +456,24 @@ export async function runFamilyLookups(
   if (allowanceError) throw allowanceError
 
   const result: FamilyLookupRunResult = {
-    usedThisMonthBefore: used ?? 0, planned: [], requestsMade: 0, stored: [], failures: [], stoppedFor: null,
+    usedThisMonthBefore: used ?? 0, planned: [], requestsMade: 0, stored: [], originals: [], failures: [], stoppedFor: null,
   }
   let remaining = typeof allowance?.monthly_remaining === 'number' ? allowance.monthly_remaining : null
   const budget = Math.min(options.limit, options.monthlyAllowance - result.usedThisMonthBefore)
   if (budget <= 0) { result.stoppedFor = 'allowance'; return result }
+
+  if (options.retryArchiveFailures && options.commit) {
+    let failed = db.from('planning_family_lookups').select('id,authority_slug,last_error').eq('status', 'failed')
+    if (options.councils?.length) failed = failed.in('authority_slug', options.councils)
+    const { data: failedRows, error: failedError } = await failed
+    if (failedError) throw failedError
+    const retry = ((failedRows ?? []) as Array<{ id: string; last_error: string | null }>).filter(row => ARCHIVE_REFUSAL.test(row.last_error ?? ''))
+    if (retry.length) {
+      const { error: retryError } = await db.from('planning_family_lookups')
+        .update({ status: 'queued', updated_at: new Date().toISOString() }).in('id', retry.map(row => row.id))
+      if (retryError) throw retryError
+    }
+  }
 
   let query = db.from('planning_family_lookups').select('id,authority_slug,parent_key,parent_reference,status,attempts')
     .in('status', ['queued', 'deferred']).gt('priority', 0).order('priority', { ascending: false })
@@ -421,6 +499,23 @@ export async function runFamilyLookups(
 
     await db.from('planning_family_lookups').update({ status: 'processing', attempts: lookup.attempts + 1, updated_at: new Date().toISOString() }).eq('id', lookup.id)
     try {
+      // Plota answers families only for live ids. When the only follow-ons are archive records, the
+      // original itself is fetched by reference instead: one request, and no family to compare.
+      if (ARCHIVE_ID.test(via)) {
+        const { application, usage } = await client.findByReference(lookup.authority_slug, lookup.parent_reference)
+        result.requestsMade++
+        remaining = usage.monthlyRemaining ?? remaining
+        await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint: REFERENCE_ENDPOINT, request_id: usage.requestId,
+          monthly_limit: usage.monthlyLimit, monthly_remaining: usage.monthlyRemaining, status_code: 200 })
+        if (!application) throw new Error('Plota holds no application with this reference')
+        const original = await storeOriginal(db, { lookup, application, admitToTier: options.admitToTier })
+        result.originals.push(original)
+        if (planningMembershipEnabled()) {
+          await assignMembershipsFor(db, [original.applicationId], 'system:family-lookup')
+            .catch(membershipError => console.error('[planning-membership] Failed to place a fetched original', membershipError))
+        }
+        continue
+      }
       const { family, usage } = await client.associated(via)
       result.requestsMade++
       remaining = usage.monthlyRemaining ?? remaining
@@ -438,9 +533,12 @@ export async function runFamilyLookups(
       const status = error instanceof PlotaError ? error.status : null
       if (error instanceof PlotaError) {
         result.requestsMade++
-        await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint: FAMILY_ENDPOINT, request_id: error.requestId, status_code: error.status })
+        await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint: ARCHIVE_ID.test(via) ? REFERENCE_ENDPOINT : FAMILY_ENDPOINT, request_id: error.requestId, status_code: error.status })
       }
-      const message = error instanceof Error ? error.message : 'Family lookup failed'
+      // A database error is a plain object with a message, not an Error.
+      const message = error instanceof Error ? error.message
+        : typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message
+        : 'Family lookup failed'
       await db.from('planning_family_lookups').update({ status: status === 429 ? 'deferred' : 'failed', last_error: message, updated_at: new Date().toISOString() }).eq('id', lookup.id)
       result.failures.push({ lookupId: lookup.id, parentReference: lookup.parent_reference, error: message })
       if (status === 429) { result.stoppedFor = 'rate_limit'; break }
