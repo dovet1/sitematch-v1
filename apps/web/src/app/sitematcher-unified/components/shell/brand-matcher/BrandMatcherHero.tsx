@@ -66,34 +66,34 @@ export function BrandMatcherHero() {
 
           <form
             onSubmit={submit}
-            className="mx-auto mt-10 max-w-[900px] rounded-[22px] border border-sm-border bg-sm-surface p-5 text-left shadow-[0_24px_60px_-28px_rgba(84,33,204,0.35)]"
+            className="mx-auto mt-10 max-w-[820px] rounded-[20px] border border-sm-border bg-sm-surface p-4 text-left shadow-[0_24px_60px_-28px_rgba(84,33,204,0.35)]"
           >
             <div className="grid gap-3 md:grid-cols-3">
-              <label className="block rounded-xl border border-sm-border px-4 py-3 focus-within:border-sm-violet">
+              <label className="block rounded-xl border border-sm-border px-3.5 py-2.5 focus-within:border-sm-violet">
                 <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-sm-ink3">
                   Size
                 </span>
-                <span className="mt-1 flex items-baseline gap-1.5">
+                <span className="mt-0.5 flex items-baseline gap-1.5">
                   <input
                     inputMode="numeric"
                     placeholder="14,000"
                     value={form.sqft}
                     onChange={(e) => setForm({ sqft: e.target.value })}
-                    className="w-full min-w-0 bg-transparent text-[22px] font-semibold text-sm-ink outline-none placeholder:text-sm-ink4"
+                    className="w-full min-w-0 bg-transparent text-[17px] font-semibold text-sm-ink outline-none placeholder:text-sm-ink4"
                     aria-label="Unit size in square feet"
                   />
-                  <span className="text-[13px] text-sm-ink3">sq ft</span>
+                  <span className="whitespace-nowrap text-[13px] text-sm-ink3">sq ft</span>
                 </span>
               </label>
 
-              <label className="relative block rounded-xl border border-sm-border px-4 py-3 focus-within:border-sm-violet">
+              <label className="relative block rounded-xl border border-sm-border px-3.5 py-2.5 focus-within:border-sm-violet">
                 <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-sm-ink3">
                   Use class
                 </span>
                 <select
                   value={form.useClass}
                   onChange={(e) => setForm({ useClass: e.target.value as BrandMatcherUseClass })}
-                  className="mt-1 w-full appearance-none bg-transparent pr-6 text-[22px] font-semibold text-sm-ink outline-none"
+                  className="mt-0.5 w-full appearance-none bg-transparent pr-6 text-[17px] font-semibold text-sm-ink outline-none"
                   aria-label="Use class"
                 >
                   {BRAND_MATCHER_USE_CLASSES.map((c) => (
@@ -104,22 +104,22 @@ export function BrandMatcherHero() {
                 </select>
                 <ChevronDown
                   size={16}
-                  className="pointer-events-none absolute bottom-5 right-4 text-sm-ink3"
+                  className="pointer-events-none absolute bottom-4 right-3.5 text-sm-ink3"
                 />
               </label>
 
-              <label className="block rounded-xl border border-sm-border px-4 py-3 focus-within:border-sm-violet">
+              <label className="block rounded-xl border border-sm-border px-3.5 py-2.5 focus-within:border-sm-violet">
                 <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-sm-ink3">
                   Location
                 </span>
-                <span className="mt-1 flex items-center gap-2">
-                  <MapPin size={16} className="flex-shrink-0 text-sm-violet" />
+                <span className="mt-0.5 flex items-center gap-2">
+                  <MapPin size={15} className="flex-shrink-0 text-sm-violet" />
                   <input
                     placeholder="LS6 2AT"
                     value={form.postcode}
                     onChange={(e) => setForm({ postcode: e.target.value.toUpperCase() })}
                     autoComplete="postal-code"
-                    className="w-full min-w-0 bg-transparent text-[22px] font-semibold text-sm-ink outline-none placeholder:text-sm-ink4"
+                    className="w-full min-w-0 bg-transparent text-[17px] font-semibold text-sm-ink outline-none placeholder:text-sm-ink4"
                     aria-label="Site postcode"
                   />
                 </span>
@@ -138,7 +138,7 @@ export function BrandMatcherHero() {
 
             <button
               type="submit"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sm-violet py-4 text-[16px] font-semibold text-white transition-colors hover:bg-sm-violet-deep"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sm-violet py-3 text-[15px] font-semibold text-white transition-colors hover:bg-sm-violet-deep"
             >
               Match brands
               <ArrowRight size={18} />
