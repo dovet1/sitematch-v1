@@ -221,7 +221,7 @@ export function UChrome({
   return (
     <header className="flex h-14 items-center gap-4 border-b border-sm-border bg-sm-surface px-4">
       {/* Logo / wordmark */}
-      <div className="flex items-center">
+      <Link href="/" aria-label="SiteMatcher home" className="flex items-center">
         <Image
           src="/logos/logo.svg"
           alt="SiteMatcher"
@@ -230,7 +230,7 @@ export function UChrome({
           className="h-9 w-auto"
           priority
         />
-      </div>
+      </Link>
 
       {/* Location search */}
       {showSearch ? (
