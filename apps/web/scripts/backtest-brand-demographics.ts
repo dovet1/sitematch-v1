@@ -1,10 +1,11 @@
 /**
- * Backtest for Brand Matcher demographic fit (migration 20261023000000). Answers: does a
- * fascia's town profile pick out the towns it really trades in? The method is documented in
+ * Backtest for Brand Matcher demographic fit (migrations 20261023000000 and 20261023020000).
+ * Answers: does a fascia's town profile pick out the towns it really trades in, compared with
+ * towns of the same size? The method is documented in
  * src/app/sitematcher-unified/lib/brand-matcher-demographics-backtest.ts.
  *
- * Read-only. Needs rebuild_all_demographics() to have run (the profiles table itself is not
- * read — profiles are rebuilt from training towns only). Run from apps/web:
+ * Read-only. Needs rebuild_all_demographics() to have run (the ranks and profiles tables are not
+ * read — both are rebuilt here from training towns only). Run from apps/web:
  *   npm run backtest:brand-demographics -- [--level fascia|brand] [--holdout 0.2]
  *     [--negatives 300] [--min-towns 12] [--out results.json]
  */
@@ -110,29 +111,31 @@ async function main() {
     `Located stores: ${located.count ?? '?'}; in a town with demographics: ${result.storesInScoredTowns}` +
       (located.count ? ` (${pct(result.storesInScoredTowns, located.count)})` : '')
   )
-  console.log(`Retail towns with demographics: ${result.retailTowns}`)
+  console.log(`Towns with demographics: ${result.towns}`)
   console.log(
     `${options.level === 'fascia' ? 'Fascias' : 'Brands'} scored: ${result.units.length}; ` +
       `skipped (< ${options.minTowns} towns): ${result.skipped}\n`
   )
 
+  // demographics: the fit score against towns of the same size. size: town size alone.
+  const broad = result.units.filter((r) => r.broad).length
   for (const v of VARIANTS) {
     const values = result.units
       .map((r) => r.auc[v])
       .filter((a): a is number => a != null)
       .sort((a, z) => a - z)
-    const broad = result.units.filter((r) => r.broad[v]).length
     if (values.length === 0) {
-      console.log(`${v.padEnd(13)} nothing scorable (${broad} broad)`)
+      console.log(`${v.padEnd(13)} nothing scorable`)
       continue
     }
     const atLeast = (min: number) => pct(values.filter((a) => a >= min).length, values.length)
     console.log(
       `${v.padEnd(13)} AUC median ${percentileCont(values, 0.5).toFixed(3)}` +
         `  IQR ${percentileCont(values, 0.25).toFixed(3)}–${percentileCont(values, 0.75).toFixed(3)}` +
-        `  ≥0.6: ${atLeast(0.6)}  ≥0.7: ${atLeast(0.7)}  (${values.length} scored, ${broad} broad)`
+        `  ≥0.6: ${atLeast(0.6)}  ≥0.7: ${atLeast(0.7)}  (${values.length} scored)`
     )
   }
+  console.log(`${broad} trade in towns that are typical for their size on every measure (good fit anywhere)`)
 
   // The figure anyone can read: how often each band goes to real towns vs other towns.
   const total = (pick: (r: UnitResult) => BandCounts) =>
@@ -143,8 +146,8 @@ async function main() {
       },
       { good: 0, partial: 0, weak: 0 }
     )
-  console.log(`\nHeld-back towns they trade in: ${bandLine(total((r) => r.bandsHeldOut))}`)
-  console.log(`Towns they do not trade in:    ${bandLine(total((r) => r.bandsOther))}`)
+  console.log(`\nHeld-back towns they trade in:           ${bandLine(total((r) => r.bandsHeldOut))}`)
+  console.log(`Same-size towns they do not trade in:    ${bandLine(total((r) => r.bandsOther))}`)
 
   const brandName = new Map(brands.map((b) => [b.id, b.name]))
   const fasciaName = new Map(fascias.map((f) => [f.id, f.name]))
@@ -153,10 +156,10 @@ async function main() {
     return r.fasciaId ? `${brand} — ${fasciaName.get(r.fasciaId) ?? r.fasciaId}` : brand
   }
   const ranked = result.units
-    .filter((r) => r.auc.all != null)
-    .sort((a, z) => (z.auc.all as number) - (a.auc.all as number))
+    .filter((r) => r.auc.demographics != null)
+    .sort((a, z) => (z.auc.demographics as number) - (a.auc.demographics as number))
   const line = (r: UnitResult) =>
-    `  ${(r.auc.all as number).toFixed(3)}  size only ${r.auc.population?.toFixed(3) ?? '  —  '}  ` +
+    `  ${(r.auc.demographics as number).toFixed(3)}  size only ${r.auc.size?.toFixed(3) ?? '  —  '}  ` +
     `${name(r)} (${r.towns} towns) [${r.topSignals.join(', ')}]`
   console.log('\nBest separated:')
   ranked.slice(0, 15).forEach((r) => console.log(line(r)))

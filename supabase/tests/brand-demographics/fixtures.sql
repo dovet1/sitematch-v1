@@ -1,5 +1,6 @@
--- Fixture checks for 20261023000000_brand_demographic_profiles.sql. Throwaway database only;
--- see stubs.sql for the run order. Each check raises on failure.
+-- Fixture checks for the Brand Matcher demographic migrations (20261023000000 and
+-- 20261023020000). Throwaway database only; see stubs.sql for the run order. Each check raises
+-- on failure.
 \set ON_ERROR_STOP 1
 
 -- 30 English towns in a row, 0.05° squares 0.1° apart. Affluence rises with i, population too.
@@ -64,6 +65,11 @@ END $$;
 CREATE FUNCTION pg_temp.near(a double precision, b double precision) RETURNS boolean LANGUAGE sql AS
   $$ SELECT abs(a - b) < 1e-6 $$;
 
+-- One size band (30 towns < 200), so ranks are across all towns: 30 towns x 3 signals.
+SELECT pg_temp.check(rebuild_bua_demographic_ranks() = 90, 'ranks written for every English town and signal');
+SELECT pg_temp.check(NOT EXISTS (SELECT 1 FROM bua_demographic_ranks WHERE bua_gsscode = 'S00000031'),
+  'the Scottish town gets no ranks');
+
 -- Units with >= 8 towns: Posh, Posh fascia, Everywhere, and its two fascias. x 3 signals.
 SELECT pg_temp.check(rebuild_brand_demographic_profiles() = 15, 'full rebuild writes 5 profiles x 3 signals');
 
@@ -75,6 +81,7 @@ SELECT pg_temp.check(
   (SELECT bua_count = 10 AND store_count = 14
           AND pg_temp.near(median, 177.5) AND pg_temp.near(p10, 159.5) AND pg_temp.near(p90, 195.5)
           AND pg_temp.near(median_rank, 25.0 / 30) AND pg_temp.near(distinctiveness, 2 * (25.0 / 30 - 0.5))
+          AND pg_temp.near(rank_p10, 21.4 / 30) AND pg_temp.near(rank_p90, 28.6 / 30)
    FROM brand_demographic_profiles
    WHERE brand_id = '00000000-0000-0000-0000-00000000000a' AND fascia_id IS NULL AND signal_name = 'affluence_high'),
   'Posh: ten English towns (Scotland and out-of-town stores excluded), affluent and distinctive');
@@ -115,6 +122,25 @@ SELECT pg_temp.check(NOT EXISTS (
   EXCEPT SELECT * FROM full_rows
 ) AND (SELECT count(*) FROM brand_demographic_profiles) = 15, 'scoped rebuild matches the full rebuild');
 
+-- Size bands of 10 towns. Affluence rises with size in these towns, so Posh's towns (the ten
+-- biggest, all in the top band) are only as affluent as towns of their size: not distinctive.
+-- Population is still ranked across all towns, so their size still stands out.
+SELECT pg_temp.check(rebuild_bua_demographic_ranks(10) = 90, 'ranks rebuilt in bands of ten');
+SELECT pg_temp.check((SELECT count(DISTINCT size_band) = 3 FROM bua_demographic_ranks), 'three size bands');
+SELECT rebuild_brand_demographic_profiles();
+SELECT pg_temp.check(
+  (SELECT pg_temp.near(distinctiveness, 0) AND pg_temp.near(median, 177.5)
+   FROM brand_demographic_profiles
+   WHERE brand_id = '00000000-0000-0000-0000-00000000000a' AND fascia_id IS NULL AND signal_name = 'affluence_high'),
+  'affluence that only comes with size is not distinctive once towns are compared within their size band');
+SELECT pg_temp.check(
+  (SELECT pg_temp.near(distinctiveness, 2 * (25.0 / 30 - 0.5))
+   FROM brand_demographic_profiles
+   WHERE brand_id = '00000000-0000-0000-0000-00000000000a' AND fascia_id IS NULL AND signal_name = 'population'),
+  'town size is still ranked against all towns');
+SELECT rebuild_bua_demographic_ranks();
+SELECT rebuild_brand_demographic_profiles();
+
 -- A brand that drops below the minimum loses its profile rather than keeping a stale one.
 DELETE FROM stores WHERE brand_id = '00000000-0000-0000-0000-00000000000a'
   AND location::geometry && ST_MakeEnvelope(-0.05, 51.9, 1, 52.1, 4326);  -- towns 20-30
@@ -128,8 +154,9 @@ SELECT pg_temp.check(NOT EXISTS (
 SELECT pg_temp.check(
   (SELECT bua_gsscode = 'E00000025' AND distance_m = 0 AND (signals->>'population')::numeric = 250000
           AND (signals->>'affluence_high')::numeric = 175
+          AND pg_temp.near((ranks->>'affluence_high')::double precision, 24.5 / 30)
    FROM brand_matcher_site_bua(52.025, -2 + 25 * 0.1 + 0.025)),
-  'a site inside a town gets that town and its signals');
+  'a site inside a town gets that town, its signals and its ranks');
 SELECT pg_temp.check(
   (SELECT bua_gsscode = 'E00000030' AND distance_m BETWEEN 600 AND 800
    FROM brand_matcher_site_bua(52.025, 1.06)),
@@ -138,11 +165,13 @@ SELECT pg_temp.check(
   NOT EXISTS (SELECT 1 FROM brand_matcher_site_bua(52.025, 1.2)),
   'a site beyond the fallback distance is not placed');
 SELECT pg_temp.check(
-  (SELECT bua_gsscode = 'S00000031' AND signals IS NULL FROM brand_matcher_site_bua(52.025, 1.125)),
+  (SELECT bua_gsscode = 'S00000031' AND signals IS NULL AND ranks IS NULL FROM brand_matcher_site_bua(52.025, 1.125)),
   'a town without demographics is placed with no signals');
 
 SELECT pg_temp.check(
   NOT has_function_privilege('anon', 'public.brand_matcher_site_bua(double precision, double precision, integer)', 'EXECUTE')
   AND NOT has_function_privilege('authenticated', 'public.rebuild_brand_demographic_profiles(uuid[])', 'EXECUTE')
-  AND NOT has_table_privilege('anon', 'public.brand_demographic_profiles', 'SELECT'),
+  AND NOT has_function_privilege('authenticated', 'public.rebuild_bua_demographic_ranks(integer)', 'EXECUTE')
+  AND NOT has_table_privilege('anon', 'public.brand_demographic_profiles', 'SELECT')
+  AND NOT has_table_privilege('anon', 'public.bua_demographic_ranks', 'SELECT'),
   'nothing is reachable by anon or authenticated');

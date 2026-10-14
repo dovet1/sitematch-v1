@@ -1,8 +1,9 @@
--- Minimal stand-ins for the production tables 20261023000000_brand_demographic_profiles.sql
--- reads. Throwaway database only. Order: this file, the migration, fixtures.sql.
+-- Minimal stand-ins for the production tables the Brand Matcher demographic migrations read.
+-- Throwaway database only. Order: this file, the two migrations, fixtures.sql.
 --
 --   createdb bdp && psql -v ON_ERROR_STOP=1 -d bdp -f supabase/tests/brand-demographics/stubs.sql \
 --     -f supabase/migrations/20261023000000_brand_demographic_profiles.sql \
+--     -f supabase/migrations/20261023020000_size_adjusted_demographic_ranks.sql \
 --     -f supabase/tests/brand-demographics/fixtures.sql
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

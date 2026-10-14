@@ -1,6 +1,7 @@
 -- Brand Matcher demographic profile deployment checks.
 --
--- Run only after applying 20261023000000_brand_demographic_profiles.sql and running
+-- Run only after applying the Brand Matcher demographic migrations (20261023000000 and
+-- 20261023020000) and running rebuild_bua_demographic_ranks() then
 -- rebuild_brand_demographic_profiles(). Read-only. Works pasted into the Supabase SQL editor
 -- or with psql:
 --
@@ -13,6 +14,10 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.brand_matcher_bua_signals WHERE signal_name <> 'population') THEN
     RAISE EXCEPTION 'FAIL: no BUA demographic signals — run rebuild_all_demographics() first';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.bua_demographic_ranks) THEN
+    RAISE EXCEPTION 'FAIL: no size-adjusted ranks — run rebuild_bua_demographic_ranks()';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM public.brand_demographic_profiles) THEN

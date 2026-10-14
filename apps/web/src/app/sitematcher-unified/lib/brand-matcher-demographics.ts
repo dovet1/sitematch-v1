@@ -1,51 +1,69 @@
 // Brand Matcher demographic fit: does the town a site is in look like the towns a brand already
 // trades in? Pure — the route will score with it and the backtest script measures it.
 //
-// "Town" is the ONS built-up area (BUA). A brand's profile is the spread (p10..p90) of each
-// demographic signal across its towns, built by rebuild_brand_demographic_profiles()
-// (migration 20261023000000). The site's town is scored against the signals that set the brand
-// apart from a typical retail town; a brand whose towns are typical on every signal trades
-// anywhere, so any town fits it.
+// "Town" is the ONS built-up area (BUA). Every town's demographic signals are ranked against towns
+// of a similar size (rebuild_bua_demographic_ranks, migration 20261023020000), so "affluent" means
+// affluent for its size: compared with all towns, every brand's loudest trait was simply "bigger
+// towns than usual". A brand's profile is the spread (p10..p90) of those ranks across its towns.
+// The site's town is scored against the signals that set the brand apart; a brand whose towns are
+// typical on every signal trades anywhere, so any town fits it.
+//
+// Town size is kept out of the score and reported on its own: it is easy to judge for yourself,
+// and left in it would outweigh every demographic signal.
 //
 // Phase 1: shown as a pill only, never added to the match score, until the backtest shows it
 // predicts where brands trade.
 
 // Kept in step with brand_demographic_profiles_min_buas in the migration.
 export const MIN_PROFILE_BUAS = 8
+// Kept in step with rebuild_bua_demographic_ranks(p_band_size).
+export const SIZE_BAND_TOWNS = 200
 // A signal counts as part of a brand's character when its towns' median rank is at least this far
-// from the middle (0.3 = the median town sits in the top or bottom 35% of retail towns).
+// from the middle (0.3 = the median town sits in the top or bottom 35% for its size).
 export const MIN_DISTINCTIVENESS = 0.3
 // Read at most this many signals, one per category: affluence_high and affluence_low are the same
 // fact twice, and counting both would double its weight.
 export const MAX_FIT_SIGNALS = 4
 export const GOOD_FIT = 0.75
 export const PARTIAL_FIT = 0.5
+export const SIZE_SIGNAL = 'population'
 
 export interface DemographicSignalProfile {
   signalName: string
   category: string
   buaCount: number
+  // Spread of the signal's value across the brand's towns (index score, or people), for wording.
   p10: number
   p25: number
   median: number
   p75: number
   p90: number
+  // Spread of the towns' size-adjusted ranks (0..1), which the fit is scored on.
+  rankP10: number
+  rankP25: number
   medianRank: number
+  rankP75: number
+  rankP90: number
   distinctiveness: number
 }
 
-// Signal name -> value for the site's town (index score, or people for 'population').
-export type SiteSignals = Record<string, number>
+// The site's town: each signal's value and its size-adjusted rank, as brand_matcher_site_bua
+// returns them.
+export interface SiteTown {
+  values: Record<string, number>
+  ranks: Record<string, number>
+}
 
 export type DemographicFitBand = 'good' | 'partial' | 'weak'
 
-// Where the site's value sits in the brand's spread.
+// Where the site sits in the brand's spread.
 export type SignalPosition = 'below' | 'low' | 'typical' | 'high' | 'above'
 
 export interface DemographicSignalFit {
   signalName: string
   category: string
   siteValue: number
+  siteRank: number
   profile: DemographicSignalProfile
   position: SignalPosition
   fit: number
@@ -59,11 +77,20 @@ export interface DemographicFit {
   score: number
   // Signals read, most distinctive first. The first is the one the pill explains.
   signals: DemographicSignalFit[]
+  // How the site's town size compares with the brand's towns. Not part of the score.
+  size: DemographicSignalFit | null
 }
 
-// 1 inside the brand's middle half (p25..p75), easing to 0.5 at p10/p90, then to 0 by the same
-// distance again beyond.
-export function signalFit(value: number, p: DemographicSignalProfile): { fit: number; position: SignalPosition } {
+interface Spread {
+  p10: number
+  p25: number
+  p75: number
+  p90: number
+}
+
+// 1 inside the middle half (p25..p75), easing to 0.5 at p10/p90, then to 0 by the same distance
+// again beyond.
+export function signalFit(value: number, p: Spread): { fit: number; position: SignalPosition } {
   if (value >= p.p25 && value <= p.p75) return { fit: 1, position: 'typical' }
   if (value < p.p25) {
     const width = p.p25 - p.p10
@@ -75,6 +102,22 @@ export function signalFit(value: number, p: DemographicSignalProfile): { fit: nu
   return { fit: width > 0 ? Math.max(0, 0.5 * (1 - (value - p.p90) / width)) : 0, position: 'above' }
 }
 
+function rankSpread(p: DemographicSignalProfile): Spread {
+  return { p10: p.rankP10, p25: p.rankP25, p75: p.rankP75, p90: p.rankP90 }
+}
+
+function scoreSignal(site: SiteTown, p: DemographicSignalProfile): DemographicSignalFit {
+  const siteRank = site.ranks[p.signalName]
+  return {
+    signalName: p.signalName,
+    category: p.category,
+    siteValue: site.values[p.signalName],
+    siteRank,
+    profile: p,
+    ...signalFit(siteRank, rankSpread(p)),
+  }
+}
+
 function bandFor(score: number): DemographicFitBand {
   return score >= GOOD_FIT ? 'good' : score >= PARTIAL_FIT ? 'partial' : 'weak'
 }
@@ -82,16 +125,16 @@ function bandFor(score: number): DemographicFitBand {
 // null when there is nothing to compare: no profile for the brand (too few towns with data) or no
 // signals for the site (outside every town, or a town without census data). That is a gap in the
 // data, not a poor fit, so no pill is shown.
-export function demographicFit(
-  site: SiteSignals | null,
-  profile: DemographicSignalProfile[]
-): DemographicFit | null {
+export function demographicFit(site: SiteTown | null, profile: DemographicSignalProfile[]): DemographicFit | null {
   if (!site || profile.length === 0) return null
-  const shared = profile.filter((p) => Number.isFinite(site[p.signalName]))
-  if (shared.length === 0) return null
+  const shared = profile.filter((p) => Number.isFinite(site.ranks[p.signalName]))
+  const sizeProfile = shared.find((p) => p.signalName === SIZE_SIGNAL)
+  const demographic = shared.filter((p) => p.signalName !== SIZE_SIGNAL)
+  if (demographic.length === 0) return null
+  const size = sizeProfile ? scoreSignal(site, sizeProfile) : null
 
   const bestPerCategory = new Map<string, DemographicSignalProfile>()
-  for (const p of shared) {
+  for (const p of demographic) {
     const current = bestPerCategory.get(p.category)
     if (!current || p.distinctiveness > current.distinctiveness) bestPerCategory.set(p.category, p)
   }
@@ -100,24 +143,18 @@ export function demographicFit(
     .sort((a, z) => z.distinctiveness - a.distinctiveness || a.signalName.localeCompare(z.signalName))
     .slice(0, MAX_FIT_SIGNALS)
 
-  if (chosen.length === 0) return { band: 'good', basis: 'broad', score: 1, signals: [] }
+  if (chosen.length === 0) return { band: 'good', basis: 'broad', score: 1, signals: [], size }
 
-  const signals = chosen.map((p) => ({
-    signalName: p.signalName,
-    category: p.category,
-    siteValue: site[p.signalName],
-    profile: p,
-    ...signalFit(site[p.signalName], p),
-  }))
+  const signals = chosen.map((p) => scoreSignal(site, p))
   const weight = chosen.reduce((s, p) => s + p.distinctiveness, 0)
   const score = signals.reduce((s, x) => s + x.fit * x.profile.distinctiveness, 0) / weight
-  return { band: bandFor(score), basis: 'profile', score, signals }
+  return { band: bandFor(score), basis: 'profile', score, signals, size }
 }
 
 // ---------------------------------------------------------------------------
-// Profile building — the backtest needs profiles built from a subset of a brand's towns, which the
-// stored table cannot give it. Mirrors rebuild_brand_demographic_profiles(); the unit tests pin
-// both to the same fixture figures.
+// Ranks and profiles — the backtest needs profiles built from a subset of a brand's towns, which
+// the stored table cannot give it. Mirrors rebuild_bua_demographic_ranks() and
+// rebuild_brand_demographic_profiles(); the unit tests pin both to the same fixture figures.
 // ---------------------------------------------------------------------------
 
 // Postgres percentile_cont: linear interpolation between the closest ranks. `sorted` ascending.
@@ -133,54 +170,97 @@ export function percentileCont(sorted: number[], p: number): number {
 export function midRanks<K>(values: Map<K, number>): Map<K, number> {
   const sorted = Array.from(values.values()).sort((a, z) => a - z)
   const n = sorted.length
-  const below = (v: number) => {
+  const countBelow = (v: number, inclusive: boolean) => {
     let lo = 0
     let hi = n
     while (lo < hi) {
       const mid = (lo + hi) >> 1
-      if (sorted[mid] < v) lo = mid + 1
-      else hi = mid
-    }
-    return lo
-  }
-  const atOrBelow = (v: number) => {
-    let lo = 0
-    let hi = n
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1
-      if (sorted[mid] <= v) lo = mid + 1
+      if (inclusive ? sorted[mid] <= v : sorted[mid] < v) lo = mid + 1
       else hi = mid
     }
     return lo
   }
   const ranks = new Map<K, number>()
   values.forEach((v, k) => {
-    const b = below(v)
-    ranks.set(k, (b + (atOrBelow(v) - b) / 2) / n)
+    const below = countBelow(v, false)
+    ranks.set(k, (below + (countBelow(v, true) - below) / 2) / n)
   })
   return ranks
 }
 
+// Postgres ntile(n) over towns ordered by population then code: equal-sized bands, the first
+// (count % n) one town larger.
+export function sizeBands(population: Map<string, number>, bandSize = SIZE_BAND_TOWNS): Map<string, number> {
+  const towns = Array.from(population.keys()).sort(
+    (a, z) => (population.get(a) as number) - (population.get(z) as number) || (a < z ? -1 : a > z ? 1 : 0)
+  )
+  const n = Math.max(1, Math.round(towns.length / bandSize))
+  const base = Math.floor(towns.length / n)
+  const extra = towns.length % n
+  const bands = new Map<string, number>()
+  let i = 0
+  for (let band = 1; band <= n; band++) {
+    const size = base + (band <= extra ? 1 : 0)
+    for (let j = 0; j < size; j++) bands.set(towns[i++], band)
+  }
+  return bands
+}
+
 export interface SignalTable {
   category: string
-  // BUA code -> value, over every retail town with a value.
+  // BUA code -> value.
   values: Map<string, number>
-  // BUA code -> mid-rank among those towns.
+  // BUA code -> size-adjusted rank (across all towns for population).
   ranks: Map<string, number>
 }
 
-export function buildSignalTable(category: string, values: Map<string, number>): SignalTable {
-  return { category, values, ranks: midRanks(values) }
+// Every signal's values per town in, size-adjusted ranks out. Needs the population signal.
+export function buildSignalTables(
+  signals: Map<string, { category: string; values: Map<string, number> }>,
+  bandSize = SIZE_BAND_TOWNS
+): Map<string, SignalTable> {
+  const population = signals.get(SIZE_SIGNAL)
+  if (!population) throw new Error('the population signal is required to form size bands')
+  const bands = sizeBands(population.values, bandSize)
+  const tables = new Map<string, SignalTable>()
+  signals.forEach(({ category, values }, name) => {
+    const inTowns = new Map(Array.from(values).filter(([t]) => bands.has(t)))
+    let ranks: Map<string, number>
+    if (name === SIZE_SIGNAL) {
+      ranks = midRanks(inTowns)
+    } else {
+      const byBand = new Map<number, Map<string, number>>()
+      inTowns.forEach((v, t) => {
+        const band = bands.get(t) as number
+        const group = byBand.get(band) ?? new Map<string, number>()
+        group.set(t, v)
+        byBand.set(band, group)
+      })
+      ranks = new Map()
+      byBand.forEach((group) => midRanks(group).forEach((r, t) => ranks.set(t, r)))
+    }
+    tables.set(name, { category, values: inTowns, ranks })
+  })
+  return tables
 }
 
-export function buildProfile(
-  buas: Iterable<string>,
-  signals: Map<string, SignalTable>
-): DemographicSignalProfile[] {
+export function siteTown(town: string, tables: Map<string, SignalTable>): SiteTown | null {
+  const values: Record<string, number> = {}
+  const ranks: Record<string, number> = {}
+  tables.forEach((table, name) => {
+    const r = table.ranks.get(town)
+    if (r == null) return
+    ranks[name] = r
+    values[name] = table.values.get(town) as number
+  })
+  return Object.keys(ranks).length ? { values, ranks } : null
+}
+
+export function buildProfile(buas: Iterable<string>, tables: Map<string, SignalTable>): DemographicSignalProfile[] {
   const towns = Array.from(new Set(buas))
   const out: DemographicSignalProfile[] = []
-  signals.forEach((table, signalName) => {
-    const present = towns.filter((b) => table.values.has(b))
+  tables.forEach((table, signalName) => {
+    const present = towns.filter((b) => table.ranks.has(b))
     if (present.length < MIN_PROFILE_BUAS) return
     const vals = present.map((b) => table.values.get(b) as number).sort((a, z) => a - z)
     const ranks = present.map((b) => table.ranks.get(b) as number).sort((a, z) => a - z)
@@ -194,7 +274,11 @@ export function buildProfile(
       median: percentileCont(vals, 0.5),
       p75: percentileCont(vals, 0.75),
       p90: percentileCont(vals, 0.9),
+      rankP10: percentileCont(ranks, 0.1),
+      rankP25: percentileCont(ranks, 0.25),
       medianRank,
+      rankP75: percentileCont(ranks, 0.75),
+      rankP90: percentileCont(ranks, 0.9),
       distinctiveness: Math.min(1, Math.abs(medianRank - 0.5) * 2),
     })
   })

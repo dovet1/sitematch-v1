@@ -1,14 +1,18 @@
 import {
   auc,
   buildProfile,
-  buildSignalTable,
+  buildSignalTables,
   demographicFit,
   midRanks,
   percentileCont,
   signalFit,
+  siteTown,
+  sizeBands,
   type DemographicSignalProfile,
+  type SiteTown,
 } from '../brand-matcher-demographics'
 
+// Rank spread 0.6..0.9 around a median of 0.75: the brand's towns sit high for their size.
 const signal = (over: Partial<DemographicSignalProfile>): DemographicSignalProfile => ({
   signalName: 'affluence_high',
   category: 'affluence',
@@ -18,13 +22,22 @@ const signal = (over: Partial<DemographicSignalProfile>): DemographicSignalProfi
   median: 120,
   p75: 130,
   p90: 140,
-  medianRank: 0.8,
-  distinctiveness: 0.6,
+  rankP10: 0.6,
+  rankP25: 0.7,
+  medianRank: 0.75,
+  rankP75: 0.8,
+  rankP90: 0.9,
+  distinctiveness: 0.5,
   ...over,
 })
 
+const site = (ranks: Record<string, number>): SiteTown => ({
+  ranks,
+  values: Object.fromEntries(Object.keys(ranks).map((k) => [k, 100])),
+})
+
 describe('signalFit', () => {
-  const p = signal({})
+  const p = { p10: 100, p25: 110, p75: 130, p90: 140 }
 
   it('is a full fit across the middle half', () => {
     expect(signalFit(110, p)).toEqual({ fit: 1, position: 'typical' })
@@ -45,60 +58,82 @@ describe('signalFit', () => {
   })
 
   it('treats a collapsed tail as a hard edge', () => {
-    const flat = signal({ p10: 110, p25: 110 })
-    expect(signalFit(109, flat)).toEqual({ fit: 0, position: 'below' })
+    expect(signalFit(109, { ...p, p10: 110 })).toEqual({ fit: 0, position: 'below' })
   })
 })
 
 describe('demographicFit', () => {
   it('is null with nothing to compare — a data gap is not a poor fit', () => {
     expect(demographicFit(null, [signal({})])).toBeNull()
-    expect(demographicFit({ affluence_high: 120 }, [])).toBeNull()
-    expect(demographicFit({ population: 50000 }, [signal({})])).toBeNull()
+    expect(demographicFit(site({ affluence_high: 0.75 }), [])).toBeNull()
+    expect(demographicFit(site({ population: 0.5 }), [signal({})])).toBeNull()
+  })
+
+  it('scores on the size-adjusted rank, not the raw value', () => {
+    const fit = demographicFit({ values: { affluence_high: 60 }, ranks: { affluence_high: 0.75 } }, [signal({})])
+    expect(fit?.band).toBe('good')
+    expect(fit?.signals[0]).toMatchObject({ siteValue: 60, siteRank: 0.75, position: 'typical' })
   })
 
   it('calls a brand with no distinctive signals a good fit anywhere', () => {
-    const fit = demographicFit({ affluence_high: 60 }, [signal({ distinctiveness: 0.1 })])
-    expect(fit).toEqual({ band: 'good', basis: 'broad', score: 1, signals: [] })
+    const fit = demographicFit(site({ affluence_high: 0.1 }), [signal({ distinctiveness: 0.1 })])
+    expect(fit).toMatchObject({ band: 'good', basis: 'broad', score: 1, signals: [] })
+  })
+
+  it('reports town size separately and never scores it', () => {
+    const profile = [
+      signal({}),
+      signal({ signalName: 'population', category: 'population', distinctiveness: 0.9 }),
+    ]
+    const fit = demographicFit(site({ affluence_high: 0.75, population: 0.1 }), profile)
+    expect(fit?.score).toBe(1)
+    expect(fit?.signals.map((s) => s.signalName)).toEqual(['affluence_high'])
+    expect(fit?.size).toMatchObject({ signalName: 'population', position: 'below', fit: 0 })
+  })
+
+  it('a brand distinctive only by size is broad on demographics', () => {
+    const fit = demographicFit(site({ affluence_high: 0.2, population: 0.75 }), [
+      signal({ distinctiveness: 0.1 }),
+      signal({ signalName: 'population', category: 'population', distinctiveness: 0.9 }),
+    ])
+    expect(fit?.basis).toBe('broad')
+    expect(fit?.size?.position).toBe('typical')
   })
 
   it('reads one signal per category — the most distinctive', () => {
-    const fit = demographicFit({ affluence_high: 120, affluence_low: 40 }, [
+    const fit = demographicFit(site({ affluence_high: 0.75, affluence_low: 0.1 }), [
       signal({}),
-      signal({ signalName: 'affluence_low', distinctiveness: 0.5, p10: 60, p25: 70, median: 80, p75: 90, p90: 100 }),
+      signal({ signalName: 'affluence_low', distinctiveness: 0.4 }),
     ])
     expect(fit?.signals.map((s) => s.signalName)).toEqual(['affluence_high'])
-    expect(fit?.band).toBe('good')
   })
 
   it('weights signals by distinctiveness and bands the result', () => {
     const profile = [
       signal({ distinctiveness: 0.9 }),
-      signal({ signalName: 'population', category: 'population', distinctiveness: 0.3, p10: 2e5, p25: 3e5, median: 3.5e5, p75: 4e5, p90: 5e5 }),
+      signal({ signalName: 'retirement_market', category: 'life_stage', distinctiveness: 0.3 }),
     ]
-    // Affluent enough, far too small: (0.9 * 1 + 0.3 * 0) / 1.2 = 0.75
-    const smallTown = demographicFit({ affluence_high: 120, population: 50_000 }, profile)
-    expect(smallTown?.score).toBeCloseTo(0.75)
-    expect(smallTown?.band).toBe('good')
-    expect(smallTown?.signals[0].signalName).toBe('affluence_high')
-    expect(smallTown?.signals[1].position).toBe('below')
-
-    // Right size, not affluent: 0.3 / 1.2 = 0.25
-    expect(demographicFit({ affluence_high: 70, population: 3.5e5 }, profile)?.band).toBe('weak')
+    // (0.9 * 1 + 0.3 * 0) / 1.2 = 0.75
+    const fit = demographicFit(site({ affluence_high: 0.75, retirement_market: 0.1 }), profile)
+    expect(fit?.score).toBeCloseTo(0.75)
+    expect(fit?.band).toBe('good')
+    expect(fit?.signals[1].position).toBe('below')
+    // 0.3 / 1.2 = 0.25
+    expect(demographicFit(site({ affluence_high: 0.3, retirement_market: 0.75 }), profile)?.band).toBe('weak')
     // Low end on both: 0.5
-    expect(demographicFit({ affluence_high: 100, population: 2e5 }, profile)?.band).toBe('partial')
+    expect(demographicFit(site({ affluence_high: 0.6, retirement_market: 0.6 }), profile)?.band).toBe('partial')
   })
 
   it('reads at most four signals', () => {
     const profile = ['a', 'b', 'c', 'd', 'e'].map((c, i) =>
       signal({ signalName: c, category: c, distinctiveness: 0.9 - i * 0.1 })
     )
-    const site = Object.fromEntries(profile.map((p) => [p.signalName, 120]))
-    expect(demographicFit(site, profile)?.signals.map((s) => s.signalName)).toEqual(['a', 'b', 'c', 'd'])
+    const s = site(Object.fromEntries(profile.map((p) => [p.signalName, 0.75])))
+    expect(demographicFit(s, profile)?.signals.map((x) => x.signalName)).toEqual(['a', 'b', 'c', 'd'])
   })
 })
 
-describe('profile building mirrors rebuild_brand_demographic_profiles', () => {
+describe('ranks and profiles mirror the SQL rebuilds', () => {
   it('interpolates percentiles like percentile_cont', () => {
     expect(percentileCont([1, 2, 3, 4], 0.5)).toBe(2.5)
     expect(percentileCont([10, 20, 30, 40, 50], 0.1)).toBe(14)
@@ -112,30 +147,55 @@ describe('profile building mirrors rebuild_brand_demographic_profiles', () => {
     expect(ranks.get('d')).toBe(0.875)
   })
 
+  it('bands towns by size like ntile', () => {
+    const pop = new Map(Array.from({ length: 7 }, (_, i) => [`t${i}`, (7 - i) * 10]))
+    // 7 towns, bands of 3 -> round(7 / 3) = 2 bands of 4 and 3, smallest first.
+    const bands = sizeBands(pop, 3)
+    expect(['t6', 't5', 't4', 't3'].map((t) => bands.get(t))).toEqual([1, 1, 1, 1])
+    expect(['t2', 't1', 't0'].map((t) => bands.get(t))).toEqual([2, 2, 2])
+  })
+
   // The same towns as supabase/tests/brand-demographics/fixtures.sql: 30 towns, affluence
-  // 50 + 5i, urbanity three-valued; Posh trades in towns 21..30.
+  // 50 + 5i and population 10,000i (both rise with i), urbanity three-valued; Posh trades in
+  // towns 21..30.
   const towns = Array.from({ length: 30 }, (_, k) => k + 1)
   const code = (i: number) => `E${String(i).padStart(8, '0')}`
-  const signals = new Map([
-    ['affluence_high', buildSignalTable('affluence', new Map(towns.map((i) => [code(i), 50 + i * 5])))],
-    ['urbanity_rural', buildSignalTable('urbanity', new Map(towns.map((i) => [code(i), 100 + (i % 3) * 5])))],
+  const raw = new Map([
+    ['affluence_high', { category: 'affluence', values: new Map(towns.map((i) => [code(i), 50 + i * 5])) }],
+    ['urbanity_rural', { category: 'urbanity', values: new Map(towns.map((i) => [code(i), 100 + (i % 3) * 5])) }],
+    ['population', { category: 'population', values: new Map(towns.map((i) => [code(i), i * 10000])) }],
   ])
+  const posh = towns.slice(20).map(code)
 
-  it('reproduces the SQL fixture figures', () => {
-    const posh = buildProfile(towns.slice(20).map(code), signals)
-    const affluence = posh.find((p) => p.signalName === 'affluence_high')!
+  it('reproduces the SQL fixture figures with one size band', () => {
+    const profile = buildProfile(posh, buildSignalTables(raw))
+    const affluence = profile.find((p) => p.signalName === 'affluence_high')!
     expect(affluence.buaCount).toBe(10)
     expect(affluence.median).toBe(177.5)
     expect(affluence.p10).toBeCloseTo(159.5)
     expect(affluence.p90).toBeCloseTo(195.5)
     expect(affluence.medianRank).toBeCloseTo(25 / 30)
+    expect(affluence.rankP10).toBeCloseTo(21.4 / 30)
+    expect(affluence.rankP90).toBeCloseTo(28.6 / 30)
     expect(affluence.distinctiveness).toBeCloseTo(2 / 3)
-    const urbanity = posh.find((p) => p.signalName === 'urbanity_rural')!
-    expect(urbanity.distinctiveness).toBeCloseTo(0)
+    expect(profile.find((p) => p.signalName === 'urbanity_rural')!.distinctiveness).toBeCloseTo(0)
+  })
+
+  it('reproduces the SQL fixture figures with bands of ten', () => {
+    const profile = buildProfile(posh, buildSignalTables(raw, 10))
+    expect(profile.find((p) => p.signalName === 'affluence_high')!.distinctiveness).toBeCloseTo(0)
+    expect(profile.find((p) => p.signalName === 'population')!.distinctiveness).toBeCloseTo(2 / 3)
+  })
+
+  it('gives a site its values and ranks', () => {
+    const s = siteTown(code(25), buildSignalTables(raw))
+    expect(s?.values.affluence_high).toBe(175)
+    expect(s?.ranks.affluence_high).toBeCloseTo(24.5 / 30)
+    expect(siteTown('S00000031', buildSignalTables(raw))).toBeNull()
   })
 
   it('drops signals with fewer than eight towns', () => {
-    expect(buildProfile(towns.slice(23).map(code), signals)).toEqual([])
+    expect(buildProfile(towns.slice(23).map(code), buildSignalTables(raw))).toEqual([])
   })
 })
 
