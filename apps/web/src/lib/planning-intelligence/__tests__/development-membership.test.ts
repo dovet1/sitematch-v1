@@ -172,9 +172,9 @@ describe('planFamilyMemberships', () => {
   it('holds a family citing several missing permissions on plainly different sites', () => {
     const plan = only(planFamilyMemberships(input(
       council([
-        // No member quotes both permissions, so this is not one scheme's quoted chain.
-        application('2026/0401', 'Reserved matters for phase 2 pursuant to outline permission 2019/1111', { procedure: 'reserved_matters', address: 'Redmayne Field North Walsham Road Sprowston' }),
-        application('2019/1111/COND', 'Discharge of condition 5 of 2020/2222', { procedure: 'discharge', address: 'Land between Saint Faiths Road and Buxton Road Old Catton' }),
+        // Joined only through 2020/2222; no member quotes all three permissions.
+        application('2026/0401', 'Variation of condition 2 of 2019/1111 and 2020/2222 to alter phase 1', { procedure: 'amendment', address: 'Redmayne Field North Walsham Road Sprowston' }),
+        application('2026/0402', 'Variation of condition 4 of 2020/2222 and 2021/3333 to alter phase 2', { procedure: 'amendment', address: 'Land between Saint Faiths Road and Buxton Road Old Catton' }),
       ]),
       [], [],
     )))
@@ -183,12 +183,12 @@ describe('planFamilyMemberships', () => {
   })
 
   it('groups a masterplan citing several missing permissions on one site as one scheme', () => {
-    const reservedMatters = application('2026/0401', 'Reserved matters for phase 2 pursuant to outline permission 2019/1111', { procedure: 'reserved_matters', address: 'Northern Site, New Covent Garden Market, Nine Elms Lane' })
-    const condition = application('2019/1111/COND', 'Discharge of condition 5 of 2020/2222', { procedure: 'discharge', address: 'New Covent Garden Market Northern Site' })
-    const plan = only(planFamilyMemberships(input(council([reservedMatters, condition]), [], [])))
+    const phaseOne = application('2026/0401', 'Variation of condition 2 of 2019/1111 and 2020/2222 to alter phase 1', { procedure: 'amendment', address: 'Northern Site, New Covent Garden Market, Nine Elms Lane' })
+    const phaseTwo = application('2026/0402', 'Variation of condition 4 of 2020/2222 and 2021/3333 to alter phase 2', { procedure: 'amendment', address: 'New Covent Garden Market Northern Site' })
+    const plan = only(planFamilyMemberships(input(council([phaseOne, phaseTwo]), [], [])))
     expect(plan).toMatchObject({
-      action: 'apply', principalApplicationId: reservedMatters.id, familyState: 'awaiting_original',
-      missingParentKeys: expect.arrayContaining(['2019/1111', '2020/2222']),
+      action: 'apply', principalApplicationId: phaseOne.id, familyState: 'awaiting_original',
+      missingParentKeys: expect.arrayContaining(['2019/1111', '2020/2222', '2021/3333']),
     })
   })
 

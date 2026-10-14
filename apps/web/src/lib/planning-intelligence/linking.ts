@@ -117,8 +117,10 @@ export function followOnKind(application: Pick<LinkableApplication, 'description
   const description = application.description ?? ''
   // Section 106 (and Scottish section 75) matters are paperwork on an existing permission, deeds of
   // variation included; read as an original, a CCTV scheme under New Covent Garden Market's
-  // obligations would have led and described that 57-application scheme.
-  if (application.procedure === 'planning-obligation') return 'condition'
+  // obligations would have led and described that 57-application scheme. Pre-application advice
+  // and planning performance agreements grant nothing either: Cornwall's PA26/00450/PREAPP led a
+  // family, and stood in for the decision PA26/00450 that a Blackwater scheme cited.
+  if (application.procedure === 'planning-obligation' || application.procedure === 'pre-application') return 'condition'
   if (CONDITION_LEAD.test(description) && !AMENDMENT_WORDING.test(description.slice(0, 60))) return 'condition'
   if (AMENDMENT_WORDING.test(description)) return 'amendment'
   if (RESERVED_MATTERS_WORDING.test(description)) return 'reserved_matters'
@@ -483,7 +485,11 @@ export function familiesFromLinks(
 
   const families = new UnionFind()
   const referenceKey = (reference: string) => `ref:${referenceCore(reference)?.core ?? normaliseReference(reference)}`
-  for (const application of applications) families.union(`app:${application.id}`, referenceKey(application.reference))
+  // Only an application that can head a family answers for its case number, as in the resolver: a
+  // pre-application record PA26/00450/PREAPP is not the decision PA26/00450 another scheme cites.
+  for (const application of applications) {
+    if (canHeadFamily(application)) families.union(`app:${application.id}`, referenceKey(application.reference))
+  }
   const strong = links.filter(link => link.strength === 'strong' && byId.has(link.childId) && (!link.parentId || byId.has(link.parentId)))
   for (const link of strong) families.union(`app:${link.childId}`, link.parentId ? `app:${link.parentId}` : referenceKey(link.parentReference))
 

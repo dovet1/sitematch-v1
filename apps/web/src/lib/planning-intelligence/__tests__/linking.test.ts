@@ -47,6 +47,17 @@ describe('followOnKind', () => {
     expect(followOnKind({ description: 'Matters relating to a S106 Agreement in respect of the CCTV Scheme for Buildings N1-N5', procedure: 'planning-obligation' })).toBe('condition')
     expect(followOnKind({ description: 'Deed of Variation to amend Section 106 agreement relating to Phase 8 only of the Berewood Masterplan.', procedure: 'planning-obligation' })).toBe('condition')
   })
+
+  it('never lets pre-application advice lead a family or stand in for a cited decision, as at Cornwall', () => {
+    const cornwall = (n: number) => `PA26/${String(n).padStart(5, '0')}`
+    const preApp = application('PA26/00450/PREAPP', 'Targeted Planning Performance Agreement for approval of Reserved Matters following Outline approval',
+      { procedure: 'pre-application', address: 'Aga House Scorrier Road Redruth' })
+    const blackwater = application('PA26/05144', 'Affordable housing led development of 32 homes with variation of Condition 1 of decision notice PA26/00450 dated 23/03/2026.',
+      { procedure: 'amendment', address: 'Land At North Hill Blackwater' })
+    const { links, families } = linkCouncilApplications(council(cornwall, [preApp, blackwater]))
+    expect(links.find(link => link.childId === blackwater.id)).toMatchObject({ parentReference: 'PA26/00450', parentId: null })
+    expect(families.find(family => family.applicationIds.includes(blackwater.id))!.applicationIds).not.toContain(preApp.id)
+  })
 })
 
 describe('linkCouncilApplications', () => {
