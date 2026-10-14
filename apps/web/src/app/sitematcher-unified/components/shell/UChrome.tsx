@@ -19,6 +19,7 @@ import {
   type LocationResult,
 } from '@/lib/mapbox'
 import { useAuth } from '@/contexts/auth-context'
+import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,9 @@ export function UChrome({
   const debouncedSearch = useRef(createDebouncedLocationSearch(300))
 
   const { user, profile, signOut, isAdmin } = useAuth()
+  // Brand Matcher and Directory don't work off a map location, so the search is hidden there.
+  const view = useWorkspaceStore((s) => s.view)
+  const showSearch = view !== 'brand-matcher' && view !== 'directory'
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
   const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false)
@@ -189,7 +193,7 @@ export function UChrome({
   // ⌘K / Ctrl+K focuses the search field.
   useEffect(() => {
     const onShortcut = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && inputRef.current) {
         e.preventDefault()
         inputRef.current?.focus()
       }
@@ -229,60 +233,64 @@ export function UChrome({
       </div>
 
       {/* Location search */}
-      <div className="relative mx-auto w-full max-w-[460px]">
-        <div className="flex h-[42px] w-full items-center gap-2 rounded-lg bg-sm-bg px-3 text-sm-ink3">
-          <Search size={16} />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setShowResults(results.length > 0)}
-            placeholder="Search a town, postcode or address…"
-            className="w-full bg-transparent text-sm text-sm-ink placeholder:text-sm-ink3 focus:outline-none"
-            aria-label="Search a location"
-            aria-expanded={showResults}
-            role="combobox"
-            aria-controls="uchrome-location-results"
-          />
-          {isSearching ? (
-            <Loader2 size={14} className="animate-spin text-sm-ink4" />
-          ) : (
-            <span className="font-mono text-[11px] text-sm-ink4">⌘K</span>
+      {showSearch ? (
+        <div className="relative mx-auto w-full max-w-[460px]">
+          <div className="flex h-[42px] w-full items-center gap-2 rounded-lg bg-sm-bg px-3 text-sm-ink3">
+            <Search size={16} />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setShowResults(results.length > 0)}
+              placeholder="Search a town, postcode or address…"
+              className="w-full bg-transparent text-sm text-sm-ink placeholder:text-sm-ink3 focus:outline-none"
+              aria-label="Search a location"
+              aria-expanded={showResults}
+              role="combobox"
+              aria-controls="uchrome-location-results"
+            />
+            {isSearching ? (
+              <Loader2 size={14} className="animate-spin text-sm-ink4" />
+            ) : (
+              <span className="font-mono text-[11px] text-sm-ink4">⌘K</span>
+            )}
+          </div>
+
+          {showResults && results.length > 0 && (
+            <div
+              ref={resultsRef}
+              id="uchrome-location-results"
+              role="listbox"
+              className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-lg border border-sm-border bg-white shadow-lg"
+            >
+              {results.map((location, index) => (
+                <button
+                  key={location.id}
+                  type="button"
+                  role="option"
+                  aria-selected={index === focusedIndex}
+                  onClick={() => handleSelect(location)}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    index === focusedIndex ? 'bg-sm-violet/10' : 'hover:bg-sm-bg'
+                  } ${index !== results.length - 1 ? 'border-b border-sm-border' : ''}`}
+                >
+                  <MapPin size={16} className="flex-shrink-0 text-sm-ink3" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-sm-ink">{location.text}</p>
+                    <p className="truncate text-xs text-sm-ink3">
+                      {formatLocationDisplay(location)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
         </div>
-
-        {showResults && results.length > 0 && (
-          <div
-            ref={resultsRef}
-            id="uchrome-location-results"
-            role="listbox"
-            className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-lg border border-sm-border bg-white shadow-lg"
-          >
-            {results.map((location, index) => (
-              <button
-                key={location.id}
-                type="button"
-                role="option"
-                aria-selected={index === focusedIndex}
-                onClick={() => handleSelect(location)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  index === focusedIndex ? 'bg-sm-violet/10' : 'hover:bg-sm-bg'
-                } ${index !== results.length - 1 ? 'border-b border-sm-border' : ''}`}
-              >
-                <MapPin size={16} className="flex-shrink-0 text-sm-ink3" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-sm-ink">{location.text}</p>
-                  <p className="truncate text-xs text-sm-ink3">
-                    {formatLocationDisplay(location)}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3">
