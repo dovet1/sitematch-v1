@@ -5,6 +5,8 @@ import type mapboxgl from 'mapbox-gl'
 import { Toaster } from 'sonner'
 import { UChrome } from './shell/UChrome'
 import { URail } from './shell/URail'
+import { UModeChooser } from './shell/UModeChooser'
+import { useModeNavStartup } from '../lib/hooks/useModeNavStartup'
 import { ULeftPanel } from './shell/ULeftPanel'
 import { UInspector } from './shell/UInspector'
 import { UnifiedMap } from './map/UnifiedMap'
@@ -100,6 +102,7 @@ export function UnifiedWorkspace() {
   const brandMatcherEnabled = useBrandMatcherEnabled()
   const isBrandMatcher = view === 'brand-matcher' && brandMatcherEnabled
   usePlanningDeepLink()
+  useModeNavStartup()
 
   // Keep the sketch store's tier access in sync so CAD interaction is unlocked.
   const { hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier()
@@ -678,6 +681,8 @@ export function UnifiedWorkspace() {
       )}
 
       {isPlanning && <PlanningModeModals />}
+
+      <UModeChooser />
     </div>
   )
 

@@ -134,6 +134,8 @@ interface WorkspaceState {
   // Panel chrome
   leftHidden: boolean
   inspectorHidden: boolean
+  // The "What do you want to do today?" mode chooser.
+  chooserOpen: boolean
 
   // Actions
   setMode: (mode: WorkspaceMode) => void
@@ -183,6 +185,7 @@ interface WorkspaceState {
 
   toggleLeft: () => void
   toggleInspector: () => void
+  setChooserOpen: (open: boolean) => void
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -230,6 +233,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   leftHidden: false,
   inspectorHidden: false,
+  chooserOpen: false,
 
   // Switching modes clears the selection and resets to Missing Brands (per handoff).
   // The dirty-Sketch leave-guard is handled by the Sketch integration layer.
@@ -485,6 +489,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   toggleLeft: () => set((s) => ({ leftHidden: !s.leftHidden })),
   toggleInspector: () => set((s) => ({ inspectorHidden: !s.inspectorHidden })),
+  setChooserOpen: (open) => set({ chooserOpen: open }),
 }))
 
 // Derived helpers (kept out of state to avoid duplication).

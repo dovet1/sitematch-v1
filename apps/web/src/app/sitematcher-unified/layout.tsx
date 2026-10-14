@@ -13,6 +13,8 @@ import { AutoParkingFlagProvider } from './lib/auto-parking-flag-context'
 import { RetailCentreFlagProvider } from './lib/retail-centre-flag-context'
 import { PlanningMonitorFlagProvider } from './lib/planning-monitor-flag-context'
 import { BrandMatcherFlagProvider } from './lib/brand-matcher-flag-context'
+import { ModeChooserPrefProvider } from './lib/mode-chooser-pref-context'
+import { createServerClient } from '@/lib/supabase'
 
 export default async function UnifiedWorkspaceLayout({
   children,
@@ -38,23 +40,43 @@ export default async function UnifiedWorkspaceLayout({
   // Sub-feature kill-switch: resolved once per request here (server) and
   // bridged to the client tree via context — the real Plus enforcement for
   // Auto parking still happens server-side on save (see the sketches API).
-  const [autoParkingEnabled, retailCentreGapsEnabled, planningMonitorEnabled, brandMatcherEnabled] =
-    await Promise.all([
-      isAutoParkingEnabled(),
-      isRetailCentreGapsEnabled(),
-      isPlanningMonitorEnabled(),
-      isBrandMatcherEnabled(),
-    ])
+  const [
+    autoParkingEnabled,
+    retailCentreGapsEnabled,
+    planningMonitorEnabled,
+    brandMatcherEnabled,
+    dontShowModeChooser,
+  ] = await Promise.all([
+    isAutoParkingEnabled(),
+    isRetailCentreGapsEnabled(),
+    isPlanningMonitorEnabled(),
+    isBrandMatcherEnabled(),
+    readDontShowModeChooser(),
+  ])
 
   return (
     <AutoParkingFlagProvider enabled={autoParkingEnabled}>
       <RetailCentreFlagProvider enabled={retailCentreGapsEnabled}>
         <PlanningMonitorFlagProvider enabled={planningMonitorEnabled}>
-          <BrandMatcherFlagProvider enabled={brandMatcherEnabled}>{children}</BrandMatcherFlagProvider>
+          <BrandMatcherFlagProvider enabled={brandMatcherEnabled}>
+            <ModeChooserPrefProvider dontShow={dontShowModeChooser}>{children}</ModeChooserPrefProvider>
+          </BrandMatcherFlagProvider>
         </PlanningMonitorFlagProvider>
       </RetailCentreFlagProvider>
     </AutoParkingFlagProvider>
   )
+}
+
+// getCurrentUser() drops user_metadata, so the mode-chooser preference is read separately. A
+// failed read just means the chooser may show; it never blocks the workspace.
+async function readDontShowModeChooser(): Promise<boolean> {
+  try {
+    const supabase = await createServerClient()
+    const { data } = await supabase.auth.getUser()
+    return data.user?.user_metadata?.dont_show_mode_chooser === true
+  } catch {
+    return false
+  }
 }
 
 function UpgradeState() {
