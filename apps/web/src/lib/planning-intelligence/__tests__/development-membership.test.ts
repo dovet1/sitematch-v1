@@ -169,16 +169,35 @@ describe('planFamilyMemberships', () => {
     })
   })
 
-  it('holds a family citing several missing permissions', () => {
+  it('holds a family citing several missing permissions on plainly different sites', () => {
     const plan = only(planFamilyMemberships(input(
       council([
         // No member quotes both permissions, so this is not one scheme's quoted chain.
-        application('2026/0401', 'Reserved matters for phase 2 pursuant to outline permission 2019/1111', { procedure: 'reserved_matters' }),
-        application('2019/1111/COND', 'Discharge of condition 5 of 2020/2222', { procedure: 'discharge' }),
+        application('2026/0401', 'Reserved matters for phase 2 pursuant to outline permission 2019/1111', { procedure: 'reserved_matters', address: 'Redmayne Field North Walsham Road Sprowston' }),
+        application('2019/1111/COND', 'Discharge of condition 5 of 2020/2222', { procedure: 'discharge', address: 'Land between Saint Faiths Road and Buxton Road Old Catton' }),
       ]),
       [], [],
     )))
-    expect(plan).toMatchObject({ action: 'hold', reason: 'several_missing_originals' })
+    // Held for its sites before the missing permissions are weighed.
+    expect(plan).toMatchObject({ action: 'hold', reason: 'different_sites' })
+  })
+
+  it('groups a masterplan citing several missing permissions on one site as one scheme', () => {
+    const reservedMatters = application('2026/0401', 'Reserved matters for phase 2 pursuant to outline permission 2019/1111', { procedure: 'reserved_matters', address: 'Northern Site, New Covent Garden Market, Nine Elms Lane' })
+    const condition = application('2019/1111/COND', 'Discharge of condition 5 of 2020/2222', { procedure: 'discharge', address: 'New Covent Garden Market Northern Site' })
+    const plan = only(planFamilyMemberships(input(council([reservedMatters, condition]), [], [])))
+    expect(plan).toMatchObject({
+      action: 'apply', principalApplicationId: reservedMatters.id, familyState: 'awaiting_original',
+      missingParentKeys: expect.arrayContaining(['2019/1111', '2020/2222']),
+    })
+  })
+
+  it('holds a family whose applications are filed at plainly different sites for review', () => {
+    const original = application('2024/3141', warehouseClub, { address: 'Broadland Business Park Old Chapel Way Postwick' })
+    const condition = application('2026/0994', 'Details for condition 9 - Travel Plan of permission 2024/3141',
+      { procedure: 'discharge', address: 'Land Between Saint Faiths Road And Buxton Road Old Catton' })
+    const plan = only(planFamilyMemberships(input(council([original, condition]), [primary(original.id, 'd1')], [development('d1')])))
+    expect(plan).toMatchObject({ action: 'hold', reason: 'different_sites' })
   })
 
   it('holds a family whose Plota family disagrees with local links', () => {

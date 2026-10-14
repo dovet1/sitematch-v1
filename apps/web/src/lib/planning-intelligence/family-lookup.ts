@@ -2,7 +2,7 @@ import { createHash } from 'crypto'
 import type { PlanningAdminClient } from './db'
 import { storageRowFor } from './ingest'
 import { assignMembershipsFor, planningMembershipEnabled } from './membership-ingest'
-import { canHeadFamily, familyKey, normaliseReference, referenceCore, type LinkKind } from './linking'
+import { canHeadFamily, familyKey, normaliseReference, referenceCore, type LinkableApplication, type LinkKind, sitesAgree } from './linking'
 import { maySpendPlotaRequest, PlotaError, type PlotaClient } from './plota'
 import type { PlotaApplication, PlotaFamily, PlotaFamilyMember } from './types'
 
@@ -44,6 +44,22 @@ export interface FamilyConflict {
   localFollowOnsOutsideFamily: string[]
   /** Family members the local linker ties to a parent outside the family. */
   membersLinkedElsewhere: Array<{ reference: string; parentKey: string }>
+  /** Set when the disagreement was accepted without review because it is one scheme on one site. */
+  resolution?: { rule: 'same_scheme'; at: string }
+}
+
+/**
+ * Whether a disagreement with Plota is one scheme on one site, and so resolves itself (agreed
+ * 14 October 2026). Plota leaves archive members out of its families (111 of the first 145 local
+ * follow-ons it lacked were archive records, Springfield Hospital's eleven among them) and misses
+ * some live ones, so a strong local citation it lacks is usually right. Every follow-on Plota lacks
+ * and every other parent a member cites must be on the family's site, read across all its members;
+ * one that plainly is not keeps the family for review. Families are one development per scheme, so a member citing an
+ * earlier permission of the same site joins that history rather than conflicting with it.
+ */
+export function sameSchemeConflict(principal: LinkableApplication | null, members: LinkableApplication[], others: LinkableApplication[]): boolean {
+  if (!principal) return false
+  return sitesAgree([principal, ...members.filter(member => member.id !== principal.id), ...others])
 }
 
 const LINK_KIND_BY_PROCEDURE: Record<string, LinkKind> = {
@@ -205,22 +221,13 @@ export async function storeFamily(
   const { error: resolveError } = await db.rpc('planning_resolve_family_parents', { p_rows: parents })
   if (resolveError) throw resolveError
 
-  // Every key this family answers: each member's reference, and the case number of any member that
-  // can head a family.
-  const familyKeys = new Set<string>([input.lookup.parent_key])
-  for (const member of members) {
-    familyKeys.add(normaliseReference(member.reference))
-    const linkable = { id: member.id, reference: member.reference, description: member.description, procedure: member.procedure }
-    const core = referenceCore(member.reference)?.core
-    if (core && canHeadFamily(linkable)) familyKeys.add(core)
-  }
-
-  const conflict = await findConflict(db, council, familyKeys, new Set(memberIds))
+  const familyKeys = familyKeysFor(input.lookup.parent_key, members)
+  const conflict = await findConflict(db, council, familyKeys, new Set(memberIds), principalId)
 
   const now = new Date().toISOString()
   const { error: closeError } = await db.from('planning_family_lookups').update({
     status: 'complete', fetched_at: now, family_id: familyId, conflict,
-    review_state: conflict ? 'pending' : 'none', last_error: null, updated_at: now,
+    review_state: reviewStateFor(conflict), last_error: null, updated_at: now,
   }).eq('id', input.lookup.id)
   if (closeError) throw closeError
   const { data: closed, error: othersError } = await db.from('planning_family_lookups').update({
@@ -235,8 +242,26 @@ export async function storeFamily(
   }
 }
 
+/** Every key a family answers: each member's reference, and the case number of any member that can head a family. */
+function familyKeysFor(lookupKey: string, members: PlotaFamilyMember[]): Set<string> {
+  const familyKeys = new Set<string>([lookupKey])
+  for (const member of members) {
+    familyKeys.add(normaliseReference(member.reference))
+    const linkable = { id: member.id, reference: member.reference, description: member.description, procedure: member.procedure }
+    const core = referenceCore(member.reference)?.core
+    if (core && canHeadFamily(linkable)) familyKeys.add(core)
+  }
+  return familyKeys
+}
+
+function reviewStateFor(conflict: FamilyConflict | null): 'none' | 'pending' | 'resolved' {
+  return !conflict ? 'none' : conflict.resolution ? 'resolved' : 'pending'
+}
+
+const SITE_COLUMNS = 'id,reference,address,postcode,uprn'
+
 async function findConflict(
-  db: PlanningAdminClient, council: string, familyKeys: Set<string>, memberIds: Set<string>
+  db: PlanningAdminClient, council: string, familyKeys: Set<string>, memberIds: Set<string>, principalId: string | null
 ): Promise<FamilyConflict | null> {
   const { data: pointing, error: pointingError } = await db.from('planning_application_links')
     .select('child_application_id,parent_key').eq('authority_slug', council).in('parent_key', [...familyKeys])
@@ -245,20 +270,73 @@ async function findConflict(
   const outsideIds = [...new Set((pointing ?? []).map(row => row.child_application_id as string).filter(id => !memberIds.has(id)))]
 
   const { data: fromMembers, error: membersError } = await db.from('planning_application_links')
-    .select('child_application_id,parent_key').in('child_application_id', [...memberIds])
+    .select('child_application_id,parent_key,parent_application_id').in('child_application_id', [...memberIds])
     .eq('strength', 'strong').neq('source', 'plota_associated').is('removed_at', null)
   if (membersError) throw membersError
   const elsewhere = (fromMembers ?? []).filter(row => !familyKeys.has(row.parent_key as string))
 
   if (outsideIds.length === 0 && elsewhere.length === 0) return null
-  const ids = [...new Set([...outsideIds, ...elsewhere.map(row => row.child_application_id as string)])]
-  const { data: references, error: referencesError } = await db.from('planning_applications').select('id,reference').in('id', ids)
-  if (referencesError) throw referencesError
-  const referenceOf = new Map((references ?? []).map(row => [row.id as string, row.reference as string]))
-  return {
-    localFollowOnsOutsideFamily: outsideIds.map(id => referenceOf.get(id) ?? id).sort(),
-    membersLinkedElsewhere: elsewhere.map(row => ({ reference: referenceOf.get(row.child_application_id as string) ?? row.child_application_id as string, parentKey: row.parent_key as string })),
+  const otherParentIds = elsewhere.map(row => row.parent_application_id as string | null).filter((id): id is string => Boolean(id))
+  const ids = [...new Set([...outsideIds, ...memberIds, ...otherParentIds, ...(principalId ? [principalId] : [])])]
+  const { data: sites, error: sitesError } = await db.from('planning_applications').select(SITE_COLUMNS).in('id', ids)
+  if (sitesError) throw sitesError
+  const siteOf = new Map(((sites ?? []) as LinkableApplication[]).map(row => [row.id, row]))
+  const referenceOf = (id: string) => siteOf.get(id)?.reference ?? id
+  const conflict: FamilyConflict = {
+    localFollowOnsOutsideFamily: outsideIds.map(referenceOf).sort(),
+    membersLinkedElsewhere: elsewhere.map(row => ({ reference: referenceOf(row.child_application_id as string), parentKey: row.parent_key as string })),
   }
+  // An other parent we do not hold has no site to compare; the member citing it is Plota's own.
+  const others = [...outsideIds, ...otherParentIds].map(id => siteOf.get(id)).filter((row): row is LinkableApplication => Boolean(row))
+  const memberSites = [...memberIds].map(id => siteOf.get(id)).filter((row): row is LinkableApplication => Boolean(row))
+  if (sameSchemeConflict(principalId ? siteOf.get(principalId) ?? null : null, memberSites, others)) {
+    conflict.resolution = { rule: 'same_scheme', at: new Date().toISOString() }
+  }
+  return conflict
+}
+
+export interface ConflictRecheck {
+  lookupId: string
+  council: string
+  parentReference: string
+  before: FamilyConflict | null
+  after: FamilyConflict | null
+  reviewState: 'none' | 'pending' | 'resolved'
+}
+
+/**
+ * Re-reads every family awaiting review against the current links and rules. A family whose
+ * disagreement is now one scheme on one site, or has gone (a link re-checked as weak), is released;
+ * the rest stay pending. Dry run unless `commit`.
+ */
+export async function recheckPendingConflicts(
+  db: PlanningAdminClient, options: { councils: string[]; commit: boolean }
+): Promise<ConflictRecheck[]> {
+  const { data: rows, error } = await db.from('planning_family_lookups')
+    .select('id,authority_slug,parent_key,parent_reference,family_id,conflict')
+    .eq('review_state', 'pending').in('authority_slug', options.councils)
+  if (error) throw error
+  const results: ConflictRecheck[] = []
+  for (const row of (rows ?? []) as Array<{ id: string; authority_slug: string; parent_key: string; parent_reference: string; family_id: string | null; conflict: FamilyConflict | null }>) {
+    if (!row.family_id) continue
+    const { data: family, error: familyError } = await db.from('planning_families')
+      .select('principal_application_id,raw').eq('id', row.family_id).single()
+    if (familyError) throw familyError
+    const { principal_application_id: principalId, raw } = family as { principal_application_id: string | null; raw: PlotaFamily }
+    const members = membersOf(raw).filter(member => member.authority?.slug === row.authority_slug)
+    const stored = await storedMembers(db, row.authority_slug, members)
+    const memberIds = new Set(members.map(member => stored.find(candidate => sameMember(candidate, member.id, member.reference))?.id)
+      .filter((id): id is string => Boolean(id)))
+    const after = await findConflict(db, row.authority_slug, familyKeysFor(row.parent_key, members), memberIds, principalId)
+    const reviewState = reviewStateFor(after)
+    results.push({ lookupId: row.id, council: row.authority_slug, parentReference: row.parent_reference, before: row.conflict, after, reviewState })
+    if (options.commit && reviewState !== 'pending') {
+      const { error: updateError } = await db.from('planning_family_lookups')
+        .update({ conflict: after, review_state: reviewState, updated_at: new Date().toISOString() }).eq('id', row.id)
+      if (updateError) throw updateError
+    }
+  }
+  return results
 }
 
 export interface FamilyLookupRunOptions {

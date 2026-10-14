@@ -1,5 +1,5 @@
 import broadland from './fixtures/plota-family-broadland-2024-3141.json'
-import { FAMILY_ENDPOINT, runFamilyLookups, storeFamily, type LookupRow } from '../family-lookup'
+import { FAMILY_ENDPOINT, recheckPendingConflicts, runFamilyLookups, storeFamily, type LookupRow } from '../family-lookup'
 import { lookupPriority, lookupWorthFetching, quotesMajorProposal } from '../family-priority'
 import { PlotaError } from '../plota'
 import type { PlotaFamily } from '../types'
@@ -142,14 +142,48 @@ describe('storeFamily', () => {
     expect(tables.planning_application_links.some(row => row.source === 'plota_associated' && row.child_application_id === 'a-2652')).toBe(false)
   })
 
-  it('stores the family but marks it for review when local evidence disagrees', async () => {
+  it('stores the family but marks it for review when a follow-on Plota lacks is on another site', async () => {
     const tables = broadlandStore([
       { id: 'l4', authority_slug: COUNCIL, child_application_id: 'a-elsewhere', parent_key: '2024/3141', strength: 'strong', source: 'cited_reference', removed_at: null },
     ])
+    Object.assign(tables.planning_applications[2], { address: 'Land Between Saint Faiths Road And Buxton Road Old Catton Norfolk' })
     const { db } = makeDb(tables)
     const result = await storeFamily(db, { lookup: lookup(tables), family, requestedVia: 'uy29jz34' })
     expect(result.conflict).toEqual({ localFollowOnsOutsideFamily: ['2026/9999'], membersLinkedElsewhere: [] })
     expect(tables.planning_family_lookups[0]).toMatchObject({ status: 'complete', review_state: 'pending' })
+  })
+
+  it('resolves the disagreement itself when the follow-on Plota lacks is on the same site', async () => {
+    // Plota leaves archive members out of its families; Springfield Hospital lacked eleven.
+    const tables = broadlandStore([
+      { id: 'l4', authority_slug: COUNCIL, child_application_id: 'a-elsewhere', parent_key: '2024/3141', strength: 'strong', source: 'cited_reference', removed_at: null },
+    ])
+    Object.assign(tables.planning_applications[2], { provider_id: 'h_archive', address: 'Broadland Business Park, Old Chapel Way, Postwick' })
+    const { db } = makeDb(tables)
+    const result = await storeFamily(db, { lookup: lookup(tables), family, requestedVia: 'uy29jz34' })
+    expect(result.conflict).toMatchObject({ localFollowOnsOutsideFamily: ['2026/9999'], resolution: { rule: 'same_scheme' } })
+    expect(tables.planning_family_lookups[0]).toMatchObject({ status: 'complete', review_state: 'resolved' })
+  })
+
+  it('re-checks a pending family and releases it once its disagreement is one scheme', async () => {
+    const tables = broadlandStore([
+      { id: 'l4', authority_slug: COUNCIL, child_application_id: 'a-elsewhere', parent_key: '2024/3141', strength: 'strong', source: 'cited_reference', removed_at: null },
+    ])
+    Object.assign(tables.planning_applications[2], { address: 'Land Between Saint Faiths Road And Buxton Road Old Catton Norfolk' })
+    const { db } = makeDb(tables)
+    await storeFamily(db, { lookup: lookup(tables), family, requestedVia: 'uy29jz34' })
+    expect(tables.planning_family_lookups[0]).toMatchObject({ review_state: 'pending' })
+
+    // Still on another site: a dry run and a commit both leave it pending.
+    expect(await recheckPendingConflicts(db, { councils: [COUNCIL], commit: true })).toEqual([expect.objectContaining({ reviewState: 'pending' })])
+    expect(tables.planning_family_lookups[0]).toMatchObject({ review_state: 'pending' })
+
+    // The citation is weakened as another site's: the disagreement is gone.
+    tables.planning_application_links.find(row => row.id === 'l4')!.strength = 'weak'
+    expect(await recheckPendingConflicts(db, { councils: [COUNCIL], commit: false })).toEqual([expect.objectContaining({ reviewState: 'none', after: null })])
+    expect(tables.planning_family_lookups[0]).toMatchObject({ review_state: 'pending' })
+    await recheckPendingConflicts(db, { councils: [COUNCIL], commit: true })
+    expect(tables.planning_family_lookups[0]).toMatchObject({ review_state: 'none', conflict: null })
   })
 })
 

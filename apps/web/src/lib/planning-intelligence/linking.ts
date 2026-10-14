@@ -115,6 +115,10 @@ const CONDITION_WORDING = /\b(?:discharge|approval|submission|compliance)\s+(?:o
  */
 export function followOnKind(application: Pick<LinkableApplication, 'description' | 'procedure'>): FollowOnKind | null {
   const description = application.description ?? ''
+  // Section 106 (and Scottish section 75) matters are paperwork on an existing permission, deeds of
+  // variation included; read as an original, a CCTV scheme under New Covent Garden Market's
+  // obligations would have led and described that 57-application scheme.
+  if (application.procedure === 'planning-obligation') return 'condition'
   if (CONDITION_LEAD.test(description) && !AMENDMENT_WORDING.test(description.slice(0, 60))) return 'condition'
   if (AMENDMENT_WORDING.test(description)) return 'amendment'
   if (RESERVED_MATTERS_WORDING.test(description)) return 'reserved_matters'
@@ -201,6 +205,69 @@ function sameSite(a: LinkableApplication, b: LinkableApplication): boolean {
   if (left.size === 0 || right.size === 0) return false
   const shared = [...left].filter(token => right.has(token)).length
   return shared / (left.size + right.size - shared) >= 0.5
+}
+
+// Words every address uses; two sites sharing only these say nothing about being one site.
+const GENERIC_ADDRESS_WORDS = new Set([
+  'LAND', 'SITE', 'SITES', 'THE', 'AND', 'FOR', 'WITH', 'FROM', 'ROAD', 'STREET', 'LANE', 'AVENUE', 'WAY', 'CLOSE',
+  'DRIVE', 'PLACE', 'HILL', 'GARDENS', 'HOUSE', 'NORTH', 'SOUTH', 'EAST', 'WEST', 'REAR', 'ADJACENT', 'BETWEEN',
+  'FORMER', 'UNIT', 'UNITS', 'PHASE', 'PLOT', 'PLOTS', 'BUILDING', 'BUILDINGS', 'KNOWN', 'FORMERLY',
+  'OLD', 'NEW', 'UPPER', 'LOWER', 'GREAT', 'LITTLE', 'NEAR', 'OFF', 'SAINT',
+  // Counties and cities that end most of a council's addresses ("... Old Catton Norfolk").
+  'LONDON', 'GREATER', 'MANCHESTER', 'MERSEYSIDE', 'MIDLANDS', 'YORKSHIRE', 'LANCASHIRE', 'CHESHIRE', 'DERBYSHIRE',
+  'NOTTINGHAMSHIRE', 'LEICESTERSHIRE', 'LINCOLNSHIRE', 'NORFOLK', 'SUFFOLK', 'ESSEX', 'KENT', 'SURREY', 'SUSSEX',
+  'HAMPSHIRE', 'BERKSHIRE', 'BUCKINGHAMSHIRE', 'OXFORDSHIRE', 'HERTFORDSHIRE', 'BEDFORDSHIRE', 'CAMBRIDGESHIRE',
+  'NORTHAMPTONSHIRE', 'WARWICKSHIRE', 'WORCESTERSHIRE', 'GLOUCESTERSHIRE', 'WILTSHIRE', 'DORSET', 'SOMERSET', 'DEVON',
+  'CORNWALL', 'SHROPSHIRE', 'STAFFORDSHIRE', 'HEREFORDSHIRE', 'CUMBRIA', 'DURHAM', 'NORTHUMBERLAND', 'TYNE', 'WEAR',
+  'GLASGOW', 'EDINBURGH', 'LANARKSHIRE', 'SCOTLAND', 'WALES', 'ENGLAND',
+])
+
+function distinctiveAddressTokens(address: string | null | undefined): Set<string> {
+  return new Set([...addressTokens(address)].filter(token => !GENERIC_ADDRESS_WORDS.has(token)))
+}
+
+const POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d)[A-Z]{2}\b/
+
+/** The postcode sector ("SW11 1"), from the postcode field or, failing that, the address. */
+function postcodeSector(application: LinkableApplication): string | null {
+  const match = POSTCODE.exec((application.postcode ?? application.address ?? '').toUpperCase())
+  return match ? `${match[1]} ${match[2]}` : null
+}
+
+/**
+ * True only when two records plainly describe different places. One-sided by design: missing or
+ * sparse addresses never count, nor does an address worded differently over the years, a shared
+ * UPRN or a shared postcode sector (Burridge Gardens SW11 1UA is the renamed Peabody estate,
+ * St Johns Hill SW11 1UR). Two records can still both be one large scheme: Beeston Park is filed
+ * under Redmayne Field, Sprowston and under Saint Faiths Road, Old Catton, so a site check is read
+ * across a whole family (`sitesAgree`) and only ever holds a family for review.
+ */
+export function clearlyDifferentSite(a: LinkableApplication, b: LinkableApplication): boolean {
+  if (a.uprn && b.uprn && String(a.uprn) === String(b.uprn)) return false
+  const sectorA = postcodeSector(a), sectorB = postcodeSector(b)
+  if (sectorA && sectorA === sectorB) return false
+  const left = distinctiveAddressTokens(a.address), right = distinctiveAddressTokens(b.address)
+  if (left.size < 2 || right.size < 2) return false
+  const shared = [...left].filter(token => right.has(token)).length
+  return shared / Math.min(left.size, right.size) < 1 / 3
+}
+
+/**
+ * Whether a family's records describe one site: every record is tied to the others through a chain
+ * of records that do not plainly differ. A record sharing a UPRN with one member and an address with
+ * another joins them, as Beeston Park's do.
+ */
+export function sitesAgree(all: LinkableApplication[]): boolean {
+  // A record with nothing to compare differs from no one, and would otherwise join any two sites.
+  const applications = all.filter(application => application.uprn || postcodeSector(application)
+    || distinctiveAddressTokens(application.address).size >= 2)
+  if (applications.length < 2) return true
+  const joined = new UnionFind()
+  applications.forEach((a, i) => applications.slice(i + 1).forEach(b => {
+    if (!clearlyDifferentSite(a, b)) joined.union(a.id, b.id)
+  }))
+  const root = joined.find(applications[0].id)
+  return applications.every(application => joined.find(application.id) === root)
 }
 
 /**

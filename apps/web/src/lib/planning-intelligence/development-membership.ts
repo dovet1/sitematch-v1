@@ -7,6 +7,7 @@ import {
   familiesFromLinks,
   familyKey,
   followOnKind,
+  sitesAgree,
   type ApplicationLink,
 } from './linking'
 
@@ -64,6 +65,7 @@ export type HoldReason =
   | 'several_missing_originals'
   | 'plota_conflict'
   | 'protected_development'
+  | 'different_sites'
 
 export type FamilyPlan =
   | {
@@ -148,6 +150,9 @@ export function planFamilyMemberships(input: MembershipInput): FamilyPlan[] {
     const familyKeys = new Set([...missingParentKeys, ...members.map(member => familyKey(member.reference))])
     const conflict = [...familyKeys].find(key => conflictedParentKeys.has(key))
     if (conflict) { plans.push(hold('plota_conflict', `Plota's family for ${conflict} disagrees with local links`)); continue }
+    // A citation of a record on another site is most likely a mistyped reference, but a large scheme
+    // can be filed under several addresses; a person decides (agreed 14 October 2026).
+    if (!sitesAgree(members)) { plans.push(hold('different_sites', 'Its applications are filed at addresses that plainly differ')); continue }
 
     // The assessment plan already decided lead, read-with and paperwork for this family.
     // A family the assessment plan split up (several missing permissions, not one quoted chain)

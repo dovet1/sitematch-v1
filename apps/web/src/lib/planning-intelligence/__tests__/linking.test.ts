@@ -1,4 +1,4 @@
-import { buildCouncilLinkProfile, followOnKind, linkCouncilApplications, linksForApplication, lookupKeysFor, normaliseReference, referenceCore, resolverFor, type LinkableApplication } from '../linking'
+import { buildCouncilLinkProfile, clearlyDifferentSite, followOnKind, linkCouncilApplications, linksForApplication, lookupKeysFor, normaliseReference, referenceCore, resolverFor, sitesAgree, type LinkableApplication } from '../linking'
 
 let sequence = 0
 function application(reference: string, description: string, overrides: Partial<LinkableApplication> = {}): LinkableApplication {
@@ -42,6 +42,11 @@ describe('followOnKind', () => {
     expect(followOnKind({ description: 'Site layout fire hydrant locations', procedure: 'discharge' })).toBe('condition')
     expect(followOnKind({ description: 'Erection of a warehouse', procedure: 'full' })).toBeNull()
   })
+
+  it('reads any section 106 matter as paperwork, a deed of variation included', () => {
+    expect(followOnKind({ description: 'Matters relating to a S106 Agreement in respect of the CCTV Scheme for Buildings N1-N5', procedure: 'planning-obligation' })).toBe('condition')
+    expect(followOnKind({ description: 'Deed of Variation to amend Section 106 agreement relating to Phase 8 only of the Berewood Masterplan.', procedure: 'planning-obligation' })).toBe('condition')
+  })
 })
 
 describe('linkCouncilApplications', () => {
@@ -69,6 +74,43 @@ describe('linkCouncilApplications', () => {
 
     expect(links).toEqual([expect.objectContaining({ childId: child.id, parentId: parent.id, kind: 'condition', strength: 'strong' })])
     expect(families).toEqual([expect.objectContaining({ rootId: parent.id, missingParentReferences: [] })])
+  })
+
+  it('keeps a citation strong whatever the address; sites are read across the whole family', () => {
+    // Beeston Park is filed under Redmayne Field, Sprowston and under Saint Faiths Road, Old Catton.
+    const amendment = application('2025/0416', 'Non material amendment of 2024/1794 - revised phasing strategy',
+      { procedure: 'amendment', address: 'Redmayne Field North Walsham Road Sprowston Norfolk' })
+    const oldCatton = application('2026/0409', 'Details of condition 5 2025/0416 of 2 - groundwater quantitative risk assessment',
+      { procedure: 'discharge', address: 'Land Between Saint Faiths Road And Buxton Road Old Catton Norfolk', uprn: '100091642733' })
+    const { links } = linkCouncilApplications(council(broadland, [amendment, oldCatton]))
+    expect(links.find(link => link.childId === oldCatton.id)).toMatchObject({ parentId: amendment.id, strength: 'strong' })
+
+    expect(clearlyDifferentSite(amendment, oldCatton)).toBe(true)
+    expect(sitesAgree([amendment, oldCatton])).toBe(false)
+    // A Redmayne Field record sharing the Old Catton record's UPRN ties the two addresses together.
+    const travelPlan = application('2026/1383', 'Details for condition 20 - Overarching Travel Plan of permission 2025/0416',
+      { procedure: 'discharge', address: 'Redmayne Field North Walsham Road Sprowston Norfolk', uprn: '100091642733' })
+    expect(sitesAgree([amendment, oldCatton, travelPlan])).toBe(true)
+  })
+
+  it('never weakens a citation for want of an address', () => {
+    expect(clearlyDifferentSite(application('1', ''), application('2', '', { address: 'Redmayne Field Sprowston' }))).toBe(false)
+    expect(clearlyDifferentSite(application('1', '', { address: 'Land at Site' }), application('2', '', { address: 'Redmayne Field Sprowston' }))).toBe(false)
+    expect(clearlyDifferentSite(
+      application('1', '', { address: 'Unit 1 Alpha Park', postcode: 'NR7 0WG' }),
+      application('2', '', { address: 'Beta Works Gamma Lane', postcode: 'NR7 0WG' }),
+    )).toBe(false)
+    // A shared postcode sector, read from the address when the field is empty: Burridge Gardens is
+    // the renamed Peabody estate.
+    expect(clearlyDifferentSite(
+      application('1', '', { address: "Block 8 Burridge Gardens St John's Hill SW11 1UA", postcode: 'SW11 1UA' }),
+      application('2', '', { address: 'Peabody Estate St Johns Hill SW11 1UR' }),
+    )).toBe(false)
+    // Springfield Hospital, worded two ways over the years.
+    expect(clearlyDifferentSite(
+      application('1', '', { address: 'Phase 2b Springfield Hospital 61 Glenburnie Road SW17 7DJ (the site is at the southern end of the hospital site and was formerly known as plots X Y Z and VB)' }),
+      application('2', '', { address: 'Phase 2b Springfield Hospital 61 Glenburnie Road SW17 7DJ' }),
+    )).toBe(false)
   })
 
   it('keeps an incidental mention as a weak link that joins nothing', () => {

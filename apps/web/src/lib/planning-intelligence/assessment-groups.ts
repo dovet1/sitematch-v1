@@ -2,6 +2,7 @@ import {
   familyKey,
   followOnKind,
   linkCouncilApplications,
+  sitesAgree,
   type ApplicationFamily,
   type ApplicationLink,
   type LinkableApplication,
@@ -19,7 +20,8 @@ import {
  * - where the original is missing, a family with a significant member is still assessed from that
  *   member and its parent is requested; a family of routine paperwork only waits for its parent
  *   instead of being graded low;
- * - uncertain links (weak only, or a family citing several missing permissions) stay separate.
+ * - a family citing several missing permissions is one scheme unless its sites plainly differ;
+ * - uncertain links (weak only, or several missing permissions on different sites) stay separate.
  */
 export type AssessmentRole =
   | 'assess'                 // heads its own assessment
@@ -106,11 +108,12 @@ export function planCouncilAssessments(
     if (!members.some(member => member.intelligence_tier)) continue
     members.forEach(member => grouped.add(member.id))
 
-    // A family citing several missing permissions is usually a phased masterplan or a mistake:
-    // keep each tier application separate until someone reviews it. The exception is a chain that
-    // one member quotes in full ("permission 2019/4915 (as varied by NMA 2025/2720)"): that is one
-    // scheme's history, not competing permissions.
-    if (family.missingParentReferences.length > 1 && !quotedAsOneChain(family, links)) {
+    // A family citing several missing permissions is a chain or a phased masterplan, and is
+    // assessed as one scheme (decided 14 October 2026: one development per scheme, not per phase).
+    // It can also be a mistake, so it is kept apart when its members are on plainly different sites,
+    // unless one member quotes the chain in full ("permission 2019/4915 (as varied by NMA
+    // 2025/2720)"), which is one scheme's history in the council's own words.
+    if (family.missingParentReferences.length > 1 && !quotedAsOneChain(family, links) && !sitesAgree(members)) {
       for (const member of members.filter(m => m.intelligence_tier)) {
         roles.set(member.id, isRoutineFollowOn(member) ? 'await_parent' : 'assess')
         if (isRoutineFollowOn(member)) {

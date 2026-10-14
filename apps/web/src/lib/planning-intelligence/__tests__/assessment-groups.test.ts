@@ -80,10 +80,17 @@ describe('planCouncilAssessments', () => {
     expect(chain.units).toEqual([expect.objectContaining({ headId: s73.id, timelineIds: [nma.id], uncertain: false })])
     expect(chain.units[0].missingParentReferences.sort()).toEqual(['2019/4915', '2025/2720'])
 
-    // Joined only transitively: no one application quotes all three permissions.
-    const phaseOne = application('2026/0101', 'Variation of condition 2 of 2019/4915 and 2020/1111 to alter phase 1 layout', { procedure: 'amendment' })
-    const phaseTwo = application('2026/0102', 'Variation of condition 4 of 2020/1111 and 2021/2222 to alter phase 2 layout', { procedure: 'amendment' })
-    const separate = planCouncilAssessments([phaseOne, phaseTwo, ...fillers])
+    // Joined only transitively, no one application quoting all three permissions: one scheme when
+    // the phases share a site (one development per scheme, 14 October 2026)...
+    const phaseOne = application('2026/0101', 'Variation of condition 2 of 2019/4915 and 2020/1111 to alter phase 1 layout', { procedure: 'amendment', address: 'Battersea Power Station, Kirtling Street' })
+    const phaseTwo = application('2026/0102', 'Variation of condition 4 of 2020/1111 and 2021/2222 to alter phase 2 layout', { procedure: 'amendment', address: 'Phase 2, Battersea Power Station' })
+    const scheme = planCouncilAssessments([phaseOne, phaseTwo, ...fillers])
+    expect(scheme.units).toEqual([expect.objectContaining({ headId: phaseOne.id, memberIds: [phaseOne.id, phaseTwo.id], uncertain: false })])
+    expect(scheme.units[0].missingParentReferences.sort()).toEqual(['2019/4915', '2020/1111', '2021/2222'])
+
+    // ...and kept separate when they plainly are not one site.
+    const elsewhere = { ...phaseTwo, id: 'elsewhere', address: 'Land at Springfield Hospital, Glenburnie Road' }
+    const separate = planCouncilAssessments([phaseOne, elsewhere, ...fillers])
     expect(separate.units).toHaveLength(2)
     expect(separate.units.every(unit => unit.uncertain)).toBe(true)
   })
