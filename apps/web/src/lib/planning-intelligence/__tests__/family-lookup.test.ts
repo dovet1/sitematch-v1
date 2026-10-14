@@ -293,12 +293,40 @@ describe('runFamilyLookups', () => {
   it('retries lookups that failed only on an archive id, when asked', async () => {
     const tables = archiveOnly(broadlandStore())
     Object.assign(tables.planning_family_lookups[0], { status: 'failed', last_error: 'That is a historical (archive) record id. Archive records are searchable but not individually retrievable' })
-    tables.planning_family_lookups.push({ id: 'lookup-2', authority_slug: COUNCIL, parent_key: '2019/0001', parent_reference: '2019/0001', status: 'failed', last_error: 'Plota returned an invalid family shape', attempts: 1, priority: 1000 })
+    tables.planning_family_lookups.push({ id: 'lookup-2', authority_slug: COUNCIL, parent_key: '2019/0001', parent_reference: '2019/0001', status: 'failed', last_error: 'Plota request failed (500)', attempts: 1, priority: 1000 })
     expect((await runFamilyLookups(makeDb(tables).db, byReference(), { limit: 5, monthlyAllowance: 300, commit: false, retryArchiveFailures: true })).planned).toEqual([])
 
     const result = await runFamilyLookups(makeDb(tables).db, byReference(), { limit: 5, monthlyAllowance: 300, commit: true, retryArchiveFailures: true })
     expect(result.originals).toHaveLength(1)
     expect(tables.planning_family_lookups[1]).toMatchObject({ status: 'failed' })
+  })
+
+  it('fetches the original when Plota has not linked the follow-on into a family yet', async () => {
+    const tables = broadlandStore()
+    const plota = { ...byReference(), associated: jest.fn().mockResolvedValue({ family: null, usage: { requestId: 'req_standalone', monthlyLimit: 20000, monthlyRemaining: 9000 } }) }
+    const result = await runFamilyLookups(makeDb(tables).db, plota, { limit: 5, monthlyAllowance: 300, commit: true })
+    expect(plota.associated).toHaveBeenCalledTimes(1)
+    expect(plota.findByReference).toHaveBeenCalledWith(COUNCIL, '2024/3141')
+    expect(result).toMatchObject({ requestsMade: 2, failures: [] })
+    expect(result.originals).toHaveLength(1)
+    expect(tables.planning_provider_usage.map(row => row.endpoint)).toEqual([FAMILY_ENDPOINT, REFERENCE_ENDPOINT])
+  })
+
+  it('asks Plota about a follow-on old enough to have been linked into its family', async () => {
+    const tables = broadlandStore()
+    const recent = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)
+    tables.planning_applications[1].date_received = recent
+    const result = await runFamilyLookups(makeDb(tables).db, client(), { limit: 5, monthlyAllowance: 300, commit: false })
+    expect(result.planned[0].via).toBe('7gdc72mt')
+  })
+
+  it('counts both requests of a standalone answer against the allowance', async () => {
+    const tables = broadlandStore()
+    tables.planning_provider_usage.push(...Array.from({ length: 299 }, () => ({ provider: 'plota', endpoint: FAMILY_ENDPOINT, occurred_at: monthStart(), status_code: 200 })))
+    const plota = { ...byReference(), associated: jest.fn().mockResolvedValue({ family: null, usage: { requestId: 'req_standalone', monthlyLimit: 20000, monthlyRemaining: 9000 } }) }
+    const result = await runFamilyLookups(makeDb(tables).db, plota, { limit: 5, monthlyAllowance: 300, commit: true })
+    expect(plota.findByReference).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ requestsMade: 1, failures: [expect.objectContaining({ error: 'Plota has not linked this application to a family yet' })] })
   })
 
   it('defers a rate-limited lookup and stops the run', async () => {

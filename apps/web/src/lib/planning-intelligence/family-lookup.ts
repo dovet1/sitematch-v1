@@ -21,7 +21,11 @@ export const FAMILY_ENDPOINT = '/v1/applications/:id/associated'
 /** An original fetched by council and reference, because its family cannot be asked for by archive id. */
 export const REFERENCE_ENDPOINT = '/v1/applications?council&reference'
 const ARCHIVE_ID = /^h_/
-const ARCHIVE_REFUSAL = /historical \(archive\) record id/i
+// Failures worth one more try with the current code: an archive id Plota refused, and a "standalone"
+// answer read as an invalid family before standalone answers fell back to the original.
+const RECOVERABLE_FAILURE = /historical \(archive\) record id|invalid family shape/i
+/** Plota links new applications into families some weeks after they arrive. */
+const FAMILY_SETTLING_DAYS = 14
 
 export interface LookupRow {
   id: string
@@ -408,7 +412,7 @@ export interface FamilyLookupRunOptions {
   councils?: string[]
   /** Without commit the run only reports which families it would fetch. */
   commit: boolean
-  /** Re-queue lookups that failed only because Plota refused an archive id, to fetch by reference. */
+  /** Re-queue lookups that failed on an archive id or a standalone answer, which the run now recovers. */
   retryArchiveFailures?: boolean
   admitToTier?: boolean
 }
@@ -434,9 +438,14 @@ async function childToAsk(db: PlanningAdminClient, lookup: LookupRow): Promise<s
   const { data: children, error: childrenError } = await db.from('planning_applications')
     .select('provider_id,source_kind,date_received').in('id', ids)
   if (childrenError) throw childrenError
-  // Plota's family endpoint answers for live ids; prefer the most recent live follow-on.
+  // Plota's family endpoint answers for live ids, and links a new application into its family only
+  // after a few weeks: a two-week-old discharge at Central Bedfordshire came back standalone while an
+  // older one returned all 14 members. Prefer the most recent live follow-on that has settled.
+  const settled = new Date(Date.now() - FAMILY_SETTLING_DAYS * 86_400_000).toISOString().slice(0, 10)
+  const hasSettled = (row: { date_received?: unknown }) => Number(String(row.date_received ?? '9999') <= settled)
   const ranked = [...(children ?? [])].sort((a, b) =>
     Number(b.source_kind === 'live') - Number(a.source_kind === 'live')
+    || hasSettled(b) - hasSettled(a)
     || String(b.date_received ?? '').localeCompare(String(a.date_received ?? '')))
   return (ranked[0]?.provider_id as string | undefined) ?? null
 }
@@ -467,7 +476,7 @@ export async function runFamilyLookups(
     if (options.councils?.length) failed = failed.in('authority_slug', options.councils)
     const { data: failedRows, error: failedError } = await failed
     if (failedError) throw failedError
-    const retry = ((failedRows ?? []) as Array<{ id: string; last_error: string | null }>).filter(row => ARCHIVE_REFUSAL.test(row.last_error ?? ''))
+    const retry = ((failedRows ?? []) as Array<{ id: string; last_error: string | null }>).filter(row => RECOVERABLE_FAILURE.test(row.last_error ?? ''))
     if (retry.length) {
       const { error: retryError } = await db.from('planning_family_lookups')
         .update({ status: 'queued', updated_at: new Date().toISOString() }).in('id', retry.map(row => row.id))
@@ -486,6 +495,8 @@ export async function runFamilyLookups(
     const via = await childToAsk(db, lookup)
     result.planned.push({ lookupId: lookup.id, council: lookup.authority_slug, parentReference: lookup.parent_reference, via })
     if (!options.commit) continue
+    // A standalone answer costs a second request for the original; the allowance counts requests.
+    if (result.requestsMade >= budget) { result.stoppedFor = 'allowance'; break }
     if (!via) {
       await db.from('planning_family_lookups').update({ status: 'failed', last_error: 'No stored follow-on to ask Plota about', updated_at: new Date().toISOString() }).eq('id', lookup.id)
       result.failures.push({ lookupId: lookup.id, parentReference: lookup.parent_reference, error: 'no stored follow-on' })
@@ -498,10 +509,11 @@ export async function runFamilyLookups(
     if (current && current.status === 'complete') continue
 
     await db.from('planning_family_lookups').update({ status: 'processing', attempts: lookup.attempts + 1, updated_at: new Date().toISOString() }).eq('id', lookup.id)
+    let endpoint = FAMILY_ENDPOINT
     try {
-      // Plota answers families only for live ids. When the only follow-ons are archive records, the
-      // original itself is fetched by reference instead: one request, and no family to compare.
-      if (ARCHIVE_ID.test(via)) {
+      // The original itself, by council and reference: one request, and no family to compare.
+      const fetchOriginal = async () => {
+        endpoint = REFERENCE_ENDPOINT
         const { application, usage } = await client.findByReference(lookup.authority_slug, lookup.parent_reference)
         result.requestsMade++
         remaining = usage.monthlyRemaining ?? remaining
@@ -514,13 +526,21 @@ export async function runFamilyLookups(
           await assignMembershipsFor(db, [original.applicationId], 'system:family-lookup')
             .catch(membershipError => console.error('[planning-membership] Failed to place a fetched original', membershipError))
         }
-        continue
       }
+      // Plota answers families only for live ids; when the only follow-ons are archive records, the
+      // original is fetched instead.
+      if (ARCHIVE_ID.test(via)) { await fetchOriginal(); continue }
       const { family, usage } = await client.associated(via)
       result.requestsMade++
       remaining = usage.monthlyRemaining ?? remaining
       await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint: FAMILY_ENDPOINT, request_id: usage.requestId,
         monthly_limit: usage.monthlyLimit, monthly_remaining: usage.monthlyRemaining, status_code: 200 })
+      // Not yet in a Plota family: the original is still worth having, within the same allowance.
+      if (!family) {
+        if (result.requestsMade >= budget || !maySpendPlotaRequest(remaining)) throw new Error('Plota has not linked this application to a family yet')
+        await fetchOriginal()
+        continue
+      }
       const storedFamily = await storeFamily(db, { lookup, family, requestedVia: via, admitToTier: options.admitToTier })
       result.stored.push(storedFamily)
       // The paid part is done and stored; placing the family is repeatable, so its failure is logged
@@ -533,7 +553,7 @@ export async function runFamilyLookups(
       const status = error instanceof PlotaError ? error.status : null
       if (error instanceof PlotaError) {
         result.requestsMade++
-        await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint: ARCHIVE_ID.test(via) ? REFERENCE_ENDPOINT : FAMILY_ENDPOINT, request_id: error.requestId, status_code: error.status })
+        await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint, request_id: error.requestId, status_code: error.status })
       }
       // A database error is a plain object with a message, not an Error.
       const message = error instanceof Error ? error.message

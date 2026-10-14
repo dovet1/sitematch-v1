@@ -36,6 +36,17 @@ describe('PlotaClient', () => {
     }) as unknown as typeof fetch
     await expect(new PlotaClient('secret-demo-key').search({ q: 'x' })).rejects.toThrow('Bad filter')
   })
+
+  it('reads a standalone answer as no family yet, and anything else malformed as an error', async () => {
+    const respond = (data: unknown) => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ data, meta: {} }) }) as unknown as typeof fetch
+    }
+    // Central Bedfordshire CB/26/03010/DOC, two weeks after it was received.
+    respond({ id: '63sfeayv', reference: 'CB/26/03010/DOC', role: 'standalone', principal: null, conditions: [], count: 0, applications: [] })
+    await expect(new PlotaClient('key').associated('63sfeayv')).resolves.toMatchObject({ family: null })
+    respond({ id: 'x', principal: null })
+    await expect(new PlotaClient('key').associated('x')).rejects.toThrow('Plota returned an invalid family shape')
+  })
 })
 
 describe('buildSearchSpecs', () => {

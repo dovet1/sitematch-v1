@@ -109,9 +109,14 @@ export class PlotaClient {
    * The whole family of related applications for one application: the principal, every member with
    * its parent, and the condition ledger. One request, whatever the family's size.
    */
-  async associated(id: string, options: { signal?: AbortSignal } = {}): Promise<{ family: PlotaFamily; usage: PlotaUsageHeaders }> {
+  async associated(id: string, options: { signal?: AbortSignal } = {}): Promise<{ family: PlotaFamily | null; usage: PlotaUsageHeaders }> {
     const { body, usage } = await this.get(`/applications/${encodeURIComponent(id)}/associated`, options)
-    const family = ((body as { data?: unknown }).data ?? body) as PlotaFamily
+    const family = ((body as { data?: unknown }).data ?? body) as PlotaFamily & { role?: string }
+    // Plota has not linked this application to a family (yet): role "standalone", no principal and no
+    // members. Common for follow-ons received in the last few weeks; not an error.
+    if (family && family.principal === null && Array.isArray(family.applications) && family.applications.length === 0) {
+      return { family: null, usage }
+    }
     if (!family || !family.principal || !Array.isArray(family.applications)) {
       throw new PlotaError('Plota returned an invalid family shape', 502, usage.requestId, null)
     }
