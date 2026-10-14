@@ -16,7 +16,9 @@ INSERT INTO demographic_signal_mappings VALUES ('affluence_high', 'affluence'), 
 INSERT INTO bua_demographic_signals
 SELECT format('E%s', lpad(i::text, 8, '0')), 'affluence_high', 50 + i * 5 FROM generate_series(1, 30) i
 UNION ALL
-SELECT format('E%s', lpad(i::text, 8, '0')), 'urbanity_rural', 100 + (i % 3) * 5 FROM generate_series(1, 30) i;
+SELECT format('E%s', lpad(i::text, 8, '0')), 'urbanity_rural', 100 + (i % 3) * 5 FROM generate_series(1, 30) i
+-- A Scottish border town given a value from a sliver of an English census area: must be ignored.
+UNION ALL SELECT 'S00000031', 'affluence_high', 999;
 
 INSERT INTO brands VALUES
   ('00000000-0000-0000-0000-00000000000a', 'Posh'),

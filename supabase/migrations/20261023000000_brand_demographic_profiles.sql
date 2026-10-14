@@ -26,6 +26,8 @@
 -- ---------------------------------------------------------------------------
 -- 1. brand_matcher_bua_signals
 -- ---------------------------------------------------------------------------
+--    England and Wales towns only (E/W codes). A Scottish town on the border can overlap a sliver
+--    of an English census area and so receive "demographics" that describe only that sliver.
 CREATE OR REPLACE VIEW public.brand_matcher_bua_signals
 WITH (security_invoker = true) AS
   SELECT s.bua_gsscode,
@@ -35,12 +37,14 @@ WITH (security_invoker = true) AS
   FROM public.bua_demographic_signals s
   JOIN public.demographic_signal_mappings m ON m.signal_name = s.signal_name
   WHERE s.index_score IS NOT NULL
+    AND left(s.bua_gsscode, 1) IN ('E', 'W')
   UNION ALL
   -- Population only for BUAs that also carry demographics, so every signal is measured over
   -- the same set of towns.
   SELECT b.gsscode, 'population', 'population', b.pop_final::double precision
   FROM public.built_up_areas b
   WHERE b.pop_final IS NOT NULL
+    AND left(b.gsscode, 1) IN ('E', 'W')
     AND EXISTS (
       SELECT 1 FROM public.bua_demographic_signals s
       WHERE s.bua_gsscode = b.gsscode AND s.index_score IS NOT NULL
