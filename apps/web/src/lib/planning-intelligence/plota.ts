@@ -112,9 +112,10 @@ export class PlotaClient {
   async associated(id: string, options: { signal?: AbortSignal } = {}): Promise<{ family: PlotaFamily | null; usage: PlotaUsageHeaders }> {
     const { body, usage } = await this.get(`/applications/${encodeURIComponent(id)}/associated`, options)
     const family = ((body as { data?: unknown }).data ?? body) as PlotaFamily & { role?: string }
-    // Plota has not linked this application to a family (yet): role "standalone", no principal and no
-    // members. Common for follow-ons received in the last few weeks; not an error.
-    if (family && family.principal === null && Array.isArray(family.applications) && family.applications.length === 0) {
+    // No principal means Plota knows no parent for this application: "standalone" (common for
+    // follow-ons received in the last few weeks), or "principal" of a family it heads itself, as
+    // Buckinghamshire's PL/26/02762/VRC does without its parent PL/23/1448/FA. Not an error.
+    if (family && family.principal === null && Array.isArray(family.applications)) {
       return { family: null, usage }
     }
     if (!family || !family.principal || !Array.isArray(family.applications)) {

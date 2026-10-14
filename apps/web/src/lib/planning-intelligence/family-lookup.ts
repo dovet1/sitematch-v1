@@ -24,6 +24,7 @@ const ARCHIVE_ID = /^h_/
 // Failures worth one more try with the current code: an archive id Plota refused, and a "standalone"
 // answer read as an invalid family before standalone answers fell back to the original.
 const RECOVERABLE_FAILURE = /historical \(archive\) record id|invalid family shape/i
+const MAX_RECOVERY_ATTEMPTS = 3
 /** Plota links new applications into families some weeks after they arrive. */
 const FAMILY_SETTLING_DAYS = 14
 
@@ -472,11 +473,13 @@ export async function runFamilyLookups(
   if (budget <= 0) { result.stoppedFor = 'allowance'; return result }
 
   if (options.retryArchiveFailures && options.commit) {
-    let failed = db.from('planning_family_lookups').select('id,authority_slug,last_error').eq('status', 'failed')
+    let failed = db.from('planning_family_lookups').select('id,authority_slug,last_error,attempts').eq('status', 'failed')
     if (options.councils?.length) failed = failed.in('authority_slug', options.councils)
     const { data: failedRows, error: failedError } = await failed
     if (failedError) throw failedError
-    const retry = ((failedRows ?? []) as Array<{ id: string; last_error: string | null }>).filter(row => RECOVERABLE_FAILURE.test(row.last_error ?? ''))
+    // A few tries each: a lookup that keeps failing the same way is not retried batch after batch.
+    const retry = ((failedRows ?? []) as Array<{ id: string; last_error: string | null; attempts: number | null }>)
+      .filter(row => RECOVERABLE_FAILURE.test(row.last_error ?? '') && (row.attempts ?? 0) < MAX_RECOVERY_ATTEMPTS)
     if (retry.length) {
       const { error: retryError } = await db.from('planning_family_lookups')
         .update({ status: 'queued', updated_at: new Date().toISOString() }).in('id', retry.map(row => row.id))

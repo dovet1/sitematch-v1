@@ -44,6 +44,9 @@ describe('PlotaClient', () => {
     // Central Bedfordshire CB/26/03010/DOC, two weeks after it was received.
     respond({ id: '63sfeayv', reference: 'CB/26/03010/DOC', role: 'standalone', principal: null, conditions: [], count: 0, applications: [] })
     await expect(new PlotaClient('key').associated('63sfeayv')).resolves.toMatchObject({ family: null })
+    // Buckinghamshire PL/26/02762/VRC heads its own Plota family, without the permission it varies.
+    respond({ id: 'wuy5yrzh', role: 'principal', principal: null, count: 2, applications: [{ id: 'wuy5yrzh', depth: 0 }, { id: '0k3y8x31', depth: 1 }] })
+    await expect(new PlotaClient('key').associated('wuy5yrzh')).resolves.toMatchObject({ family: null })
     respond({ id: 'x', principal: null })
     await expect(new PlotaClient('key').associated('x')).rejects.toThrow('Plota returned an invalid family shape')
   })

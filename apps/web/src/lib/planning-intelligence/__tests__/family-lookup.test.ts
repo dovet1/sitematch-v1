@@ -301,6 +301,15 @@ describe('runFamilyLookups', () => {
     expect(tables.planning_family_lookups[1]).toMatchObject({ status: 'failed' })
   })
 
+  it('stops retrying a lookup that keeps failing', async () => {
+    const tables = archiveOnly(broadlandStore())
+    Object.assign(tables.planning_family_lookups[0], { status: 'failed', attempts: 3, last_error: 'Plota returned an invalid family shape' })
+    const plota = byReference()
+    const result = await runFamilyLookups(makeDb(tables).db, plota, { limit: 5, monthlyAllowance: 300, commit: true, retryArchiveFailures: true })
+    expect(result.requestsMade).toBe(0)
+    expect(tables.planning_family_lookups[0]).toMatchObject({ status: 'failed' })
+  })
+
   it('fetches the original when Plota has not linked the follow-on into a family yet', async () => {
     const tables = broadlandStore()
     const plota = { ...byReference(), associated: jest.fn().mockResolvedValue({ family: null, usage: { requestId: 'req_standalone', monthlyLimit: 20000, monthlyRemaining: 9000 } }) }
