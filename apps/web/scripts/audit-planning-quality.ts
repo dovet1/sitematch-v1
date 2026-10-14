@@ -7,7 +7,7 @@ async function main() {
  const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false},global:{fetch:(url,init)=>fetch(url,{...init,signal:AbortSignal.timeout(20000)})}})
  const samples=[]
  for(const relevance of ['high','medium','low']) {
-  const {data,error}=await db.from('developments').select('id,canonical_name,relevance,confidence,summary,model_dwelling_count,creates_commercial_space,unanswered_questions,development_applications(planning_applications(id,raw))').eq('relevance',relevance).order('last_seen_at',{ascending:false}).limit(10)
+  const {data,error}=await db.from('developments').select('id,canonical_name,relevance,confidence,summary,model_dwelling_count,creates_commercial_space,unanswered_questions,development_applications!development_applications_development_id_fkey(planning_applications(id,raw))').eq('relevance',relevance).order('last_seen_at',{ascending:false}).limit(10)
   if(error)throw error
   samples.push(...data)
  }

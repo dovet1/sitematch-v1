@@ -29,7 +29,7 @@ async function main() {
   const out: Record<string, unknown>[] = []
   for (const council of councils) {
     const { data: apps, error } = await db.from('planning_applications')
-      .select('id,reference,description,procedure,stage,date_received,raw,development_applications(development_id,role,developments(id,relevance,creates_commercial_space,research_state,review_state))')
+      .select('id,reference,description,procedure,stage,date_received,raw,development_applications(development_id,role,developments!development_applications_development_id_fkey(id,relevance,creates_commercial_space,research_state,review_state))')
       .eq('authority_slug', council)
       .eq('intelligence_tier', true)
       .gte('date_received', '2025-09-01')

@@ -60,7 +60,7 @@ async function linkedDevelopment(
 ): Promise<{ id: string; role: string; principalApplicationId: string | null }> {
   const { data, error } = await db
     .from('development_applications')
-    .select('development_id,role,developments(principal_application_id)')
+    .select('development_id,role,developments!development_applications_development_id_fkey(principal_application_id)')
     .eq('planning_application_id', applicationId)
     .single()
   if (error) throw error

@@ -90,7 +90,7 @@ async function main() {
   const moves: Move[] = []
   for (const target of targets) {
     const membership = await check('membership', db.from('development_applications')
-      .select('development_id,role,relationship_source,developments(relevance,review_state,research_state)')
+      .select('development_id,role,relationship_source,developments!development_applications_development_id_fkey(relevance,review_state,research_state)')
       .eq('planning_application_id', target.id).maybeSingle()) as null | {
         development_id: string; role: string; relationship_source: string
         developments: { relevance: string | null; review_state: string; research_state: string } | null
