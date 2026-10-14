@@ -1,63 +1,49 @@
 -- Brand Matcher demographic profile deployment checks.
 --
 -- Run only after applying 20261023000000_brand_demographic_profiles.sql and running
--- rebuild_brand_demographic_profiles(). Read-only; the transaction is rolled back.
--- Prints coverage figures as notices — read them, they say how much of each estate the
--- method can see.
+-- rebuild_brand_demographic_profiles(). Read-only. Works pasted into the Supabase SQL editor
+-- or with psql:
 --
 --   psql -v ON_ERROR_STOP=1 -d <db> -f supabase/tests/brand_demographic_profiles_test.sql
-
-BEGIN;
-
-\set ON_ERROR_STOP on
-
-CREATE OR REPLACE FUNCTION pg_temp.assert_true(actual boolean, label text)
-RETURNS void LANGUAGE plpgsql AS $$
-BEGIN
-  IF actual IS DISTINCT FROM true THEN
-    RAISE EXCEPTION 'FAIL: %', label;
-  END IF;
-  RAISE NOTICE 'ok: %', label;
-END;
-$$;
+--
+-- A failed check stops with an error naming it. If they all pass, the result is one row of
+-- coverage figures — read them: they say how much of each estate the method can see.
 
 DO $$
-DECLARE
-  v_located bigint;
-  v_in_town bigint;
-  v_in_scored_town bigint;
-  v_profiles bigint;
-  v_brands bigint;
-  v_fascias bigint;
-  v_signals bigint;
 BEGIN
-  SELECT count(*) INTO v_signals FROM (SELECT DISTINCT signal_name FROM public.brand_matcher_bua_signals) s;
-  PERFORM pg_temp.assert_true(v_signals > 1, 'BUA signals exist (has rebuild_all_demographics() run?)');
+  IF NOT EXISTS (SELECT 1 FROM public.brand_matcher_bua_signals WHERE signal_name <> 'population') THEN
+    RAISE EXCEPTION 'FAIL: no BUA demographic signals — run rebuild_all_demographics() first';
+  END IF;
 
-  SELECT count(*) INTO v_profiles FROM public.brand_demographic_profiles;
-  PERFORM pg_temp.assert_true(v_profiles > 0, 'profiles exist (has rebuild_brand_demographic_profiles() run?)');
+  IF NOT EXISTS (SELECT 1 FROM public.brand_demographic_profiles) THEN
+    RAISE EXCEPTION 'FAIL: no profiles — run rebuild_brand_demographic_profiles()';
+  END IF;
 
   -- A brand trades in at least as many towns as any one of its fascias.
-  PERFORM pg_temp.assert_true(NOT EXISTS (
+  IF EXISTS (
     SELECT 1
     FROM public.brand_demographic_profiles f
     LEFT JOIN public.brand_demographic_profiles b
       ON b.brand_id = f.brand_id AND b.fascia_id IS NULL AND b.signal_name = f.signal_name
     WHERE f.fascia_id IS NOT NULL
       AND (b.brand_id IS NULL OR b.bua_count < f.bua_count)
-  ), 'brand-level profile covers each fascia profile');
+  ) THEN
+    RAISE EXCEPTION 'FAIL: a fascia profile covers more towns than its brand profile';
+  END IF;
 
   -- Fascias belong to the brand they are profiled under.
-  PERFORM pg_temp.assert_true(NOT EXISTS (
+  IF EXISTS (
     SELECT 1
     FROM public.brand_demographic_profiles d
     JOIN public.fascias f ON f.id = d.fascia_id
     WHERE f.brand_id <> d.brand_id
-  ), 'fascia profiles sit under their own brand');
+  ) THEN
+    RAISE EXCEPTION 'FAIL: a fascia is profiled under the wrong brand';
+  END IF;
 
   -- A store inside a town with signals places back into that same town.
-  PERFORM pg_temp.assert_true((
-    SELECT bool_and(t.bua_gsscode = st.gsscode AND t.distance_m = 0 AND t.signals ? 'population')
+  IF NOT (
+    SELECT coalesce(bool_and(t.bua_gsscode = st.gsscode AND t.distance_m = 0 AND t.signals ? 'population'), false)
     FROM (
       SELECT s.location, g.gsscode
       FROM public.stores s
@@ -69,32 +55,30 @@ BEGIN
     CROSS JOIN LATERAL public.brand_matcher_site_bua(
       ST_Y(st.location::geometry), ST_X(st.location::geometry)
     ) t
-  ), 'a site at a store inside a town is placed in that town');
-
-  -- Coverage. Not asserted: these are for reading.
-  SELECT count(*) INTO v_located FROM public.stores WHERE brand_id IS NOT NULL AND location IS NOT NULL;
-  SELECT coalesce(sum(p.store_count), 0) INTO v_in_town FROM public.brand_bua_presence() p;
-  SELECT coalesce(sum(p.store_count), 0) INTO v_in_scored_town
-  FROM public.brand_bua_presence() p
-  WHERE EXISTS (SELECT 1 FROM public.brand_matcher_bua_signals v WHERE v.bua_gsscode = p.bua_gsscode);
-  SELECT count(DISTINCT brand_id) INTO v_brands FROM public.brand_demographic_profiles WHERE fascia_id IS NULL;
-  SELECT count(DISTINCT fascia_id) INTO v_fascias FROM public.brand_demographic_profiles WHERE fascia_id IS NOT NULL;
-
-  RAISE NOTICE 'coverage: % located stores; % (% %%) inside a town; % (% %%) inside a town with demographics',
-    v_located,
-    v_in_town, round(100.0 * v_in_town / nullif(v_located, 0), 1),
-    v_in_scored_town, round(100.0 * v_in_scored_town / nullif(v_located, 0), 1);
-  RAISE NOTICE 'coverage: % brands and % fascias profiled; % signals', v_brands, v_fascias, v_signals;
+  ) THEN
+    RAISE EXCEPTION 'FAIL: a site at a store inside a town was not placed in that town';
+  END IF;
 END;
 $$;
 
--- The most distinctive brand-level signals, to sanity-check by eye (Waitrose should skew affluent).
-SELECT b.name AS brand, d.signal_name, round(d.median::numeric, 1) AS median,
-       round(d.distinctiveness::numeric, 2) AS distinctiveness, d.bua_count
-FROM public.brand_demographic_profiles d
-JOIN public.brands b ON b.id = d.brand_id
-WHERE d.fascia_id IS NULL
-ORDER BY d.distinctiveness DESC
-LIMIT 30;
-
-ROLLBACK;
+-- All checks passed. Coverage, for reading.
+WITH presence AS (
+  SELECT p.*,
+         EXISTS (SELECT 1 FROM public.brand_matcher_bua_signals v WHERE v.bua_gsscode = p.bua_gsscode) AS has_signals
+  FROM public.brand_bua_presence() p
+),
+located AS (
+  SELECT count(*) AS n FROM public.stores WHERE brand_id IS NOT NULL AND location IS NOT NULL
+)
+SELECT
+  'all checks passed' AS status,
+  located.n AS located_stores,
+  (SELECT sum(store_count) FROM presence) AS stores_inside_a_town,
+  round(100.0 * (SELECT sum(store_count) FROM presence) / nullif(located.n, 0), 1) AS pct_inside_a_town,
+  (SELECT sum(store_count) FROM presence WHERE has_signals) AS stores_in_town_with_demographics,
+  round(100.0 * (SELECT sum(store_count) FROM presence WHERE has_signals) / nullif(located.n, 0), 1)
+    AS pct_in_town_with_demographics,
+  (SELECT count(DISTINCT brand_id) FROM public.brand_demographic_profiles WHERE fascia_id IS NULL) AS brands_profiled,
+  (SELECT count(DISTINCT fascia_id) FROM public.brand_demographic_profiles WHERE fascia_id IS NOT NULL) AS fascias_profiled,
+  (SELECT count(DISTINCT signal_name) FROM public.brand_matcher_bua_signals) AS signals
+FROM located;
