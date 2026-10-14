@@ -496,7 +496,11 @@ export async function runFamilyLookups(
     result.planned.push({ lookupId: lookup.id, council: lookup.authority_slug, parentReference: lookup.parent_reference, via })
     if (!options.commit) continue
     // A standalone answer costs a second request for the original; the allowance counts requests.
-    if (result.requestsMade >= budget) { result.stoppedFor = 'allowance'; break }
+    // Reaching the run's own limit is a normal end; only the monthly allowance is a stop.
+    if (result.requestsMade >= budget) {
+      if (options.monthlyAllowance - result.usedThisMonthBefore <= options.limit) result.stoppedFor = 'allowance'
+      break
+    }
     if (!via) {
       await db.from('planning_family_lookups').update({ status: 'failed', last_error: 'No stored follow-on to ask Plota about', updated_at: new Date().toISOString() }).eq('id', lookup.id)
       result.failures.push({ lookupId: lookup.id, parentReference: lookup.parent_reference, error: 'no stored follow-on' })

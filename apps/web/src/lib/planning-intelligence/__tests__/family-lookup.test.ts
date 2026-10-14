@@ -320,6 +320,15 @@ describe('runFamilyLookups', () => {
     expect(result.planned[0].via).toBe('7gdc72mt')
   })
 
+  it('ends a run at its own limit without reporting the monthly allowance spent', async () => {
+    const tables = broadlandStore()
+    tables.planning_family_lookups.push({ id: 'lookup-2', authority_slug: COUNCIL, parent_key: '2019/0001', parent_reference: '2019/0001', status: 'queued', attempts: 0, priority: 1000, last_requested_at: '2026-09-14' })
+    tables.planning_application_links.push({ id: 'l9', authority_slug: COUNCIL, child_application_id: 'a-0994', parent_key: '2019/0001', strength: 'strong', source: 'cited_reference', removed_at: null })
+    const plota = { ...byReference(), associated: jest.fn().mockResolvedValue({ family: null, usage: { requestId: 'req_standalone', monthlyLimit: 20000, monthlyRemaining: 9000 } }) }
+    const result = await runFamilyLookups(makeDb(tables).db, plota, { limit: 2, monthlyAllowance: 300, commit: true })
+    expect(result).toMatchObject({ requestsMade: 2, stoppedFor: null })
+  })
+
   it('counts both requests of a standalone answer against the allowance', async () => {
     const tables = broadlandStore()
     tables.planning_provider_usage.push(...Array.from({ length: 299 }, () => ({ provider: 'plota', endpoint: FAMILY_ENDPOINT, occurred_at: monthStart(), status_code: 200 })))
