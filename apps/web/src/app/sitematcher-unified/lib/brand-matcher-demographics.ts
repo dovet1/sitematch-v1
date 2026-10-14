@@ -16,8 +16,14 @@
 
 // Kept in step with brand_demographic_profiles_min_buas in the migration.
 export const MIN_PROFILE_BUAS = 8
-// Kept in step with rebuild_bua_demographic_ranks(p_band_size).
-export const SIZE_BAND_TOWNS = 200
+// Size bands, kept in step with rebuild_bua_demographic_ranks(): up to 200 towns, closing early
+// once the next town is more than twice the smallest's population if the band has 50 already.
+export interface SizeBandRules {
+  bandSize: number
+  minBand: number
+  maxRatio: number
+}
+export const SIZE_BANDS: SizeBandRules = { bandSize: 200, minBand: 50, maxRatio: 2 }
 // A signal counts as part of a brand's character when its towns' median rank is at least this far
 // from the middle (0.3 = the median town sits in the top or bottom 35% for its size).
 export const MIN_DISTINCTIVENESS = 0.3
@@ -136,11 +142,19 @@ export function demographicFit(site: SiteTown | null, profile: DemographicSignal
   const bestPerCategory = new Map<string, DemographicSignalProfile>()
   for (const p of demographic) {
     const current = bestPerCategory.get(p.category)
-    if (!current || p.distinctiveness > current.distinctiveness) bestPerCategory.set(p.category, p)
+    // Ties go to the alphabetically first name (byte order), as in brand_demographic_backtest().
+    if (
+      !current ||
+      p.distinctiveness > current.distinctiveness ||
+      (p.distinctiveness === current.distinctiveness && p.signalName < current.signalName)
+    ) {
+      bestPerCategory.set(p.category, p)
+    }
   }
+  const byName = (a: string, z: string) => (a < z ? -1 : a > z ? 1 : 0)
   const chosen = Array.from(bestPerCategory.values())
     .filter((p) => p.distinctiveness >= MIN_DISTINCTIVENESS)
-    .sort((a, z) => z.distinctiveness - a.distinctiveness || a.signalName.localeCompare(z.signalName))
+    .sort((a, z) => z.distinctiveness - a.distinctiveness || byName(a.signalName, z.signalName))
     .slice(0, MAX_FIT_SIGNALS)
 
   if (chosen.length === 0) return { band: 'good', basis: 'broad', score: 1, signals: [], size }
@@ -188,21 +202,30 @@ export function midRanks<K>(values: Map<K, number>): Map<K, number> {
   return ranks
 }
 
-// Postgres ntile(n) over towns ordered by population then code: equal-sized bands, the first
-// (count % n) one town larger.
-export function sizeBands(population: Map<string, number>, bandSize = SIZE_BAND_TOWNS): Map<string, number> {
+// Mirrors rebuild_bua_demographic_ranks(): towns smallest first (code order, byte-wise, breaks
+// ties), a new band when the current one is full or, once it has minBand towns, when the next town
+// is more than maxRatio times the band's smallest. A last band under minBand joins the one below.
+export function sizeBands(population: Map<string, number>, rules: SizeBandRules = SIZE_BANDS): Map<string, number> {
   const towns = Array.from(population.keys()).sort(
     (a, z) => (population.get(a) as number) - (population.get(z) as number) || (a < z ? -1 : a > z ? 1 : 0)
   )
-  const n = Math.max(1, Math.round(towns.length / bandSize))
-  const base = Math.floor(towns.length / n)
-  const extra = towns.length % n
   const bands = new Map<string, number>()
-  let i = 0
-  for (let band = 1; band <= n; band++) {
-    const size = base + (band <= extra ? 1 : 0)
-    for (let j = 0; j < size; j++) bands.set(towns[i++], band)
+  let band = 1
+  let count = 0
+  let start: number | null = null
+  for (const t of towns) {
+    const pop = population.get(t) as number
+    if (start == null) {
+      start = pop
+    } else if (count >= rules.bandSize || (count >= rules.minBand && pop > rules.maxRatio * start)) {
+      band++
+      count = 0
+      start = pop
+    }
+    bands.set(t, band)
+    count++
   }
+  if (band > 1 && count < rules.minBand) bands.forEach((b, t) => b === band && bands.set(t, band - 1))
   return bands
 }
 
@@ -217,11 +240,11 @@ export interface SignalTable {
 // Every signal's values per town in, size-adjusted ranks out. Needs the population signal.
 export function buildSignalTables(
   signals: Map<string, { category: string; values: Map<string, number> }>,
-  bandSize = SIZE_BAND_TOWNS
+  rules: SizeBandRules = SIZE_BANDS
 ): Map<string, SignalTable> {
   const population = signals.get(SIZE_SIGNAL)
   if (!population) throw new Error('the population signal is required to form size bands')
-  const bands = sizeBands(population.values, bandSize)
+  const bands = sizeBands(population.values, rules)
   const tables = new Map<string, SignalTable>()
   signals.forEach(({ category, values }, name) => {
     const inTowns = new Map(Array.from(values).filter(([t]) => bands.has(t)))

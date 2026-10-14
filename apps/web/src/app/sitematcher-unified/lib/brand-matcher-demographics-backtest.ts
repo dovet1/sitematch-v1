@@ -1,5 +1,6 @@
 // Backtest for Brand Matcher demographic fit. Pure — scripts/backtest-brand-demographics.ts loads
-// the rows and prints the result.
+// the rows and prints the result. brand_demographic_backtest() (migration 20261023040000) runs the
+// same backtest inside the database; the two agree unit for unit.
 //
 // For each fascia (or brand), hold back a share of its towns, build the profile from the rest, and
 // score the held-back towns against towns it does not trade in. AUC is the chance a real town
@@ -10,9 +11,10 @@
 //                  towns. Size cannot help here, so this is what demographics alone add.
 //   size         — town size alone, against towns of any size: how much size by itself separates.
 
+import { createHash } from 'crypto'
 import {
   MIN_PROFILE_BUAS,
-  SIZE_BAND_TOWNS,
+  SIZE_BANDS,
   SIZE_SIGNAL,
   auc,
   buildProfile,
@@ -22,6 +24,7 @@ import {
   sizeBands,
   type DemographicFitBand,
   type SiteTown,
+  type SizeBandRules,
 } from './brand-matcher-demographics'
 
 export interface PresenceRow {
@@ -43,7 +46,7 @@ export interface BacktestOptions {
   holdout: number
   negativesPerUnit: number
   minTowns: number
-  bandSize?: number
+  sizeBands?: SizeBandRules
 }
 
 export type Variant = 'demographics' | 'size'
@@ -72,21 +75,11 @@ export interface BacktestResult {
   units: UnitResult[]
 }
 
-// Deterministic 0..1 from a string, so a rerun splits the same way. FNV-1a, then the murmur3
-// finaliser: FNV alone leaves the high bits nearly unchanged between codes that differ only in the
-// last character (E00000001, E00000002…), which would put runs of towns on the same side.
+// Deterministic 0..1 from a string, so a rerun splits the same way: the first 32 bits of its md5.
+// brand_matcher_hash01() in SQL computes the same value, so the database backtest and this one
+// split towns identically.
 export function hash01(s: string): number {
-  let h = 0x811c9dc5
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  h ^= h >>> 16
-  h = Math.imul(h, 0x85ebca6b)
-  h ^= h >>> 13
-  h = Math.imul(h, 0xc2b2ae35)
-  h ^= h >>> 16
-  return (h >>> 0) / 0x100000000
+  return parseInt(createHash('md5').update(s, 'utf8').digest('hex').slice(0, 8), 16) / 0x100000000
 }
 
 const emptyBands = (): BandCounts => ({ good: 0, partial: 0, weak: 0 })
@@ -103,15 +96,15 @@ export function runBacktest(
   signalRows: SignalRow[],
   options: BacktestOptions
 ): BacktestResult {
-  const bandSize = options.bandSize ?? SIZE_BAND_TOWNS
+  const rules = options.sizeBands ?? SIZE_BANDS
   const raw = new Map<string, { category: string; values: Map<string, number> }>()
   for (const r of signalRows) {
     const entry = raw.get(r.signalName) ?? { category: r.signalCategory, values: new Map() }
     entry.values.set(r.buaGsscode, r.value)
     raw.set(r.signalName, entry)
   }
-  const tables = buildSignalTables(raw, bandSize)
-  const bands = sizeBands(tables.get(SIZE_SIGNAL)!.values, bandSize)
+  const tables = buildSignalTables(raw, rules)
+  const bands = sizeBands(tables.get(SIZE_SIGNAL)!.values, rules)
   const towns = Array.from(bands.keys())
   const site = new Map<string, SiteTown>()
   for (const t of towns) {

@@ -147,12 +147,27 @@ describe('ranks and profiles mirror the SQL rebuilds', () => {
     expect(ranks.get('d')).toBe(0.875)
   })
 
-  it('bands towns by size like ntile', () => {
-    const pop = new Map(Array.from({ length: 7 }, (_, i) => [`t${i}`, (7 - i) * 10]))
-    // 7 towns, bands of 3 -> round(7 / 3) = 2 bands of 4 and 3, smallest first.
-    const bands = sizeBands(pop, 3)
-    expect(['t6', 't5', 't4', 't3'].map((t) => bands.get(t))).toEqual([1, 1, 1, 1])
-    expect(['t2', 't1', 't0'].map((t) => bands.get(t))).toEqual([2, 2, 2])
+  // Same towns and rules as the size-band checks in supabase/tests/brand-demographics/fixtures.sql.
+  const pop30 = new Map(Array.from({ length: 30 }, (_, k) => [`E${String(k + 1).padStart(8, '0')}`, (k + 1) * 10000]))
+  const bandSizes = (bands: Map<string, number>) =>
+    Array.from(bands.values()).reduce<Record<number, number>>((acc, b) => ({ ...acc, [b]: (acc[b] ?? 0) + 1 }), {})
+
+  it('fills bands up to the band size, smallest towns first', () => {
+    const bands = sizeBands(pop30, { bandSize: 10, minBand: 5, maxRatio: Infinity })
+    expect(bandSizes(bands)).toEqual({ 1: 10, 2: 10, 3: 10 })
+    expect(bands.get('E00000001')).toBe(1)
+    expect(bands.get('E00000030')).toBe(3)
+  })
+
+  it('closes a band once towns more than double in size, and folds a small last band down', () => {
+    // 10k-50k | 60k-120k | 130k-260k, then 270k-300k (4 towns < 5) joins the band below.
+    expect(bandSizes(sizeBands(pop30, { bandSize: 200, minBand: 5, maxRatio: 2 }))).toEqual({ 1: 5, 2: 7, 3: 18 })
+  })
+
+  it('breaks population ties by code', () => {
+    const tied = new Map([['b', 0], ['a', 0], ['c', 0], ['d', 5]])
+    const bands = sizeBands(tied, { bandSize: 2, minBand: 1, maxRatio: Infinity })
+    expect(['a', 'b', 'c', 'd'].map((t) => bands.get(t))).toEqual([1, 1, 2, 2])
   })
 
   // The same towns as supabase/tests/brand-demographics/fixtures.sql: 30 towns, affluence
@@ -182,7 +197,7 @@ describe('ranks and profiles mirror the SQL rebuilds', () => {
   })
 
   it('reproduces the SQL fixture figures with bands of ten', () => {
-    const profile = buildProfile(posh, buildSignalTables(raw, 10))
+    const profile = buildProfile(posh, buildSignalTables(raw, { bandSize: 10, minBand: 5, maxRatio: Infinity }))
     expect(profile.find((p) => p.signalName === 'affluence_high')!.distinctiveness).toBeCloseTo(0)
     expect(profile.find((p) => p.signalName === 'population')!.distinctiveness).toBeCloseTo(2 / 3)
   })

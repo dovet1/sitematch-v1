@@ -125,7 +125,7 @@ SELECT pg_temp.check(NOT EXISTS (
 -- Size bands of 10 towns. Affluence rises with size in these towns, so Posh's towns (the ten
 -- biggest, all in the top band) are only as affluent as towns of their size: not distinctive.
 -- Population is still ranked across all towns, so their size still stands out.
-SELECT pg_temp.check(rebuild_bua_demographic_ranks(10) = 90, 'ranks rebuilt in bands of ten');
+SELECT pg_temp.check(rebuild_bua_demographic_ranks(10, 5, 1000) = 90, 'ranks rebuilt in bands of ten');
 SELECT pg_temp.check((SELECT count(DISTINCT size_band) = 3 FROM bua_demographic_ranks), 'three size bands');
 SELECT rebuild_brand_demographic_profiles();
 SELECT pg_temp.check(
@@ -138,17 +138,44 @@ SELECT pg_temp.check(
    FROM brand_demographic_profiles
    WHERE brand_id = '00000000-0000-0000-0000-00000000000a' AND fascia_id IS NULL AND signal_name = 'population'),
   'town size is still ranked against all towns');
+-- A band also closes once towns more than double in size: 10k-50k | 60k-120k | 130k-260k, and
+-- the last four (270k-300k, under the minimum of five) join the band below.
+SELECT rebuild_bua_demographic_ranks(200, 5, 2);
+SELECT pg_temp.check(
+  (SELECT array_agg(n ORDER BY size_band) = ARRAY[5, 7, 18]::bigint[]
+   FROM (SELECT size_band, count(*) AS n FROM bua_demographic_ranks WHERE signal_name = 'population' GROUP BY 1) b),
+  'bands close when population doubles, and a small last band joins the one below');
+
 SELECT rebuild_bua_demographic_ranks();
 SELECT rebuild_brand_demographic_profiles();
 
 -- A brand that drops below the minimum loses its profile rather than keeping a stale one.
 DELETE FROM stores WHERE brand_id = '00000000-0000-0000-0000-00000000000a'
-  AND location::geometry && ST_MakeEnvelope(-0.05, 51.9, 1, 52.1, 4326);  -- towns 20-30
+  AND location::geometry && ST_MakeEnvelope(-0.05, 51.9, 1, 52.1, 4326);  -- towns 20-29
 SELECT pg_temp.check(rebuild_brand_demographic_profiles(ARRAY['00000000-0000-0000-0000-00000000000a'::uuid]) = 0,
   'brand below the minimum is rebuilt to nothing');
 SELECT pg_temp.check(NOT EXISTS (
   SELECT 1 FROM brand_demographic_profiles WHERE brand_id = '00000000-0000-0000-0000-00000000000a'
 ), 'stale profile removed');
+
+-- The profile rebuild keeps a snapshot of which towns each brand trades in, for the backtest.
+SELECT pg_temp.check(NOT EXISTS (
+  (SELECT * FROM brand_bua_presence() EXCEPT SELECT * FROM brand_bua_presence_snapshot)
+  UNION ALL
+  (SELECT * FROM brand_bua_presence_snapshot EXCEPT SELECT * FROM brand_bua_presence())
+), 'presence snapshot matches the stores');
+
+-- The backtest's helpers match the TypeScript ones.
+SELECT pg_temp.check(pg_temp.near(brand_matcher_hash01('unit|E00000001'),
+  ('x' || substr(md5('unit|E00000001'), 1, 8))::bit(32)::bigint / 4294967296.0), 'hash01 is the first 32 bits of md5');
+SELECT pg_temp.check(
+  pg_temp.near(brand_matcher_signal_fit(110, 100, 110, 130, 140), 1)
+  AND pg_temp.near(brand_matcher_signal_fit(105, 100, 110, 130, 140), 0.75)
+  AND pg_temp.near(brand_matcher_signal_fit(95, 100, 110, 130, 140), 0.25)
+  AND pg_temp.near(brand_matcher_signal_fit(60, 100, 110, 130, 140), 0)
+  AND pg_temp.near(brand_matcher_signal_fit(145, 100, 110, 130, 140), 0.25)
+  AND pg_temp.near(brand_matcher_signal_fit(109, 110, 110, 130, 140), 0),
+  'signal fit matches signalFit()');
 
 -- Placing a site.
 SELECT pg_temp.check(
@@ -171,7 +198,9 @@ SELECT pg_temp.check(
 SELECT pg_temp.check(
   NOT has_function_privilege('anon', 'public.brand_matcher_site_bua(double precision, double precision, integer)', 'EXECUTE')
   AND NOT has_function_privilege('authenticated', 'public.rebuild_brand_demographic_profiles(uuid[])', 'EXECUTE')
-  AND NOT has_function_privilege('authenticated', 'public.rebuild_bua_demographic_ranks(integer)', 'EXECUTE')
+  AND NOT has_function_privilege('authenticated', 'public.rebuild_bua_demographic_ranks(integer, integer, double precision)', 'EXECUTE')
   AND NOT has_table_privilege('anon', 'public.brand_demographic_profiles', 'SELECT')
-  AND NOT has_table_privilege('anon', 'public.bua_demographic_ranks', 'SELECT'),
+  AND NOT has_table_privilege('anon', 'public.bua_demographic_ranks', 'SELECT')
+  AND NOT has_table_privilege('anon', 'public.brand_bua_presence_snapshot', 'SELECT')
+  AND NOT has_function_privilege('authenticated', 'public.brand_demographic_backtest(integer, integer, double precision, integer, integer)', 'EXECUTE'),
   'nothing is reachable by anon or authenticated');
