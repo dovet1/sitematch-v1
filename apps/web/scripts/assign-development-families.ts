@@ -14,7 +14,8 @@
  *
  * --only=family (or awaiting_original) limits what is applied to plans of that family state; the
  * report still shows every family. Families whose original is stored do not depend on a Plota lookup,
- * so they can be applied before the lookups run.
+ * so they can be applied before the lookups run. --principals=ref,ref limits it further to the families
+ * those principal references lead.
  *
  * Run from apps/web:
  *   ../../node_modules/.bin/tsx scripts/assign-development-families.ts --councils=broadland,wandsworth,glasgow [--only=family] [--commit]
@@ -34,6 +35,7 @@ const councils = args.get('councils')?.split(',').filter(Boolean) ?? []
 if (councils.length === 0) throw new Error('--councils is required; step 5 runs council by council')
 const only = args.get('only')
 if (only && only !== 'family' && only !== 'awaiting_original') throw new Error('--only must be family or awaiting_original')
+const principals = args.get('principals') ? new Set(args.get('principals')!.split(',').filter(Boolean)) : null
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false },
@@ -73,7 +75,8 @@ async function main() {
     const awaiting = applies.filter(plan => plan.familyState === 'awaiting_original')
     const lookupProblems = awaiting.filter(plan => plan.missingParentKeys.some(key => !['queued', 'deferred', 'processing'].includes(lookupFor.get(key)?.status ?? 'missing')))
 
-    const selected = applies.filter(plan => !only || plan.familyState === only)
+    const selected = applies.filter(plan => (!only || plan.familyState === only)
+      && (!principals || principals.has(reference.get(plan.principalApplicationId ?? '') ?? '')))
     const summary = {
       council,
       only: only ?? null,

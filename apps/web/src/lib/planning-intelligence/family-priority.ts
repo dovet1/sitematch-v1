@@ -119,11 +119,11 @@ export async function prioritiseFamilyLookups(db: PlanningAdminClient, councils?
       if (childError) throw childError
       for (const row of (data ?? []) as Array<{ id: string; intelligence_tier: boolean; date_received: string | null; description: string | null }>) children.set(row.id, row)
       let { data: developments, error: developmentError }: { data: unknown; error: unknown } = await db.from('development_applications')
-        .select('planning_application_id,developments(relevance,family_state,principal_application_id)').in('planning_application_id', ids)
+        .select('planning_application_id,developments!development_applications_development_id_fkey(relevance,family_state,principal_application_id)').in('planning_application_id', ids)
       // Before the step 5 migration there are no family columns and so no waiting families.
       if ((developmentError as { code?: string } | null)?.code === '42703') {
         ({ data: developments, error: developmentError } = await db.from('development_applications')
-          .select('planning_application_id,developments(relevance)').in('planning_application_id', ids))
+          .select('planning_application_id,developments!development_applications_development_id_fkey(relevance)').in('planning_application_id', ids))
       }
       if (developmentError) throw developmentError
       for (const row of ((developments ?? []) as unknown[]) as unknown as Array<{ planning_application_id: string; developments: { relevance: string | null; family_state?: string | null; principal_application_id?: string | null } | null }>) {
