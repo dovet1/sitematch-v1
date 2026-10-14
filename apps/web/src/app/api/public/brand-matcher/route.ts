@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePlusAccess, directoryAdminClient, formatCategory } from '@/lib/directory'
-import { isBrandMatcherEnabled } from '@/lib/feature-flags'
+import { isBrandMatcherDemographicsEnabled, isBrandMatcherEnabled } from '@/lib/feature-flags'
 import { sqFtFromM2 } from '@/app/sitematcher-unified/lib/size-filter'
 import { factsRowToTradingFacts } from '@/lib/companies-house/facts'
 import type { CompanyFactsRow } from '@/lib/companies-house/types'
 import {
   assembleMatches,
+  demographicKey,
   LOCATION_TYPE_RADIUS_MILES,
   METERS_PER_MILE,
   normalisePostcode,
   shortCentreName,
+  type DemographicsInput,
   type EstateRange,
   type RawBrand,
   type RawBrandGeo,
   type RawNewsItem,
   type RawRequirement,
 } from '@/app/sitematcher-unified/lib/brand-matcher'
+import type { BacktestScore, DemographicSignalProfile } from '@/app/sitematcher-unified/lib/brand-matcher-demographics'
 import {
   BRAND_MATCHER_USE_CLASSES,
   type BrandMatcherCentre,
@@ -65,6 +68,7 @@ async function selectAll<T>(build: () => any): Promise<T[]> {
 
 interface ProfileRow {
   brand_id: string
+  fascia_id: string | null
   p25_m2: number
   p75_m2: number
   min_m2: number
@@ -121,7 +125,11 @@ function parseLonLat(raw: unknown): { lat: number | null; lon: number | null } {
 
 async function loadEstateRanges(db: Db): Promise<Map<string, EstateRange[]>> {
   const rows = await selectAll<ProfileRow>(() =>
-    db.from('brand_floor_area_profiles').select('brand_id, p25_m2, p75_m2, min_m2, max_m2').order('brand_id')
+    db
+      .from('brand_floor_area_profiles')
+      .select('brand_id, fascia_id, p25_m2, p75_m2, min_m2, max_m2')
+      .order('brand_id')
+      .order('fascia_key')
   )
   const map = new Map<string, EstateRange[]>()
   for (const r of rows) {
@@ -130,6 +138,7 @@ async function loadEstateRanges(db: Db): Promise<Map<string, EstateRange[]>> {
       p75: sqFtFromM2(r.p75_m2),
       min: sqFtFromM2(r.min_m2),
       max: sqFtFromM2(r.max_m2),
+      fasciaId: r.fascia_id,
     }
     const list = map.get(r.brand_id)
     if (list) list.push(range)
@@ -346,6 +355,85 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
   return map
 }
 
+interface DemographicProfileRow {
+  brand_id: string
+  fascia_id: string | null
+  signal_name: string
+  signal_category: string
+  bua_count: number
+  p10: number
+  p25: number
+  median: number
+  p75: number
+  p90: number
+  rank_p10: number
+  rank_p25: number
+  median_rank: number
+  rank_p75: number
+  rank_p90: number
+  distinctiveness: number
+}
+
+// The site's town, the brands' town profiles and their backtest scores, for the demographic pill.
+async function loadDemographics(db: Db, site: BrandMatcherSite): Promise<DemographicsInput> {
+  const [town, profileRows, scoreRows] = await Promise.all([
+    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon }),
+    selectAll<DemographicProfileRow>(() =>
+      db
+        .from('brand_demographic_profiles')
+        .select(
+          'brand_id, fascia_id, signal_name, signal_category, bua_count, p10, p25, median, p75, p90, ' +
+            'rank_p10, rank_p25, median_rank, rank_p75, rank_p90, distinctiveness'
+        )
+        .order('brand_id')
+        .order('fascia_key')
+        .order('signal_name')
+    ),
+    selectAll<{ brand_id: string; fascia_id: string | null; broad: boolean; auc_demographics: number | null }>(() =>
+      db
+        .from('brand_demographic_backtest_results')
+        .select('brand_id, fascia_id, broad, auc_demographics')
+        .order('brand_id')
+        .order('fascia_key')
+    ),
+  ])
+  if (town.error) throw town.error
+
+  const row = (town.data ?? [])[0] as
+    | { bua_name: string; signals: Record<string, number> | null; ranks: Record<string, number> | null }
+    | undefined
+  const profiles = new Map<string, DemographicSignalProfile[]>()
+  for (const r of profileRows) {
+    const key = demographicKey(r.brand_id, r.fascia_id)
+    const list = profiles.get(key) ?? []
+    list.push({
+      signalName: r.signal_name,
+      category: r.signal_category,
+      buaCount: r.bua_count,
+      p10: r.p10,
+      p25: r.p25,
+      median: r.median,
+      p75: r.p75,
+      p90: r.p90,
+      rankP10: r.rank_p10,
+      rankP25: r.rank_p25,
+      medianRank: r.median_rank,
+      rankP75: r.rank_p75,
+      rankP90: r.rank_p90,
+      distinctiveness: r.distinctiveness,
+    })
+    profiles.set(key, list)
+  }
+  const scores = new Map<string, BacktestScore>(
+    scoreRows.map((r) => [demographicKey(r.brand_id, r.fascia_id), { broad: r.broad, aucDemographics: r.auc_demographics }])
+  )
+  return {
+    site: row?.signals && row.ranks ? { townName: row.bua_name, values: row.signals, ranks: row.ranks } : null,
+    profiles,
+    scores,
+  }
+}
+
 function parseQuery(body: unknown): BrandMatcherQuery | string {
   if (!body || typeof body !== 'object') return 'Invalid request'
   const b = body as Record<string, unknown>
@@ -393,7 +481,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts] =
+    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, demographics] =
       await Promise.all([
         loadBrands(db),
         loadEstateRanges(db),
@@ -403,6 +491,15 @@ export async function POST(request: NextRequest) {
         loadPlanningCounts(db),
         loadGeo(db, site),
         loadTradingFacts(db),
+        // Never lets a demographic problem take the matcher down: no pill rather than no results.
+        isBrandMatcherDemographicsEnabled().then((on) =>
+          on
+            ? loadDemographics(db, site).catch((error) => {
+                console.error('Brand matcher demographics failed:', error)
+                return undefined
+              })
+            : undefined
+        ),
       ])
 
     const { matches, considered } = assembleMatches({
@@ -416,6 +513,7 @@ export async function POST(request: NextRequest) {
       planningCounts,
       geo,
       tradingFacts,
+      demographics,
     })
 
     const payload: BrandMatcherResponse = { site, query, matches, considered }

@@ -22,6 +22,14 @@ import type {
   SizeFitState,
   TradingFacts,
 } from '../types/brand-matcher'
+import {
+  demographicMatch,
+  describeDemographic,
+  type BacktestScore,
+  type DemographicMatch,
+  type DemographicSignalProfile,
+  type SiteTown,
+} from './brand-matcher-demographics'
 
 export const METERS_PER_MILE = 1609.344
 // Radius for "already trades in your type of location" (handoff: "within 30 miles").
@@ -120,6 +128,8 @@ export interface EstateRange {
   p75: number
   min: number
   max: number
+  // The fascia this range describes; null for the brand-level range.
+  fasciaId?: string | null
 }
 
 const SIZE_RANK: Record<SizeFitState, number> = {
@@ -423,6 +433,9 @@ export function buildPills(m: BrandMatch, query: Pick<BrandMatcherQuery, 'useCla
       tone: n > 0 ? 'green' : 'neutral',
     })
   }
+  if (m.demographic) {
+    pills.push(demographicPill(m.demographic, m.name))
+  }
   if (m.nearest) {
     const blocker = m.nearest.miles < BLOCKER_MILES
     pills.push({
@@ -436,6 +449,18 @@ export function buildPills(m: BrandMatch, query: Pick<BrandMatcherQuery, 'useCla
     })
   }
   return pills
+}
+
+const DEMOGRAPHIC_PILL: Record<DemographicMatch['band'], { value: string; tone: SignalTone; mark?: '✓' | '△' }> = {
+  good: { value: 'Good fit', tone: 'green', mark: '✓' },
+  partial: { value: 'Partial fit', tone: 'amber', mark: '△' },
+  // A weak fit is a reason to look twice, not a blocker: never red.
+  weak: { value: 'Weak fit', tone: 'neutral' },
+  any: { value: 'Any town', tone: 'neutral' },
+}
+
+export function demographicPill(d: DemographicMatch, brandName: string): Pill {
+  return { key: 'demographic', label: 'Demographics', ...DEMOGRAPHIC_PILL[d.band], title: describeDemographic(d, brandName).join(' ') }
 }
 
 // ---------------------------------------------------------------------------
@@ -475,7 +500,7 @@ function csvCell(v: string | number | null | undefined): string {
 export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): string {
   const header = [
     'Rank', 'Brand', 'Category', 'Match score', 'Size fit', 'Use class', 'Acquisitive',
-    'Open requirements', 'Same location type', 'Nearest store (mi)', 'Nearest store',
+    'Open requirements', 'Same location type', 'Demographic fit', 'Nearest store (mi)', 'Nearest store',
     'Primary contact', 'Role', 'Email', 'Phone',
   ]
   const rows = matches.map((m, i) => {
@@ -484,7 +509,7 @@ export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): s
     const c = m.contacts.primary
     return [
       i + 1, m.name, m.category, `${m.score}%`, pill('size'), pill('useClass'), pill('acquisitive'),
-      m.acquisitive?.requirements?.count ?? '', pill('locationType'),
+      m.acquisitive?.requirements?.count ?? '', pill('locationType'), pill('demographic'),
       m.nearest ? m.nearest.miles.toFixed(1) : '', m.nearest?.storeName ?? '',
       c?.name ?? '', c?.title ?? '', c?.email ?? '', c?.phone ?? '',
     ].map(csvCell).join(',')
@@ -543,6 +568,19 @@ export interface AssembleInput {
   planningCounts: Map<string, number>
   geo: Map<string, RawBrandGeo>
   tradingFacts?: Map<string, TradingFacts>
+  demographics?: DemographicsInput
+}
+
+// What the route loads for the demographic pill. Profiles and scores are keyed by
+// demographicKey(brandId, fasciaId) — fasciaId null for the brand as a whole.
+export interface DemographicsInput {
+  site: (SiteTown & { townName: string }) | null
+  profiles: Map<string, DemographicSignalProfile[]>
+  scores: Map<string, BacktestScore>
+}
+
+export function demographicKey(brandId: string, fasciaId: string | null | undefined): string {
+  return `${brandId}|${fasciaId ?? ''}`
 }
 
 function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -662,6 +700,19 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
         )[0]
       : null
 
+    // The fascia nearest the site's size has its own profile when it trades in enough towns;
+    // otherwise the whole brand's stands in.
+    const fasciaId = typical?.fasciaId ?? null
+    const dem = input.demographics
+    const demographic = dem
+      ? demographicMatch({
+          site: dem.site,
+          fasciaProfile: fasciaId ? dem.profiles.get(demographicKey(b.id, fasciaId)) ?? null : null,
+          fasciaScore: fasciaId ? dem.scores.get(demographicKey(b.id, fasciaId)) ?? null : null,
+          brandProfile: dem.profiles.get(demographicKey(b.id, null)) ?? null,
+          brandScore: dem.scores.get(demographicKey(b.id, null)) ?? null,
+        })
+      : null
     const contacts = rankContacts(
       [...(input.brandContacts.get(b.id) ?? []), ...reqs.flatMap((r) => r.contacts)],
       key
@@ -680,6 +731,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
       tradingFacts: input.tradingFacts?.get(b.id) ?? null,
       typicalRange: typical ? { min: typical.p25, max: typical.p75 } : null,
       contacts,
+      demographic,
       score,
       scoreParts: parts,
     })

@@ -3,6 +3,8 @@ import {
   buildProfile,
   buildSignalTables,
   demographicFit,
+  demographicMatch,
+  describeDemographic,
   midRanks,
   percentileCont,
   signalFit,
@@ -220,5 +222,93 @@ describe('auc', () => {
     expect(auc([1, 1], [1, 1])).toBe(0.5)
     expect(auc([1, 3], [2])).toBe(0.5)
     expect(auc([], [1])).toBeNaN()
+  })
+})
+
+describe('demographicMatch', () => {
+  const town = (ranks: Record<string, number>) => ({ ...site(ranks), townName: 'Reading' })
+  const affluent = [
+    signal({ distinctiveness: 0.6 }),
+    signal({ signalName: 'population', category: 'population', p25: 20_000, p75: 60_000, distinctiveness: 0.8 }),
+  ]
+  const validated = { broad: false, aucDemographics: 0.8 }
+
+  it('uses the fascia profile when it has one', () => {
+    const d = demographicMatch({
+      site: town({ affluence_high: 0.75, population: 0.75 }),
+      fasciaProfile: affluent,
+      fasciaScore: validated,
+      brandProfile: null,
+      brandScore: null,
+    })
+    expect(d).toMatchObject({ band: 'good', basis: 'fascia', townName: 'Reading' })
+    expect(d?.reasons).toEqual([{ signalName: 'affluence_high', direction: 'higher', sitePosition: 'typical' }])
+    expect(d?.size).toMatchObject({ position: 'typical', typicalMin: 20_000, typicalMax: 60_000 })
+  })
+
+  it('falls back to the whole brand when the fascia has no profile', () => {
+    const d = demographicMatch({
+      site: town({ affluence_high: 0.2 }),
+      fasciaProfile: null,
+      fasciaScore: null,
+      brandProfile: affluent,
+      brandScore: validated,
+    })
+    expect(d).toMatchObject({ band: 'weak', basis: 'brand' })
+  })
+
+  it('shows nothing where the backtest did not back the profile', () => {
+    const base = { site: town({ affluence_high: 0.75 }), fasciaProfile: affluent, brandProfile: null, brandScore: null }
+    expect(demographicMatch({ ...base, fasciaScore: { broad: false, aucDemographics: 0.6 } })).toBeNull()
+    expect(demographicMatch({ ...base, fasciaScore: null })).toBeNull()
+    expect(demographicMatch({ ...base, fasciaScore: { broad: false, aucDemographics: 0.65 } })).not.toBeNull()
+  })
+
+  it('says "any town" for a brand typical everywhere, with or without a backtest', () => {
+    const d = demographicMatch({
+      site: town({ affluence_high: 0.1 }),
+      fasciaProfile: [signal({ distinctiveness: 0.1 })],
+      fasciaScore: null,
+      brandProfile: null,
+      brandScore: null,
+    })
+    expect(d).toMatchObject({ band: 'any', reasons: [] })
+  })
+
+  it('shows nothing without a town or a profile', () => {
+    expect(
+      demographicMatch({ site: null, fasciaProfile: affluent, fasciaScore: validated, brandProfile: null, brandScore: null })
+    ).toBeNull()
+    expect(
+      demographicMatch({ site: town({ affluence_high: 0.5 }), fasciaProfile: null, fasciaScore: null, brandProfile: null, brandScore: null })
+    ).toBeNull()
+  })
+})
+
+describe('describeDemographic', () => {
+  it('says how the brand leans and where the town sits', () => {
+    const lines = describeDemographic(
+      {
+        band: 'partial',
+        basis: 'fascia',
+        townName: 'Reading',
+        reasons: [
+          { signalName: 'affluence_high', direction: 'higher', sitePosition: 'typical' },
+          { signalName: 'car_dependency_walkable', direction: 'lower', sitePosition: 'above' },
+        ],
+        size: { position: 'below', sitePopulation: 8_400, typicalMin: 20_000, typicalMax: 61_000 },
+      },
+      'Waitrose'
+    )
+    expect(lines).toEqual([
+      "Compared with towns of a similar size, Waitrose's towns are more affluent and more car-dependent.",
+      'Reading is in line with them on affluence, but not on walkability.',
+      'Town size: Reading (8.4k people) is smaller than most of their towns; their towns are usually 20k–61k.',
+    ])
+  })
+
+  it('names the whole brand when its estate stood in, and handles "any town"', () => {
+    const lines = describeDemographic({ band: 'any', basis: 'brand', townName: 'Leeds', reasons: [], size: null }, 'Greggs')
+    expect(lines).toEqual(["Greggs's towns (across the whole brand) are typical for their size on every measure, so Leeds fits as well as most."])
   })
 })

@@ -6,6 +6,7 @@
 --     -f supabase/migrations/20261023020000_size_adjusted_demographic_ranks.sql \
 --     -f supabase/migrations/20261023030000_size_bands_limit_population_spread.sql \
 --     -f supabase/migrations/20261023040000_brand_demographic_backtest.sql \
+--     -f supabase/migrations/20261023050000_brand_demographic_backtest_results.sql \
 --     -f supabase/tests/brand-demographics/fixtures.sql
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -14,6 +15,7 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN CREATE ROLE authenticated; END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role; END IF;
 END $$;
+CREATE TABLE public.feature_flags (key text PRIMARY KEY, enabled boolean NOT NULL DEFAULT false, description text);
 CREATE TABLE public.brands (id uuid PRIMARY KEY, name text);
 CREATE TABLE public.fascias (id uuid PRIMARY KEY, brand_id uuid REFERENCES public.brands(id), name text);
 CREATE TABLE public.stores (

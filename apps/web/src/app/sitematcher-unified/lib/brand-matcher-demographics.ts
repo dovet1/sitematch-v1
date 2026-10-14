@@ -166,6 +166,160 @@ export function demographicFit(site: SiteTown | null, profile: DemographicSignal
 }
 
 // ---------------------------------------------------------------------------
+// The card — which profile to use, whether it has earned a pill, and the words on it
+// ---------------------------------------------------------------------------
+
+// A profile's fit is shown only where the backtest found it picks out the brand's real towns at
+// least this often against towns of the same size it is not in (0.5 = a coin toss). The backtest
+// put 52 of 128 profiled fascias at or above this; below it the pill would mislead as often as help.
+export const MIN_VALIDATED_AUC = 0.65
+
+// One row of brand_demographic_backtest_results.
+export interface BacktestScore {
+  broad: boolean
+  aucDemographics: number | null
+}
+
+export interface DemographicReason {
+  signalName: string
+  // Which way the brand's towns lean for their size.
+  direction: 'higher' | 'lower'
+  sitePosition: SignalPosition
+}
+
+export interface DemographicMatch {
+  // 'any': the brand's towns are typical for their size on every measure.
+  band: DemographicFitBand | 'any'
+  // Whose towns: the fascia's own, or the whole brand's when the fascia has too few.
+  basis: 'fascia' | 'brand'
+  townName: string
+  // The most distinctive measures, most distinctive first (at most two).
+  reasons: DemographicReason[]
+  size: { position: SignalPosition; sitePopulation: number; typicalMin: number; typicalMax: number } | null
+}
+
+export interface DemographicMatchInput {
+  site: (SiteTown & { townName: string }) | null
+  // The fascia nearest the site's size, when it has a profile of its own.
+  fasciaProfile: DemographicSignalProfile[] | null
+  fasciaScore: BacktestScore | null
+  brandProfile: DemographicSignalProfile[] | null
+  brandScore: BacktestScore | null
+}
+
+// null means show nothing: no town or profile to compare, or a profile the backtest did not back.
+export function demographicMatch(input: DemographicMatchInput): DemographicMatch | null {
+  const { site } = input
+  if (!site) return null
+  const useFascia = !!input.fasciaProfile && input.fasciaProfile.length > 0
+  const profile = useFascia ? input.fasciaProfile : input.brandProfile
+  const score = useFascia ? input.fasciaScore : input.brandScore
+  if (!profile || profile.length === 0) return null
+
+  const fit = demographicFit(site, profile)
+  if (!fit) return null
+
+  const size = fit.size
+    ? {
+        position: fit.size.position,
+        sitePopulation: fit.size.siteValue,
+        typicalMin: fit.size.profile.p25,
+        typicalMax: fit.size.profile.p75,
+      }
+    : null
+  const base = { basis: useFascia ? ('fascia' as const) : ('brand' as const), townName: site.townName, size }
+
+  // "Trades in all kinds of towns" is a description of the estate, not a prediction, so it needs
+  // no backtest behind it.
+  if (fit.basis === 'broad') return { band: 'any', reasons: [], ...base }
+
+  if (!score || score.broad || score.aucDemographics == null || score.aucDemographics < MIN_VALIDATED_AUC) {
+    return null
+  }
+  return {
+    band: fit.band,
+    reasons: fit.signals.slice(0, 2).map((s) => ({
+      signalName: s.signalName,
+      direction: s.profile.medianRank > 0.5 ? 'higher' : 'lower',
+      sitePosition: s.position,
+    })),
+    ...base,
+  }
+}
+
+// How each measure reads. Within affluence, professional jobs, walkability, stability and student
+// presence the signals hold the same number (they differ only in GapFinder's tag thresholds), so
+// they share their words.
+const WORDS: Record<string, { topic: string; higher: string; lower: string }> = {
+  affluence: { topic: 'affluence', higher: 'more affluent', lower: 'less affluent' },
+  professional_economy: { topic: 'professional jobs', higher: 'more professional jobs', lower: 'fewer professional jobs' },
+  car_dependency: { topic: 'walkability', higher: 'more walkable', lower: 'more car-dependent' },
+  stability: { topic: 'how settled it is', higher: 'more settled', lower: 'more transient' },
+  student_presence: { topic: 'students', higher: 'more students', lower: 'fewer students' },
+  student_market: { topic: 'students', higher: 'more students', lower: 'fewer students' },
+  young_professionals: { topic: 'young professionals', higher: 'more young professionals', lower: 'fewer young professionals' },
+  family_market: { topic: 'families', higher: 'more families', lower: 'fewer families' },
+  empty_nesters: { topic: 'empty nesters', higher: 'more empty nesters', lower: 'fewer empty nesters' },
+  retirement_market: { topic: 'retirees', higher: 'more retirees', lower: 'fewer retirees' },
+  urbanity_urban_core: { topic: 'how urban it is', higher: 'more urban', lower: 'less urban' },
+  urbanity_dense_urban: { topic: 'how urban it is', higher: 'more urban', lower: 'less urban' },
+  urbanity_suburban: { topic: 'how suburban it is', higher: 'more suburban', lower: 'less suburban' },
+  urbanity_rural: { topic: 'how rural it is', higher: 'more rural', lower: 'less rural' },
+}
+
+function words(signalName: string) {
+  return (
+    WORDS[signalName] ??
+    WORDS[signalName.replace(/_(high|medium|low|stable|mixed|transient|walkable|car_dependent|minimal|moderate|strong)$/, '')] ?? {
+      topic: signalName.replace(/_/g, ' '),
+      higher: `more ${signalName.replace(/_/g, ' ')}`,
+      lower: `less ${signalName.replace(/_/g, ' ')}`,
+    }
+  )
+}
+
+function joinAnd(parts: string[]): string {
+  return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
+}
+
+const inLine = (p: SignalPosition) => p === 'typical' || p === 'low' || p === 'high'
+
+function formatPeople(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`
+  if (n >= 1_000) return `${(n / 1000).toFixed(1)}k`
+  return String(Math.round(n))
+}
+
+// Plain-English lines for the pill's tooltip.
+export function describeDemographic(d: DemographicMatch, brandName: string): string[] {
+  const town = d.townName
+  const lines: string[] = []
+  const whose = d.basis === 'brand' ? `${brandName}'s towns (across the whole brand)` : `${brandName}'s towns`
+  if (d.band === 'any') {
+    lines.push(`${whose} are typical for their size on every measure, so ${town} fits as well as most.`)
+  } else {
+    lines.push(`Compared with towns of a similar size, ${whose} are ${joinAnd(d.reasons.map((r) => words(r.signalName)[r.direction]))}.`)
+    const matched = d.reasons.filter((r) => inLine(r.sitePosition)).map((r) => words(r.signalName).topic)
+    const missed = d.reasons.filter((r) => !inLine(r.sitePosition)).map((r) => words(r.signalName).topic)
+    if (missed.length === 0) lines.push(`${town} is in line with them on ${joinAnd(matched)}.`)
+    else if (matched.length === 0) lines.push(`${town} is not in line with them on ${joinAnd(missed)}.`)
+    else lines.push(`${town} is in line with them on ${joinAnd(matched)}, but not on ${joinAnd(missed)}.`)
+  }
+  if (d.size) {
+    const range = `${formatPeople(d.size.typicalMin)}–${formatPeople(d.size.typicalMax)}`
+    const verdict =
+      d.size.position === 'below'
+        ? 'smaller than most of their towns'
+        : d.size.position === 'above'
+          ? 'larger than most of their towns'
+          : 'a typical size for them'
+    lines.push(`Town size: ${town} (${formatPeople(d.size.sitePopulation)} people) is ${verdict}; their towns are usually ${range}.`)
+  }
+  return lines
+}
+
+// ---------------------------------------------------------------------------
 // Ranks and profiles — the backtest needs profiles built from a subset of a brand's towns, which
 // the stored table cannot give it. Mirrors rebuild_bua_demographic_ranks() and
 // rebuild_brand_demographic_profiles(); the unit tests pin both to the same fixture figures.

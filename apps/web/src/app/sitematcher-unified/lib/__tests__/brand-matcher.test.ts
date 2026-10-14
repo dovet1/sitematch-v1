@@ -3,6 +3,7 @@ import {
   areaCoversRegion,
   assembleMatches,
   buildPills,
+  demographicKey,
   formatSqftRange,
   isNationalArea,
   matchesToCsv,
@@ -386,5 +387,68 @@ describe('assembleMatches', () => {
   it('leaves the location-type signal out when the site is in no centre', () => {
     const { matches } = assembleMatches(input({ site: { ...site, centre: null } }))
     expect(matches.every((m) => m.locationType === null)).toBe(true)
+  })
+
+  describe('demographic fit', () => {
+    const prof = (medianRank: number, distinctiveness: number) => [
+      {
+        signalName: 'affluence_high', category: 'affluence', buaCount: 30,
+        p10: 90, p25: 100, median: 110, p75: 120, p90: 130,
+        rankP10: medianRank - 0.15, rankP25: medianRank - 0.05, medianRank, rankP75: medianRank + 0.05, rankP90: medianRank + 0.15,
+        distinctiveness,
+      },
+    ]
+    // Fettle trades as two fascias; the 12k-16k one is nearest a 14,000 sq ft site and has its own
+    // profile. Tiny has none, so its brand-level profile stands in, but that one never passed the backtest.
+    const demographics = {
+      site: { townName: 'Leeds', values: { affluence_high: 112 }, ranks: { affluence_high: 0.8 } },
+      profiles: new Map([
+        [demographicKey('fettle', 'fettle-large'), prof(0.8, 0.6)],
+        [demographicKey('fettle', 'fettle-small'), prof(0.2, 0.6)],
+        [demographicKey('tiny', null), prof(0.8, 0.6)],
+      ]),
+      scores: new Map([
+        [demographicKey('fettle', 'fettle-large'), { broad: false, aucDemographics: 0.8 }],
+        [demographicKey('tiny', null), { broad: false, aucDemographics: 0.55 }],
+      ]),
+    }
+    const withFascias = input({
+      demographics,
+      estateRanges: new Map([
+        ['fettle', [
+          { p25: 3000, p75: 5000, min: 2000, max: 20000, fasciaId: 'fettle-small' },
+          { p25: 12000, p75: 16000, min: 9000, max: 20000, fasciaId: 'fettle-large' },
+        ]],
+      ]),
+    })
+
+    it('scores the fascia nearest the site size against its own towns', () => {
+      const fettle = assembleMatches(withFascias).matches.find((m) => m.brandId === 'fettle')!
+      expect(fettle.demographic).toMatchObject({ band: 'good', basis: 'fascia', townName: 'Leeds' })
+      const pill = buildPills(fettle, { useClass: 'E' }).find((p) => p.key === 'demographic')
+      expect(pill).toMatchObject({ label: 'Demographics', value: 'Good fit', tone: 'green' })
+      expect(pill?.title).toContain("Fettle Home's towns are more affluent")
+    })
+
+    it('never adds to the score', () => {
+      const plain = assembleMatches(input()).matches
+      const withDem = assembleMatches(withFascias).matches
+      expect(withDem.map((m) => m.score)).toEqual(plain.map((m) => m.score))
+    })
+
+    it('shows nothing for a profile the backtest did not back, or with the flag off', () => {
+      const tiny = assembleMatches(input({ demographics, query: { sqft: 1000, useClass: 'E', postcode: 'LS6 2AT' } }))
+        .matches.find((m) => m.brandId === 'tiny')!
+      expect(tiny.demographic).toBeNull()
+      expect(assembleMatches(input()).matches.every((m) => m.demographic == null)).toBe(true)
+    })
+
+    it('exports the fit', () => {
+      const csv = matchesToCsv(assembleMatches(withFascias).matches, { sqft: 14000, useClass: 'E', postcode: 'LS6 2AT' })
+      const [header, ...rows] = csv.split('\n')
+      const col = header.split(',').indexOf('Demographic fit')
+      expect(col).toBeGreaterThan(-1)
+      expect(rows.map((r) => r.split(',')[col])).toContain('Good fit')
+    })
   })
 })

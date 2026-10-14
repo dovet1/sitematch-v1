@@ -177,6 +177,16 @@ SELECT pg_temp.check(
   AND pg_temp.near(brand_matcher_signal_fit(109, 110, 110, 130, 140), 0),
   'signal fit matches signalFit()');
 
+-- Backtest scores are recorded per fascia and per brand; a fresh run of a level replaces it.
+SELECT pg_temp.check(record_brand_demographic_backtest('fascia') = 2, 'both Everywhere fascias scored');
+SELECT pg_temp.check(record_brand_demographic_backtest('brand') = 1, 'Everywhere scored as a whole brand');
+SELECT pg_temp.check(record_brand_demographic_backtest('fascia') = 2
+  AND (SELECT count(*) FROM brand_demographic_backtest_results) = 3, 're-running a level replaces its scores');
+SELECT pg_temp.check(
+  (SELECT bool_and(towns >= 12 AND held_out >= 2) FROM brand_demographic_backtest_results), 'recorded units are the backtestable ones');
+SELECT pg_temp.check(
+  (SELECT enabled = false FROM feature_flags WHERE key = 'brand_matcher_demographics_enabled'), 'the pill ships switched off');
+
 -- Placing a site.
 SELECT pg_temp.check(
   (SELECT bua_gsscode = 'E00000025' AND distance_m = 0 AND (signals->>'population')::numeric = 250000
@@ -202,5 +212,7 @@ SELECT pg_temp.check(
   AND NOT has_table_privilege('anon', 'public.brand_demographic_profiles', 'SELECT')
   AND NOT has_table_privilege('anon', 'public.bua_demographic_ranks', 'SELECT')
   AND NOT has_table_privilege('anon', 'public.brand_bua_presence_snapshot', 'SELECT')
-  AND NOT has_function_privilege('authenticated', 'public.brand_demographic_backtest(integer, integer, double precision, integer, integer)', 'EXECUTE'),
+  AND NOT has_function_privilege('authenticated', 'public.brand_demographic_backtest(integer, integer, double precision, integer, integer, text)', 'EXECUTE')
+  AND NOT has_function_privilege('authenticated', 'public.record_brand_demographic_backtest(text, integer, integer)', 'EXECUTE')
+  AND NOT has_table_privilege('anon', 'public.brand_demographic_backtest_results', 'SELECT'),
   'nothing is reachable by anon or authenticated');

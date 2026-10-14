@@ -80,3 +80,11 @@ export const BRAND_MATCHER_FLAG = 'brand_matcher_enabled'
 export function isBrandMatcherEnabled(): Promise<boolean> {
   return isFeatureEnabled(BRAND_MATCHER_FLAG)
 }
+
+// Demographic fit pill on Brand Matcher cards. Off by default; needs the demographic profiles and
+// their backtest scores in place (migrations 20261023000000-20261023050000).
+export const BRAND_MATCHER_DEMOGRAPHICS_FLAG = 'brand_matcher_demographics_enabled'
+
+export function isBrandMatcherDemographicsEnabled(): Promise<boolean> {
+  return isFeatureEnabled(BRAND_MATCHER_DEMOGRAPHICS_FLAG)
+}
