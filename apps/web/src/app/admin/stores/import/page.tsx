@@ -5,6 +5,7 @@ import type { UploadResponse } from '@/types/store-import'
 import { FileUploadSection } from './components/FileUploadSection'
 import { ProgressSection } from './components/ProgressSection'
 import { CompleteSection } from './components/CompleteSection'
+import { RefreshDemographicsPanel } from './components/RefreshDemographicsPanel'
 
 type ImportStage = 'upload' | 'processing' | 'complete'
 
@@ -110,6 +111,8 @@ export default function StoreImportPage() {
           onReset={handleReset}
         />
       )}
+
+      <RefreshDemographicsPanel />
     </div>
   )
 }

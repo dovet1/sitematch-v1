@@ -1,3 +1,5 @@
+import type { DemographicMatch } from '../lib/brand-matcher-demographics'
+
 // Brand Matcher (site -> brands) payload types. Shared by /api/public/brand-matcher and the
 // mode's UI. See docs/design_handoff_contact_brands/README.md.
 
@@ -158,6 +160,9 @@ export interface BrandMatch {
   // Typical unit for the band copy, from the estate profile (p25–p75), in sq ft.
   typicalRange: { min: number; max: number } | null
   contacts: BrandMatcherContacts
+  // Does the site's town look like the towns the brand trades in? Shown, never scored; absent
+  // when there is nothing validated to say (brand-matcher-demographics.ts).
+  demographic?: DemographicMatch | null
   score: number
   scoreParts: ScorePart[]
 }

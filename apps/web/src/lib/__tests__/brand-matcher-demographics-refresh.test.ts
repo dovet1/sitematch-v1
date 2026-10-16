@@ -1,0 +1,130 @@
+import {
+  BACKTEST_BATCH,
+  PROFILE_BATCH,
+  START,
+  STEP_BUDGET_MS,
+  parseCursor,
+  refreshStep,
+  type RefreshCursor,
+  type RefreshDeps,
+} from '../brand-matcher-demographics-refresh'
+
+// 60 brands; 14 fascias and 9 brands can be backtested. Each call "takes" callMs.
+function fakeDb(callMs = 1000) {
+  let clock = 0
+  const profileCalls: string[][] = []
+  const backtestCalls: [string, number, number][] = []
+  const units = { fascia: 14, brand: 9 }
+  const deps: RefreshDeps = {
+    listBrandIds: async () => Array.from({ length: 60 }, (_, i) => `b${String(i).padStart(2, '0')}`),
+    rebuildProfiles: async (ids) => {
+      clock += callMs
+      profileCalls.push(ids)
+      return ids.length * 10
+    },
+    recordBacktest: async (level, from, to) => {
+      clock += callMs
+      backtestCalls.push([level, from, to])
+      return Math.max(0, Math.min(to, units[level]) - from + 1)
+    },
+    now: () => clock,
+  }
+  return { deps, profileCalls, backtestCalls }
+}
+
+async function runToEnd(deps: RefreshDeps) {
+  const messages: string[] = []
+  let cursor: RefreshCursor = START
+  for (let i = 0; i < 50; i++) {
+    const r = await refreshStep(cursor, deps)
+    messages.push(r.message)
+    if (r.done) return messages
+    cursor = r
+  }
+  throw new Error('did not finish')
+}
+
+describe('refreshStep', () => {
+  it('rebuilds every brand, then records fascia then brand scores', async () => {
+    const { deps, profileCalls, backtestCalls } = fakeDb()
+    const messages = await runToEnd(deps)
+    expect(profileCalls.flat()).toHaveLength(60)
+    expect(profileCalls.every((ids) => ids.length <= PROFILE_BATCH)).toBe(true)
+    expect(backtestCalls.filter(([l]) => l === 'fascia').map(([, f]) => f)).toEqual([1, 7, 13])
+    expect(backtestCalls.filter(([l]) => l === 'brand').map(([, f]) => f)).toEqual([1, 7])
+    expect(backtestCalls.every(([, f, t]) => t - f + 1 === BACKTEST_BATCH)).toBe(true)
+    expect(messages).toContain('Backtest scores recorded for 14 fascias')
+    expect(messages[messages.length - 1]).toBe('Backtest scores recorded for 9 brands — refresh complete')
+  })
+
+  it('stops a step when the time budget is spent and resumes where it stopped', async () => {
+    const slow = fakeDb(STEP_BUDGET_MS / 2 + 1)
+    // Two calls fit in a step's budget, so 60 brands take three steps.
+    const first = await refreshStep(START, slow.deps)
+    expect(first).toMatchObject({ stage: 'profiles', next: 2 * PROFILE_BATCH, done: false })
+    const second = await refreshStep(first, slow.deps)
+    expect(second).toMatchObject({ stage: 'profiles', next: 4 * PROFILE_BATCH, done: false })
+    const third = await refreshStep(second, slow.deps)
+    expect(third).toMatchObject({ stage: 'fascia', next: 1 })
+    expect(slow.profileCalls.flat()).toHaveLength(60)
+
+    const fascia = await refreshStep({ stage: 'fascia', next: 1 }, slow.deps)
+    expect(fascia).toMatchObject({ stage: 'fascia', next: 1 + 2 * BACKTEST_BATCH, done: false })
+  })
+})
+
+describe('statement timeouts', () => {
+  const timeout = Object.assign(new Error('canceling statement due to statement timeout'), { code: '57014' })
+
+  it('splits a profile batch that times out until each part fits', async () => {
+    const { deps } = fakeDb()
+    const calls: number[] = []
+    const rebuild = deps.rebuildProfiles
+    deps.rebuildProfiles = async (ids) => {
+      calls.push(ids.length)
+      if (ids.length > 3) throw timeout
+      return rebuild(ids)
+    }
+    const r = await refreshStep(START, deps)
+    expect(r.stage).toBe('fascia')
+    expect(calls.slice(0, 7)).toEqual([10, 5, 3, 2, 5, 3, 2])
+  })
+
+  it('splits a backtest range that times out', async () => {
+    const { deps, backtestCalls } = fakeDb()
+    const record = deps.recordBacktest
+    deps.recordBacktest = async (level, from, to) => {
+      if (to - from + 1 > 3) throw timeout
+      return record(level, from, to)
+    }
+    const r = await refreshStep({ stage: 'fascia', next: 1 }, deps)
+    expect(r).toMatchObject({ stage: 'brand', next: 1 })
+    expect(backtestCalls.slice(0, 2)).toEqual([['fascia', 1, 3], ['fascia', 4, 6]])
+  })
+
+  it('does not retry other errors, or a single brand that times out', async () => {
+    const { deps } = fakeDb()
+    deps.rebuildProfiles = async () => {
+      throw new Error('permission denied')
+    }
+    await expect(refreshStep(START, deps)).rejects.toThrow('permission denied')
+    deps.rebuildProfiles = async () => {
+      throw timeout
+    }
+    await expect(refreshStep(START, deps)).rejects.toThrow('statement timeout')
+  })
+})
+
+describe('parseCursor', () => {
+  it('starts from the beginning on an empty body', () => {
+    expect(parseCursor({})).toEqual(START)
+    expect(parseCursor(null)).toEqual(START)
+  })
+  it('accepts a cursor the route returned and rejects anything else', () => {
+    expect(parseCursor({ stage: 'brand', next: 7 })).toEqual({ stage: 'brand', next: 7 })
+    expect(parseCursor({ stage: 'fascia', next: 0 })).toBeNull()
+    expect(parseCursor({ stage: 'done', next: 0 })).toBeNull()
+    expect(parseCursor({ stage: 'profiles', next: -1 })).toBeNull()
+    expect(parseCursor('x')).toBeNull()
+  })
+})
