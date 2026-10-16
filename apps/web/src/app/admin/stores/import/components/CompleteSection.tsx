@@ -196,7 +196,7 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
             <div>
               <p className="font-semibold text-blue-900">Data Rebuild Queued</p>
               <p className="text-sm text-blue-700 mt-1">
-                The BUA summaries will rebuild in the background. Gap Analysis usually updates within a few minutes.
+                The BUA summaries will rebuild in the background. Gap Analysis usually updates within 10 minutes.
               </p>
             </div>
           </div>

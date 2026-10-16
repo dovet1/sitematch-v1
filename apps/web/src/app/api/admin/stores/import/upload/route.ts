@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
 import { requireAdmin } from '@/lib/auth'
-import { adminClient } from '@/lib/admin-auth'
+import { queueCacheRebuild } from '@/lib/cache-rebuild-queue'
 import { createServerClient } from '@/lib/supabase'
 import type { CSVRow } from '@/types/store-import'
 
@@ -846,29 +846,14 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Queue the expensive BUA rebuild instead of tying it to this already-long
-        // import request. The cron is the backstop; the extra request below usually
-        // starts it immediately in a separate server invocation.
+        // Queue the expensive BUA rebuild; the database's pg_cron job picks it up
+        // within 5 minutes.
         console.log('Queueing BUA summary rebuild...')
-        const rebuildClient = adminClient()
-        const { error: queueError } = await rebuildClient
-          .from('cache_rebuild_queue')
-          .insert({ reason: 'store_import' })
-
-        // 23505 means another pending row already covers this import.
-        if (queueError && queueError.code !== '23505') {
-          console.error('Failed to queue BUA summary rebuild:', queueError.message)
-        } else {
-          rebuildTriggered = true
-
-          if (matchUrl && process.env.CRON_SECRET) {
-            fetch(`${matchUrl}/api/cron/process-cache-rebuilds`, {
-              headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-            }).catch((err) => {
-              console.warn('Immediate BUA rebuild trigger failed; the cron will retry:', err?.message)
-            })
-          }
+        const queued = await queueCacheRebuild('store_import')
+        if (queued.error) {
+          console.error('Failed to queue BUA summary rebuild:', queued.error)
         }
+        rebuildTriggered = queued.queued
       }
     }
 
