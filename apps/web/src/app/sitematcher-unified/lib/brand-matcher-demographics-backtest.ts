@@ -1,13 +1,16 @@
 // Backtest for Brand Matcher demographic fit. Pure — scripts/backtest-brand-demographics.ts loads
-// the rows and prints the result. brand_demographic_backtest() (migration 20261023040000) runs the
+// the rows and prints the result. brand_demographic_backtest() (migration 20261023060000) runs the
 // same backtest inside the database; the two agree unit for unit.
 //
-// For each fascia (or brand), hold back a share of its towns, build the profile from the rest, and
-// score the held-back towns against towns it does not trade in. AUC is the chance a real town
-// outscores one it is not in: 0.5 is a coin toss, 0.7+ is a useful signal.
+// Five-fold: each fascia's (or brand's) towns are dealt into five folds. For each fold, the profile
+// is built from the other four and the fold's towns are scored against towns the unit is not in, so
+// every town is tested exactly once. A single 20% hold-out tested only 15-20 towns, and the score
+// swung with which towns happened to be held back (Safestore's one estate scored 0.33 one way and
+// 0.69 the other); pooling all five folds steadies it. AUC is the chance a real town outscores one
+// the unit is not in, over all pairs within the same fold: 0.5 is a coin toss, 0.7+ is useful.
 //
 // Two measurements:
-//   demographics — the fit score, against towns drawn from the same size bands as the held-back
+//   demographics — the fit score, against towns drawn from the same size bands as the tested
 //                  towns. Size cannot help here, so this is what demographics alone add.
 //   size         — town size alone, against towns of any size: how much size by itself separates.
 
@@ -16,7 +19,6 @@ import {
   MIN_PROFILE_BUAS,
   SIZE_BANDS,
   SIZE_SIGNAL,
-  auc,
   buildProfile,
   buildSignalTables,
   demographicFit,
@@ -43,11 +45,13 @@ export interface SignalRow {
 
 export interface BacktestOptions {
   level: 'fascia' | 'brand'
-  holdout: number
+  folds: number
   negativesPerUnit: number
   minTowns: number
   sizeBands?: SizeBandRules
 }
+
+export const DEFAULT_FOLDS = 5
 
 export type Variant = 'demographics' | 'size'
 export const VARIANTS: Variant[] = ['demographics', 'size']
@@ -59,9 +63,11 @@ export interface UnitResult {
   brandId: string
   fasciaId: string | null
   towns: number
+  // Towns scored across all folds (a fold with too few training towns is skipped).
+  tested: number
   // null when the variant could not be scored (for demographics: see `broad`).
   auc: Record<Variant, number | null>
-  // Nothing sets this unit's towns apart for their size, so every town is a good fit.
+  // In no fold did anything set this unit's towns apart for their size.
   broad: boolean
   topSignals: string[]
   bandsHeldOut: BandCounts
@@ -91,6 +97,13 @@ function byHash(key: string, towns: string[]): string[] {
     .map((x) => x.t)
 }
 
+// Wins (ties half) and pair count for positives against negatives.
+function pairs(positives: number[], negatives: number[]): { wins: number; total: number } {
+  let wins = 0
+  for (const p of positives) for (const n of negatives) wins += n < p ? 1 : n === p ? 0.5 : 0
+  return { wins, total: positives.length * negatives.length }
+}
+
 export function runBacktest(
   presence: PresenceRow[],
   signalRows: SignalRow[],
@@ -112,7 +125,11 @@ export function runBacktest(
     if (s) site.set(t, s)
   }
   const townsInBand = new Map<number, string[]>()
-  bands.forEach((band, t) => townsInBand.set(band, [...(townsInBand.get(band) ?? []), t]))
+  bands.forEach((band, t) => {
+    const list = townsInBand.get(band) ?? []
+    list.push(t)
+    townsInBand.set(band, list)
+  })
 
   const units = new Map<string, { brandId: string; fasciaId: string | null; towns: Set<string> }>()
   let storesInScoredTowns = 0
@@ -130,59 +147,79 @@ export function runBacktest(
   const results: UnitResult[] = []
   let skipped = 0
   units.forEach((unit, key) => {
-    const train: string[] = []
-    const test: string[] = []
-    unit.towns.forEach((t) => (hash01(`${key}|${t}`) < options.holdout ? test : train).push(t))
-    if (unit.towns.size < options.minTowns || train.length < MIN_PROFILE_BUAS || test.length < 2) {
+    if (unit.towns.size < options.minTowns) {
       skipped++
       return
     }
-
-    // Size-matched: for each held-back town, towns from its own size band the unit is not in.
-    const perTown = Math.ceil(options.negativesPerUnit / test.length)
-    const matched = new Set<string>()
-    for (const t of test) {
-      const pool = (townsInBand.get(bands.get(t) as number) ?? []).filter((x) => !unit.towns.has(x))
-      byHash(`${key}|neg|${t}`, pool)
-        .slice(0, perTown)
-        .forEach((x) => matched.add(x))
+    // Deal towns into folds; a fold is tested only when the other folds leave enough to profile.
+    const fold = new Map<string, number>()
+    unit.towns.forEach((t) => fold.set(t, Math.floor(hash01(`${key}|${t}`) * options.folds)))
+    const folds = Array.from({ length: options.folds }, (_, k) => {
+      const test = Array.from(unit.towns).filter((t) => fold.get(t) === k)
+      const train = Array.from(unit.towns).filter((t) => fold.get(t) !== k)
+      return { k, test, train }
+    }).filter((f) => f.test.length >= 1 && f.train.length >= MIN_PROFILE_BUAS)
+    if (folds.length === 0) {
+      skipped++
+      return
     }
+    const tested = folds.reduce((s, f) => s + f.test.length, 0)
+    const perTown = Math.ceil(options.negativesPerUnit / tested)
     const anySize = byHash(
       `${key}|any`,
       towns.filter((t) => !unit.towns.has(t))
     ).slice(0, options.negativesPerUnit)
-
-    const profile = buildProfile(train, tables)
-    const fit = (t: string) => demographicFit(site.get(t) ?? null, profile)
-    const pos = test.map(fit)
-    const neg = Array.from(matched).map(fit)
 
     const result: UnitResult = {
       key,
       brandId: unit.brandId,
       fasciaId: unit.fasciaId,
       towns: unit.towns.size,
+      tested,
       auc: { demographics: null, size: null },
-      broad: pos.some((f) => f?.basis === 'broad'),
-      topSignals: pos.find((f) => f)?.signals.map((s) => s.signalName) ?? [],
+      broad: true,
+      topSignals: [],
       bandsHeldOut: emptyBands(),
       bandsOther: emptyBands(),
     }
-    if (!result.broad) {
-      const a = auc(
-        pos.flatMap((f) => (f ? [f.score] : [])),
-        neg.flatMap((f) => (f ? [f.score] : []))
+    let demo = { wins: 0, total: 0 }
+    let size = { wins: 0, total: 0 }
+    for (const f of folds) {
+      const profile = buildProfile(f.train, tables)
+      const fit = (t: string) => demographicFit(site.get(t) ?? null, profile)
+
+      const sizeFit = (t: string) => fit(t)?.size?.fit
+      const s = pairs(
+        f.test.flatMap((t) => sizeFit(t) ?? []),
+        anySize.flatMap((t) => sizeFit(t) ?? [])
       )
-      result.auc.demographics = Number.isFinite(a) ? a : null
-      pos.forEach((f) => f && result.bandsHeldOut[f.band]++)
-      neg.forEach((f) => f && result.bandsOther[f.band]++)
+      size = { wins: size.wins + s.wins, total: size.total + s.total }
+
+      const pos = f.test.map(fit)
+      if (pos.some((x) => x?.basis === 'broad')) continue
+      if (result.broad) {
+        result.broad = false
+        result.topSignals = pos.find((x) => x)?.signals.map((x) => x.signalName) ?? []
+      }
+      // Size-matched: for each tested town, towns from its own size band the unit is not in.
+      const matched = new Set<string>()
+      for (const t of f.test) {
+        const pool = (townsInBand.get(bands.get(t) as number) ?? []).filter((x) => !unit.towns.has(x))
+        byHash(`${key}|neg|${t}`, pool)
+          .slice(0, perTown)
+          .forEach((x) => matched.add(x))
+      }
+      const neg = Array.from(matched).map(fit)
+      const d = pairs(
+        pos.flatMap((x) => (x ? [x.score] : [])),
+        neg.flatMap((x) => (x ? [x.score] : []))
+      )
+      demo = { wins: demo.wins + d.wins, total: demo.total + d.total }
+      pos.forEach((x) => x && result.bandsHeldOut[x.band]++)
+      neg.forEach((x) => x && result.bandsOther[x.band]++)
     }
-    const sizeFit = (t: string) => fit(t)?.size?.fit
-    const s = auc(
-      test.flatMap((t) => sizeFit(t) ?? []),
-      anySize.flatMap((t) => sizeFit(t) ?? [])
-    )
-    result.auc.size = Number.isFinite(s) ? s : null
+    result.auc.demographics = demo.total > 0 ? demo.wins / demo.total : null
+    result.auc.size = size.total > 0 ? size.wins / size.total : null
     results.push(result)
   })
 

@@ -7,6 +7,7 @@
 --     -f supabase/migrations/20261023030000_size_bands_limit_population_spread.sql \
 --     -f supabase/migrations/20261023040000_brand_demographic_backtest.sql \
 --     -f supabase/migrations/20261023050000_brand_demographic_backtest_results.sql \
+--     -f supabase/migrations/20261023060000_brand_demographic_backtest_five_fold.sql \
 --     -f supabase/tests/brand-demographics/fixtures.sql
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

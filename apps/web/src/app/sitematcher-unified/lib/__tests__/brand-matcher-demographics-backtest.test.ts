@@ -36,7 +36,7 @@ const presence: PresenceRow[] = [
   { brandId: 'posh', fasciaId: 'posh-main', buaGsscode: 'S00000001', storeCount: 3 },
 ]
 
-const options = { level: 'fascia' as const, holdout: 0.2, negativesPerUnit: 300, minTowns: 12 }
+const options = { level: 'fascia' as const, folds: 5, negativesPerUnit: 300, minTowns: 12 }
 
 describe('hash01', () => {
   it('spreads near-identical codes evenly', () => {
@@ -69,6 +69,13 @@ describe('runBacktest', () => {
     const big = unit('big/big-main')
     expect(big.broad || Math.abs((big.auc.demographics as number) - 0.5) < 0.15).toBe(true)
     expect(big.auc.size).toBeGreaterThan(0.9)
+  })
+
+  it('tests every town once across the folds', () => {
+    const posh = unit('posh/posh-main')
+    expect(posh.tested).toBe(posh.towns)
+    const scored = posh.bandsHeldOut.good + posh.bandsHeldOut.partial + posh.bandsHeldOut.weak
+    expect(scored).toBe(posh.towns)
   })
 
   it('splits the same way on every run', () => {

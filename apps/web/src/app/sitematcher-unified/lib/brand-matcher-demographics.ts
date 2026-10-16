@@ -348,10 +348,12 @@ export function midRanks<K>(values: Map<K, number>): Map<K, number> {
     }
     return lo
   }
+  // Same arithmetic as the SQL (cume_dist() - ties / 2n), so equal values come out bit-for-bit
+  // equal in both and ties between towns are never broken by rounding.
   const ranks = new Map<K, number>()
   values.forEach((v, k) => {
-    const below = countBelow(v, false)
-    ranks.set(k, (below + (countBelow(v, true) - below) / 2) / n)
+    const atOrBelow = countBelow(v, true)
+    ranks.set(k, atOrBelow / n - (atOrBelow - countBelow(v, false)) / (2 * n))
   })
   return ranks
 }

@@ -6,7 +6,7 @@
  *
  * Read-only. Needs rebuild_all_demographics() to have run (the ranks and profiles tables are not
  * read — both are rebuilt here from training towns only). Run from apps/web:
- *   npm run backtest:brand-demographics -- [--level fascia|brand] [--holdout 0.2]
+ *   npm run backtest:brand-demographics -- [--level fascia|brand] [--folds 5]
  *     [--negatives 300] [--min-towns 12] [--out results.json]
  */
 
@@ -15,6 +15,7 @@ import { loadEnvConfig } from '@next/env'
 import { createClient } from '@supabase/supabase-js'
 import { percentileCont } from '../src/app/sitematcher-unified/lib/brand-matcher-demographics'
 import {
+  DEFAULT_FOLDS,
   VARIANTS,
   runBacktest,
   type BandCounts,
@@ -30,7 +31,7 @@ function arg(name: string): string | undefined {
 
 const options = {
   level: arg('level') === 'brand' ? ('brand' as const) : ('fascia' as const),
-  holdout: Number(arg('holdout') ?? 0.2),
+  folds: Number(arg('folds') ?? DEFAULT_FOLDS),
   negativesPerUnit: Number(arg('negatives') ?? 300),
   minTowns: Number(arg('min-towns') ?? 12),
 }
@@ -146,7 +147,7 @@ async function main() {
       },
       { good: 0, partial: 0, weak: 0 }
     )
-  console.log(`\nHeld-back towns they trade in:           ${bandLine(total((r) => r.bandsHeldOut))}`)
+  console.log(`\nTowns they trade in (each tested once):  ${bandLine(total((r) => r.bandsHeldOut))}`)
   console.log(`Same-size towns they do not trade in:    ${bandLine(total((r) => r.bandsOther))}`)
 
   const brandName = new Map(brands.map((b) => [b.id, b.name]))
