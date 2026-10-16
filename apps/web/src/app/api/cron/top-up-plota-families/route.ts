@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
       monthlyAllowance: Number.MAX_SAFE_INTEGER,
       councils,
       commit: true,
+      // Families are grouped before classification now, so a fetched record that qualifies in its own
+      // right enters the tier as an ingested one would (scripts/admit-fetched-originals.ts, 16 October).
+      admitToTier: true,
     })
     return NextResponse.json({ success: true, budget, ...result })
   } catch (error) {

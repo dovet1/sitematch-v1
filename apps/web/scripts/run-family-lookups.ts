@@ -36,6 +36,8 @@ async function main() {
   const client = commit ? new PlotaClient(process.env.PLOTA_API_KEY ?? '') : { associated: dryRun, findByReference: dryRun }
   const result = await runFamilyLookups(db as never, client as never, {
     limit, monthlyAllowance: allowance, councils, commit, retryArchiveFailures: args.has('retry-archive'),
+    // Fetched records that qualify in their own right enter the tier, as the top-up's do.
+    admitToTier: true,
   })
   console.log(JSON.stringify({
     commit, usedThisMonthBefore: result.usedThisMonthBefore, requestsMade: result.requestsMade, stoppedFor: result.stoppedFor,
