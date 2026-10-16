@@ -59,14 +59,59 @@ describe('refreshStep', () => {
 
   it('stops a step when the time budget is spent and resumes where it stopped', async () => {
     const slow = fakeDb(STEP_BUDGET_MS / 2 + 1)
+    // Two calls fit in a step's budget, so 60 brands take three steps.
     const first = await refreshStep(START, slow.deps)
     expect(first).toMatchObject({ stage: 'profiles', next: 2 * PROFILE_BATCH, done: false })
     const second = await refreshStep(first, slow.deps)
-    expect(second).toMatchObject({ stage: 'fascia', next: 1 })
+    expect(second).toMatchObject({ stage: 'profiles', next: 4 * PROFILE_BATCH, done: false })
+    const third = await refreshStep(second, slow.deps)
+    expect(third).toMatchObject({ stage: 'fascia', next: 1 })
     expect(slow.profileCalls.flat()).toHaveLength(60)
 
     const fascia = await refreshStep({ stage: 'fascia', next: 1 }, slow.deps)
     expect(fascia).toMatchObject({ stage: 'fascia', next: 1 + 2 * BACKTEST_BATCH, done: false })
+  })
+})
+
+describe('statement timeouts', () => {
+  const timeout = Object.assign(new Error('canceling statement due to statement timeout'), { code: '57014' })
+
+  it('splits a profile batch that times out until each part fits', async () => {
+    const { deps } = fakeDb()
+    const calls: number[] = []
+    const rebuild = deps.rebuildProfiles
+    deps.rebuildProfiles = async (ids) => {
+      calls.push(ids.length)
+      if (ids.length > 3) throw timeout
+      return rebuild(ids)
+    }
+    const r = await refreshStep(START, deps)
+    expect(r.stage).toBe('fascia')
+    expect(calls.slice(0, 7)).toEqual([10, 5, 3, 2, 5, 3, 2])
+  })
+
+  it('splits a backtest range that times out', async () => {
+    const { deps, backtestCalls } = fakeDb()
+    const record = deps.recordBacktest
+    deps.recordBacktest = async (level, from, to) => {
+      if (to - from + 1 > 3) throw timeout
+      return record(level, from, to)
+    }
+    const r = await refreshStep({ stage: 'fascia', next: 1 }, deps)
+    expect(r).toMatchObject({ stage: 'brand', next: 1 })
+    expect(backtestCalls.slice(0, 2)).toEqual([['fascia', 1, 3], ['fascia', 4, 6]])
+  })
+
+  it('does not retry other errors, or a single brand that times out', async () => {
+    const { deps } = fakeDb()
+    deps.rebuildProfiles = async () => {
+      throw new Error('permission denied')
+    }
+    await expect(refreshStep(START, deps)).rejects.toThrow('permission denied')
+    deps.rebuildProfiles = async () => {
+      throw timeout
+    }
+    await expect(refreshStep(START, deps)).rejects.toThrow('statement timeout')
   })
 })
 
