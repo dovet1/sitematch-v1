@@ -177,6 +177,13 @@ SELECT pg_temp.check(
   AND pg_temp.near(brand_matcher_signal_fit(109, 110, 110, 130, 140), 0),
   'signal fit matches signalFit()');
 
+-- Presence can be limited to some brands, so the admin refresh can rebuild a batch at a time.
+SELECT pg_temp.check(
+  (SELECT count(*) = 15 AND bool_and(brand_id = '00000000-0000-0000-0000-00000000000b' AND fascia_id = '00000000-0000-0000-0000-0000000000b1')
+   FROM brand_bua_presence(ARRAY['00000000-0000-0000-0000-00000000000b'::uuid]) WHERE fascia_id IS NOT NULL
+     AND fascia_id = '00000000-0000-0000-0000-0000000000b1'),
+  'presence for one brand only');
+
 -- Backtest scores are recorded per fascia and per brand; a fresh run of a level replaces it.
 SELECT pg_temp.check(record_brand_demographic_backtest('fascia') = 2, 'both Everywhere fascias scored');
 SELECT pg_temp.check(record_brand_demographic_backtest('brand') = 1, 'Everywhere scored as a whole brand');
