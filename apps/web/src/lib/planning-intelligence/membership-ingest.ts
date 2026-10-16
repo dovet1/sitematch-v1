@@ -25,12 +25,23 @@ export function planningMembershipEnabled(): boolean {
 
 /**
  * The councils where ingestion may group applications into families, from
- * PLANNING_MEMBERSHIP_COUNCILS (comma-separated slugs). Linking evidence can run nationally while
- * grouping stays on the pilot: grouping changes what the tab shows and can clear or re-queue
- * grades, so it widens only when the user lists a council. Unset or empty means no council at all.
+ * PLANNING_MEMBERSHIP_COUNCILS (comma-separated slugs, or `*` for every council, new ones included;
+ * every council was grouped on 14 October 2026). Grouping changes what the tab and Monitor show, so
+ * it widens only when the user says so. Unset or empty means no council at all.
  */
-export function membershipCouncils(value = process.env.PLANNING_MEMBERSHIP_COUNCILS): Set<string> {
-  return new Set((value ?? '').split(',').map(council => council.trim()).filter(Boolean))
+export function membershipCouncils(value = process.env.PLANNING_MEMBERSHIP_COUNCILS): Set<string> | 'all' {
+  const councils = new Set((value ?? '').split(',').map(council => council.trim()).filter(Boolean))
+  return councils.has('*') ? 'all' : councils
+}
+
+/**
+ * The plans ingestion applies. A family whose grouping would clear a paperwork application's own
+ * grade is left as it is: that can take the application off the Planning Monitor until its original
+ * is fetched and graded, and the user chose on 16 October 2026 to leave such families ungrouped.
+ */
+export function plansToApplyAtIngestion(plans: FamilyPlan[]): { apply: FamilyPlan[]; keptGrades: number } {
+  const apply = plans.filter(plan => plan.action !== 'apply' || !plan.clearMachineGrade)
+  return { apply, keptGrades: plans.length - apply.length }
 }
 
 const CHUNK = 200
@@ -230,16 +241,17 @@ export async function assignMembershipsFor(db: PlanningAdminClient, applicationI
   const total: ApplyResult = { applied: 0, unchanged: 0, held: 0, failed: [], queuedClassifications: 0, awaitingOriginal: 0 }
   if (applicationIds.length === 0) return total
   const allowed = membershipCouncils()
-  if (allowed.size === 0) {
+  if (allowed !== 'all' && allowed.size === 0) {
     console.warn('[planning-membership] PLANNING_MEMBERSHIP_COUNCILS is empty; no council is grouped')
     return total
   }
   const councilsWaiting: string[] = []
-  for (const [council, { plans }] of await planMembershipsFor(db, applicationIds, allowed)) {
-    const result = await applyFamilyPlans(db, plans, { actor, reason: 'linked at ingestion' })
+  for (const [council, { plans }] of await planMembershipsFor(db, applicationIds, allowed === 'all' ? undefined : allowed)) {
+    const { apply, keptGrades } = plansToApplyAtIngestion(plans)
+    const result = await applyFamilyPlans(db, apply, { actor, reason: 'linked at ingestion' })
     total.applied += result.applied
     total.unchanged += result.unchanged
-    total.held += result.held
+    total.held += result.held + keptGrades
     total.failed.push(...result.failed)
     total.queuedClassifications += result.queuedClassifications
     total.awaitingOriginal += result.awaitingOriginal

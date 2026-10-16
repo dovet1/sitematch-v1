@@ -1,5 +1,6 @@
 import { expectedDailyNeed, familyTopUpBudget, SCHEDULED_DAILY_REQUESTS } from '../family-topup'
-import { membershipCouncils } from '../membership-ingest'
+import { membershipCouncils, plansToApplyAtIngestion } from '../membership-ingest'
+import type { FamilyPlan } from '../development-membership'
 
 const at = (iso: string) => new Date(iso)
 
@@ -43,8 +44,32 @@ describe('expectedDailyNeed', () => {
 
 describe('membershipCouncils', () => {
   it('groups only the councils listed, and none when the list is empty', () => {
-    expect([...membershipCouncils(' south-norfolk-broadland, wandsworth ,,glasgow')]).toEqual(['south-norfolk-broadland', 'wandsworth', 'glasgow'])
-    expect(membershipCouncils(undefined).size).toBe(0)
-    expect(membershipCouncils('').size).toBe(0)
+    expect([...(membershipCouncils(' south-norfolk-broadland, wandsworth ,,glasgow') as Set<string>)]).toEqual(['south-norfolk-broadland', 'wandsworth', 'glasgow'])
+    expect((membershipCouncils(undefined) as Set<string>).size).toBe(0)
+    expect((membershipCouncils('') as Set<string>).size).toBe(0)
+  })
+
+  it('reads * as every council, new ones included', () => {
+    expect(membershipCouncils('*')).toBe('all')
+    expect(membershipCouncils(' wandsworth, * ')).toBe('all')
+  })
+})
+
+describe('plansToApplyAtIngestion', () => {
+  const plan = (familyKey: string, clearMachineGrade: boolean): FamilyPlan => ({
+    action: 'apply', familyKey, targetDevelopmentId: null, headApplicationId: 'a1', principalApplicationId: null,
+    familyState: 'awaiting_original', members: [], clearMachineGrade, queueClassification: [], admitByFamily: [], missingParentKeys: ['2024/3141'],
+  })
+
+  it('leaves a family alone when grouping it would clear a paperwork grade, as the user chose on 16 October 2026', () => {
+    const plans: FamilyPlan[] = [
+      plan('keeps', false),
+      plan('clears', true),
+      { action: 'unchanged', familyKey: 'same', applicationIds: [] },
+      { action: 'hold', familyKey: 'held', reason: 'different_sites', applicationIds: [], missingParentKeys: [], detail: '' },
+    ]
+    const { apply, keptGrades } = plansToApplyAtIngestion(plans)
+    expect(apply.map(p => p.familyKey)).toEqual(['keeps', 'same', 'held'])
+    expect(keptGrades).toBe(1)
   })
 })

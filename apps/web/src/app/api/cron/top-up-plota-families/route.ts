@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
-import { FAMILY_ENDPOINT, runFamilyLookups } from '@/lib/planning-intelligence/family-lookup'
+import { FAMILY_ENDPOINT, REFERENCE_ENDPOINT, runFamilyLookups } from '@/lib/planning-intelligence/family-lookup'
 import { prioritiseFamilyLookups } from '@/lib/planning-intelligence/family-priority'
 import { expectedDailyNeed, familyTopUpBudget } from '@/lib/planning-intelligence/family-topup'
 import { PlotaClient } from '@/lib/planning-intelligence/plota'
@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
       .not('monthly_remaining', 'is', null).order('occurred_at', { ascending: false }).limit(1).maybeSingle()
     if (latestError) throw latestError
     const { count: recent, error: recentError } = await db.from('planning_provider_usage')
-      .select('id', { count: 'exact', head: true }).eq('provider', 'plota').neq('endpoint', FAMILY_ENDPOINT)
+      // The scheduled workers' own need: lookups (by family or by reference) are this job's, not theirs.
+      .select('id', { count: 'exact', head: true }).eq('provider', 'plota').neq('endpoint', FAMILY_ENDPOINT).neq('endpoint', REFERENCE_ENDPOINT)
       .gte('occurred_at', new Date(now.getTime() - 3 * 86_400_000).toISOString())
     if (recentError) throw recentError
 
