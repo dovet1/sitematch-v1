@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
-import { runPlotaLaneDiscovery, type DiscoveryLane } from '@/lib/planning-intelligence/ingest'
+import { INGEST_TIME_BUDGET_MS, runPlotaLaneDiscovery, type DiscoveryLane } from '@/lib/planning-intelligence/ingest'
 import {
   deepDiscoveryWindow,
   lateDiscoveryWindow,
@@ -21,6 +21,8 @@ const WINDOWS = { late: lateDiscoveryWindow, deep: deepDiscoveryWindow }
  * reason as refresh: a cron entry that lost its query string would silently run discovery.
  */
 export async function runDiscoveryLaneRoute(request: NextRequest, lane: DiscoveryLane) {
+  // The run's clock starts with the request, not with the first page.
+  const started = Date.now()
   if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -52,6 +54,7 @@ export async function runDiscoveryLaneRoute(request: NextRequest, lane: Discover
       pageSize,
       maxPages,
       brandLimbEnabled: process.env.PLANNING_BRAND_LIMB_ENABLED === 'true',
+      deadline: started + INGEST_TIME_BUDGET_MS,
     })
     return NextResponse.json({ success: true, lane, ...result })
   } catch (error) {

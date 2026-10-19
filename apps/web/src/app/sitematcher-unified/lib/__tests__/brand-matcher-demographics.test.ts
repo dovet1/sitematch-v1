@@ -5,6 +5,9 @@ import {
   demographicFit,
   demographicMatch,
   describeDemographic,
+  explainDemographic,
+  possessive,
+  sharePoints,
   midRanks,
   percentileCont,
   signalFit,
@@ -82,19 +85,23 @@ describe('demographicFit', () => {
     expect(fit).toMatchObject({ band: 'good', basis: 'broad', score: 1, signals: [] })
   })
 
-  it('reports town size separately and never scores it', () => {
+  it('reports town size separately and never scores it, judged on population not rank', () => {
     const profile = [
       signal({}),
       signal({ signalName: 'population', category: 'population', distinctiveness: 0.9 }),
     ]
-    const fit = demographicFit(site({ affluence_high: 0.75, population: 0.1 }), profile)
+    // A middling rank among towns its size, but far fewer people than the brand's towns.
+    const fit = demographicFit(
+      { ranks: { affluence_high: 0.75, population: 0.75 }, values: { affluence_high: 100, population: 50 } },
+      profile
+    )
     expect(fit?.score).toBe(1)
     expect(fit?.signals.map((s) => s.signalName)).toEqual(['affluence_high'])
     expect(fit?.size).toMatchObject({ signalName: 'population', position: 'below', fit: 0 })
   })
 
   it('a brand distinctive only by size is broad on demographics', () => {
-    const fit = demographicFit(site({ affluence_high: 0.2, population: 0.75 }), [
+    const fit = demographicFit({ ranks: { affluence_high: 0.2, population: 0.75 }, values: { affluence_high: 100, population: 120 } }, [
       signal({ distinctiveness: 0.1 }),
       signal({ signalName: 'population', category: 'population', distinctiveness: 0.9 }),
     ])
@@ -229,13 +236,13 @@ describe('demographicMatch', () => {
   const town = (ranks: Record<string, number>) => ({ ...site(ranks), townName: 'Reading' })
   const affluent = [
     signal({ distinctiveness: 0.6 }),
-    signal({ signalName: 'population', category: 'population', p25: 20_000, p75: 60_000, distinctiveness: 0.8 }),
+    signal({ signalName: 'population', category: 'population', p10: 10_000, p25: 20_000, p75: 60_000, p90: 80_000, distinctiveness: 0.8 }),
   ]
   const validated = { broad: false, aucDemographics: 0.8 }
 
   it('uses the fascia profile when it has one', () => {
     const d = demographicMatch({
-      site: town({ affluence_high: 0.75, population: 0.75 }),
+      site: { ...town({ affluence_high: 0.75, population: 0.75 }), values: { affluence_high: 100, population: 40_000 } },
       fasciaProfile: affluent,
       fasciaScore: validated,
       brandProfile: null,
@@ -244,6 +251,24 @@ describe('demographicMatch', () => {
     expect(d).toMatchObject({ band: 'good', basis: 'fascia', townName: 'Reading' })
     expect(d?.reasons).toEqual([{ signalName: 'affluence_high', direction: 'higher', sitePosition: 'typical' }])
     expect(d?.size).toMatchObject({ position: 'typical', typicalMin: 20_000, typicalMax: 60_000 })
+    expect(d?.breakdown).toEqual({
+      score: 1,
+      townCount: 20,
+      backtestAuc: 0.8,
+      signals: [
+        {
+          signalName: 'affluence_high',
+          direction: 'higher',
+          position: 'typical',
+          siteRank: 0.75,
+          median: 0.75,
+          typical: [0.7, 0.8],
+          range: [0.6, 0.9],
+          fit: 1,
+          weight: 1,
+        },
+      ],
+    })
   })
 
   it('falls back to the whole brand when the fascia has no profile', () => {
@@ -309,6 +334,91 @@ describe('describeDemographic', () => {
 
   it('names the whole brand when its estate stood in, and handles "any town"', () => {
     const lines = describeDemographic({ band: 'any', basis: 'brand', townName: 'Leeds', reasons: [], size: null }, 'Greggs')
-    expect(lines).toEqual(["Greggs's towns (across the whole brand) are typical for their size on every measure, so Leeds fits as well as most."])
+    expect(lines).toEqual(["Greggs' towns (across the whole brand) are typical for their size on every measure, so Leeds fits as well as most."])
+  })
+})
+
+describe('possessive', () => {
+  it("does not double up a name that already ends in 's or s", () => {
+    expect(possessive("Gail's")).toBe("Gail's")
+    expect(possessive('Greggs')).toBe("Greggs'")
+    expect(possessive('Waitrose')).toBe("Waitrose's")
+  })
+})
+
+describe('sharePoints', () => {
+  it('splits 100 points by weight, always adding up to 100', () => {
+    expect(sharePoints([1])).toEqual([100])
+    expect(sharePoints([1 / 3, 1 / 3, 1 / 3])).toEqual([34, 33, 33])
+    expect(sharePoints([0.456, 0.344, 0.2])).toEqual([46, 34, 20])
+  })
+})
+
+describe('explainDemographic', () => {
+  // Two measures: affluence worth 0.6, walkability 0.4. Reading is typical on the first and
+  // well above the brand's towns on the second.
+  const profile = [
+    signal({ distinctiveness: 0.6, buaCount: 34 }),
+    signal({
+      signalName: 'car_dependency_walkable',
+      category: 'car_dependency',
+      medianRank: 0.25,
+      rankP10: 0.05,
+      rankP25: 0.15,
+      rankP75: 0.35,
+      rankP90: 0.45,
+      distinctiveness: 0.4,
+      buaCount: 34,
+    }),
+  ]
+  const match = () =>
+    demographicMatch({
+      site: { ...site({ affluence_high: 0.75, car_dependency_walkable: 0.9 }), townName: 'Reading' },
+      fasciaProfile: profile,
+      fasciaScore: { broad: false, aucDemographics: 0.71 },
+      brandProfile: null,
+      brandScore: null,
+    })
+
+  it('lists every measure with its points, where the town sits and why', () => {
+    const d = match()
+    expect(d?.band).toBe('partial')
+    const e = explainDemographic(d!, 'Waitrose')
+    expect(e.heading).toBe('Partial fit')
+    expect(e.summary).toMatch(/^Reading looks partly like the kind of town Waitrose opens in\. It scores 60 out of 100 /)
+    expect(e.why.map((w) => w.title)).toEqual(['Why these 2 measures', 'Why it matters', 'Why compare towns of the same size'])
+    expect(e.why[0].text).toContain('These are the 2 ways their towns stand out most: more affluent and more car-dependent.')
+    expect(e.why[1].text).toContain('picked the real one 71% of the time')
+    expect(e.rows.map((r) => [r.topic, r.points, r.maxPoints, r.inLine])).toEqual([
+      ['Affluence', 60, 60, true],
+      ['Walkability', 0, 40, false],
+    ])
+    expect(e.rows[1]).toMatchObject({
+      lean: 'Their towns: more car-dependent than most towns their size',
+      // Worded the way the brand leans, so both numbers count the same way.
+      site: 'Reading: more car-dependent than 10 in 100 towns its size',
+      theirs: 'Their typical town: more car-dependent than 75 in 100',
+      verdict: 'Does not match: more walkable than 9 in 10 of their towns',
+      ends: ['more car-dependent', 'more walkable'],
+    })
+    expect(e.rows[0]).toMatchObject({
+      site: 'Reading: more affluent than 75 in 100 towns its size',
+      theirs: 'Their typical town: more affluent than 75 in 100',
+      verdict: 'Matches their towns',
+    })
+    expect(e.basis).toBe("Built from 34 of Waitrose's towns.")
+  })
+
+  it('explains "any town" without rows or a backtest', () => {
+    const d = demographicMatch({
+      site: { ...site({ affluence_high: 0.1 }), townName: 'Leeds' },
+      fasciaProfile: [signal({ distinctiveness: 0.1 })],
+      fasciaScore: null,
+      brandProfile: null,
+      brandScore: null,
+    })
+    const e = explainDemographic(d!, 'Greggs')
+    expect(e).toMatchObject({ heading: 'Any town', rows: [], why: [] })
+    expect(e.summary).toContain('no pattern for Leeds to match or miss')
   })
 })

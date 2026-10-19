@@ -57,8 +57,11 @@ export interface RequirementEvidence {
   useClasses: string[]
   // No target locations listed: the requirement does not rule the site's area out.
   nationwide: boolean
-  // Target locations within reach of the site (names), and a sample of the rest.
+  // Target locations within reach of the site (names, closest first), and a sample of the rest.
   nearbyPlaces: string[]
+  // Straight-line miles from the site to the closest target within reach; null when the only
+  // match is a region named in the requirement (no point to measure from).
+  nearestPlaceMiles: number | null
   otherPlaces: string[]
   otherPlaceCount: number
 }

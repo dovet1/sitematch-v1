@@ -117,6 +117,26 @@ describe('runPlotaSync census mapping', () => {
     expect(writes.filter(w => w.table === 'planning_provider_usage')).toHaveLength(3)
   })
 
+  it('stops starting pages at its deadline and finishes cleanly, keeping the cursor for the next run', async () => {
+    const { db, writes } = makeDb()
+    let now = 1_000_000
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => now)
+    const plota = { search: jest.fn().mockImplementation(async () => {
+      now += 120_000 // each page, with its linking, takes two minutes
+      return { page: { data: [application()], meta: { next_cursor: `after-${plota.search.mock.calls.length}` } }, usage: { monthlyRemaining: 19000 } }
+    }) }
+    try {
+      const result = await runPlotaSync({ ...base, maxPages: 10, db, client: plota as never, deadline: 1_000_000 + 230_000 })
+      expect(plota.search).toHaveBeenCalledTimes(2)
+      expect(result).toMatchObject({ status: 'partial', requestsMade: 2, stoppedForTime: true })
+      const saved = writes.filter(w => w.table === 'planning_ingest_checkpoints').at(-1)?.payload
+      expect(saved).toMatchObject({ status: 'pending', next_cursor: 'after-2' })
+      expect(writes.filter(w => w.table === 'planning_ingest_runs').at(-1)?.payload).toMatchObject({ status: 'partial', requests_made: 2 })
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
   it('persists the smaller page size across bounded invocations and obeys the reserve', async () => {
     const { db, writes, results } = makeDb()
     const plota = { search: jest.fn().mockResolvedValue({ page: {

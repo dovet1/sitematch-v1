@@ -54,7 +54,16 @@ export interface SyncInput {
    * freshness, so a stopped main discovery cannot be hidden by a healthy lane.
    */
   lane?: DiscoveryLane
+  /**
+   * Epoch milliseconds after which no new page is started. Workers run for at most 300 seconds;
+   * since linking and grouping were switched on at ingestion (16 October 2026) a run of many pages
+   * could pass that and be killed mid-page, losing its totals and repeating the page next time.
+   */
+  deadline?: number
 }
+
+/** How long a worker run may keep starting pages, leaving room for the page in flight and its linking. */
+export const INGEST_TIME_BUDGET_MS = 230_000
 
 export interface SyncResult {
   runId: string
@@ -64,6 +73,8 @@ export interface SyncResult {
   recordsUpserted: number
   intelligenceRecords: number
   stoppedForReserve: boolean
+  /** True when the run stopped starting pages at its deadline; the next run resumes from the checkpoint. */
+  stoppedForTime?: boolean
   /** Present only when PLANNING_LINKING_ENABLED is on. A linking failure is counted, never thrown. */
   linking?: { pages: number; links: number; strongLinks: number; lookupsRequested: number; failures: number }
   /** Present only when PLANNING_MEMBERSHIP_ENABLED is also on. */
@@ -394,8 +405,9 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
     let pagesLeft = input.maxPages
     let completeSpecs = 0
 
+    const pastDeadline = () => input.deadline !== undefined && Date.now() >= input.deadline
     for (const spec of specs) {
-      if (pagesLeft <= 0 || stats.stoppedForReserve) break
+      if (pagesLeft <= 0 || stats.stoppedForReserve || stats.stoppedForTime) break
       const scopeKey = [
         checkpointKind(input),
         input.scope,
@@ -423,6 +435,7 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
       let pagesComplete = Number(checkpoint?.pages_complete) || 0
       let checkpointRecords = Number(checkpoint?.records_seen) || 0
       while (pagesLeft > 0) {
+        if (pastDeadline()) { stats.stoppedForTime = true; break }
         const { error: markError } = await input.db
           .from('planning_ingest_checkpoints')
           .upsert({
@@ -599,6 +612,7 @@ export interface RefreshResult {
   cycleKey: string
   cohorts: Array<RefreshCohort & { cycleKey: string; runId: string; status: SyncResult['status'] }>
   skipped: Array<RefreshCohort & { reason: string }>
+  stoppedForTime?: boolean
   requestsMade: number
   recordsSeen: number
   recordsUpserted: number
@@ -651,7 +665,7 @@ export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResul
 
   let pagesLeft = input.maxPages
   for (const cohort of cohorts) {
-    if (pagesLeft <= 0 || result.stoppedForReserve) break
+    if (pagesLeft <= 0 || result.stoppedForReserve || result.stoppedForTime) break
     // Plota documents commercial_work and dmin as live-only, and a reduced-scope search of a
     // pre-2026 window returns an incomplete answer rather than an error. Re-checking such a
     // window would read fewer records than we already hold and report success, so the
@@ -680,6 +694,7 @@ export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResul
       councils,
       brandLimbEnabled: input.brandLimbEnabled,
       cycleKey: continuation?.cycleKey ?? cycleKey,
+      deadline: input.deadline,
     })
     result.cohorts.push({ ...cohort, windowEnd, cycleKey: continuation?.cycleKey ?? cycleKey,
       runId: run.runId, status: run.status })
@@ -688,6 +703,7 @@ export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResul
     result.recordsUpserted += run.recordsUpserted
     result.intelligenceRecords += run.intelligenceRecords
     result.stoppedForReserve = run.stoppedForReserve
+    result.stoppedForTime = run.stoppedForTime ?? false
     pagesLeft -= run.requestsMade
   }
 

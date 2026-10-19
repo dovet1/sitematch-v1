@@ -14,7 +14,7 @@ import {
 } from './client'
 import { normaliseCompanyNumber, profileToFactsRow, rankCandidates, suggestionQueries } from './facts'
 import { MAX_SCANNED_PAGES, readScannedFigures, SCANNED_ACCOUNTS_MODEL } from './scanned-accounts'
-import type { BrandCompanySuggestionRow, CompanyFactsRow } from './types'
+import type { BrandCompanySuggestionRow, CompanyFactsRow, FiguresOutcome } from './types'
 
 const SUGGESTION_LIMIT = 5
 
@@ -53,7 +53,7 @@ export async function suggestCompaniesForBrand(
 const IXBRL = 'application/xhtml+xml'
 const PDF = 'application/pdf'
 
-type FiguresFields = Pick<
+export type FiguresFields = Pick<
   CompanyFactsRow,
   'turnover' | 'turnover_status' | 'net_assets' | 'net_assets_status' | 'turnover_page' | 'net_assets_page' | 'figures_model'
 >
@@ -95,15 +95,28 @@ export async function readAccountsFigures(
   }
 }
 
+// Lay newly read figures over a row. A figure that was read replaces what was there (with its
+// page when extracted, without one when filed); a figure that was not read keeps what was there.
+function withFigures(base: CompanyFactsRow, read: Partial<FiguresFields>): CompanyFactsRow {
+  const merged: CompanyFactsRow = { ...base, ...read }
+  if (read.turnover_status === 'filed') merged.turnover_page = null
+  if (read.net_assets_status === 'filed') merged.net_assets_page = null
+  const extracted = merged.turnover_status === 'extracted' || merged.net_assets_status === 'extracted'
+  merged.figures_model = extracted ? (read.figures_model ?? base.figures_model) : null
+  return merged
+}
+
 // Fetch a company's profile from CH and upsert its facts row. Figures already read for the
 // same accounts period are kept — a profile refresh must not wipe what a reader found. New
 // accounts are read once: figures that were read become 'filed' or 'extracted'; anything else
 // stays 'unread' (figures_period_end then marks the period as checked, so it is not re-read
-// every week).
-export async function refreshCompanyFacts(
+// every week). With rereadFigures (an admin's "Refresh facts"), the latest accounts are read
+// again even when already checked; figures read replace the stored ones, the rest are kept.
+export async function refreshCompanyFactsWithOutcome(
   db: SupabaseClient,
-  rawCompanyNumber: string
-): Promise<CompanyFactsRow> {
+  rawCompanyNumber: string,
+  options: { rereadFigures?: boolean } = {}
+): Promise<{ facts: CompanyFactsRow; previous: FiguresFields | null; outcome: FiguresOutcome }> {
   const companyNumber = normaliseCompanyNumber(rawCompanyNumber)
   if (!companyNumber) throw new CompanyNotFoundError(`${rawCompanyNumber} is not a company number`)
   const profile = await getCompanyProfile(companyNumber)
@@ -117,20 +130,34 @@ export async function refreshCompanyFacts(
     .maybeSingle()
   if (existing.error) throw new Error(`read facts: ${existing.error.message}`)
   const prior = existing.data as (FiguresFields & Pick<CompanyFactsRow, 'figures_period_end'>) | null
-  let merged: CompanyFactsRow =
-    prior && prior.figures_period_end && prior.figures_period_end === row.last_accounts_made_up_to
-      ? { ...row, ...prior }
-      : row
-  if (merged === row && row.last_accounts_made_up_to) {
-    const madeUpTo = row.last_accounts_made_up_to
-    // A failed read leaves the figures unread and is retried next refresh; the profile still saves.
-    const read = await readAccountsFigures(companyNumber, madeUpTo).catch(() => undefined)
-    if (read !== undefined) merged = { ...row, figures_period_end: madeUpTo, ...read }
+  const samePeriod = !!prior?.figures_period_end && prior.figures_period_end === row.last_accounts_made_up_to
+  let merged: CompanyFactsRow = samePeriod ? { ...row, ...prior } : row
+  const madeUpTo = row.last_accounts_made_up_to
+
+  let outcome: FiguresOutcome
+  if (!madeUpTo) {
+    outcome = { kind: 'no_accounts' }
+  } else if (samePeriod && !options.rereadFigures) {
+    outcome = { kind: 'kept' }
+  } else {
+    try {
+      const read = await readAccountsFigures(companyNumber, madeUpTo)
+      merged = withFigures({ ...merged, figures_period_end: madeUpTo }, read ?? {})
+      outcome = read ? { kind: 'read', figures: read } : { kind: 'unreadable' }
+    } catch (e) {
+      // A failed read leaves the figures as they were and is retried next refresh; the profile
+      // still saves.
+      outcome = { kind: 'failed', error: e instanceof Error ? e.message : String(e) }
+    }
   }
 
   const up = await db.from('company_facts').upsert(merged, { onConflict: 'company_number' })
   if (up.error) throw new Error(`store facts: ${up.error.message}`)
-  return merged
+  return { facts: merged, previous: samePeriod ? prior : null, outcome }
+}
+
+export async function refreshCompanyFacts(db: SupabaseClient, rawCompanyNumber: string): Promise<CompanyFactsRow> {
+  return (await refreshCompanyFactsWithOutcome(db, rawCompanyNumber)).facts
 }
 
 // Link a brand to its UK trading company. Fetches the profile first, so a confirmed link

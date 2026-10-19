@@ -25,6 +25,7 @@ import type {
 } from '../../../types/brand-matcher'
 import { companiesHouseUrl } from '@/lib/companies-house/facts'
 import { BrandContactsPanel } from './BrandContactsPanel'
+import { DemographicBreakdownPanel } from './DemographicBreakdownPanel'
 import { Kicker, numberWord, ScoreRing, SignalPill } from './BrandMatcherUi'
 
 function listPhrase(items: string[]): string {
@@ -53,6 +54,8 @@ export function BrandMatchCard({
 }) {
   const contactsRef = useRef<HTMLDivElement>(null)
   const [scrollToContacts, setScrollToContacts] = useState(false)
+  const demographicRef = useRef<HTMLElement>(null)
+  const [scrollToDemographic, setScrollToDemographic] = useState(false)
   const sparse = isSparse(match)
   const pills = buildPills(match, query)
 
@@ -62,6 +65,13 @@ export function BrandMatchCard({
     contactsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     setScrollToContacts(false)
   }, [expanded, scrollToContacts])
+
+  // The Demographics pill opens the card at its "Why this fit" breakdown.
+  useEffect(() => {
+    if (!expanded || !scrollToDemographic) return
+    demographicRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    setScrollToDemographic(false)
+  }, [expanded, scrollToDemographic])
 
   const subject = [
     `${formatSqft(query.sqft)} sq ft ${classLabel(query.useClass)} unit — ${site.postcode}`,
@@ -110,7 +120,17 @@ export function BrandMatchCard({
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
           {pills.map((p) => (
             <div key={p.key} className="min-w-[112px] max-w-[190px] flex-1">
-              <SignalPill pill={p} />
+              <SignalPill
+                pill={p}
+                onClick={
+                  p.key === 'demographic' && match.demographic
+                    ? () => {
+                        setScrollToDemographic(true)
+                        onExpandedChange(true)
+                      }
+                    : undefined
+                }
+              />
             </div>
           ))}
         </div>
@@ -180,6 +200,10 @@ export function BrandMatchCard({
                 .
               </Band>
             )
+          )}
+
+          {match.demographic && (
+            <DemographicBreakdownPanel ref={demographicRef} demographic={match.demographic} brandName={match.name} />
           )}
 
           <div

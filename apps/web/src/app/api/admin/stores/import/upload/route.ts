@@ -344,6 +344,68 @@ async function batchValidateGoogle(rows: ProcessedRow[], startTime: number): Pro
   }
 }
 
+// A row may opt out of the duplicate check with `allow_duplicate` = yes/true/1. It exists
+// for the same brand genuinely trading twice at one Google place — a Travelodge on each
+// side of a motorway services, say — which the check below cannot tell from a repeat.
+function allowsDuplicate(row: ProcessedRow): boolean {
+  const v = String(row.original.allow_duplicate ?? '').trim().toLowerCase()
+  return v === 'yes' || v === 'true' || v === '1' || v === 'y'
+}
+
+// PHASE 1: Reject rows whose Google place is already a store of the same brand (read-only)
+//
+// Keyed on place AND brand, not place alone. Text search often returns the enclosing site
+// rather than the unit — a services, a retail park — so different brands legitimately share
+// a place ID (98 such groups live on 18 Sep 2026, e.g. Leon and McDonald's at Watford Gap).
+// Brand is compared by trimmed, case-insensitive name: the same rule resolveBrand uses to
+// decide which brand a row joins, so "same brand" here means the brand it would land in.
+async function checkPlaceIdDuplicates(rows: ProcessedRow[], supabase: any): Promise<void> {
+  const candidates = rows.filter(r => !r.failed && r.googlePlaceId?.trim() && !allowsDuplicate(r))
+  const key = (placeId: string, brand: string) => `${placeId.trim()}|${brand.trim().toLowerCase()}`
+
+  // Against the database
+  const placeIds = [...new Set(candidates.map(r => r.googlePlaceId!.trim()))]
+  const existing = new Map<string, string>()
+  const CHUNK = 200
+  for (let i = 0; i < placeIds.length; i += CHUNK) {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('name, google_place_id, brands(name)')
+      .in('google_place_id', placeIds.slice(i, i + CHUNK))
+    // Fail closed, per row rather than per upload: an unchecked row could be a duplicate, but
+    // it comes back in the failed CSV with its place ID and re-uploads without another Google call.
+    if (error) {
+      for (const row of candidates) {
+        row.failed = true
+        row.failureReason = `Duplicate check failed: ${error.message}`
+      }
+      return
+    }
+    for (const s of data ?? []) {
+      if (s.brands?.name) existing.set(key(s.google_place_id, s.brands.name), s.name)
+    }
+  }
+
+  // Within this file, first row wins
+  const seenInFile = new Map<string, number>()
+  for (const row of candidates) {
+    const k = key(row.googlePlaceId!, row.brand)
+    const existingName = existing.get(k)
+    if (existingName !== undefined) {
+      row.failed = true
+      row.failureReason = `Duplicate: same Google place as existing ${row.brand} store '${existingName}'`
+      continue
+    }
+    const firstRow = seenInFile.get(k)
+    if (firstRow !== undefined) {
+      row.failed = true
+      row.failureReason = `Duplicate: same Google place as row ${firstRow} in this file`
+      continue
+    }
+    seenInFile.set(k, row.rowNumber)
+  }
+}
+
 // PHASE 1: Check category conflicts (read-only)
 async function checkCategoryConflicts(rows: ProcessedRow[], supabase: any): Promise<void> {
   const successfulRows = rows.filter(r => !r.failed)
@@ -681,10 +743,13 @@ export async function POST(request: NextRequest) {
     // Step 3: Google Places Validation with Rate Limiting
     await batchValidateGoogle(processedRows, startTime)
 
-    // Step 4: Category Conflict Check
+    // Step 4: Duplicate check on Google place ID + brand
+    await checkPlaceIdDuplicates(processedRows, supabase)
+
+    // Step 5: Category Conflict Check
     await checkCategoryConflicts(processedRows, supabase)
 
-    // Step 5: Classify rows before any writes
+    // Step 6: Classify rows before any writes
     const successfulRows = processedRows.filter(r => !r.failed)
     const preWriteFailedRows = processedRows.filter(r => r.failed)
     const retryRowCount = processedRows.filter(r => r.isRetryRow).length

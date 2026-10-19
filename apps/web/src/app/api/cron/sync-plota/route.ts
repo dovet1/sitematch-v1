@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
-import { runPlotaDiscovery, runPlotaSync } from '@/lib/planning-intelligence/ingest'
+import { INGEST_TIME_BUDGET_MS, runPlotaDiscovery, runPlotaSync } from '@/lib/planning-intelligence/ingest'
 import {
   discoveryWindow,
   PlotaClient,
@@ -20,6 +20,8 @@ function utcDate(daysAgo: number): string {
 }
 
 export async function GET(request: NextRequest) {
+  // The run's clock starts with the request, not with the first page.
+  const started = Date.now()
   if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
       pageSize,
       maxPages,
       brandLimbEnabled: process.env.PLANNING_BRAND_LIMB_ENABLED === 'true',
+      deadline: started + INGEST_TIME_BUDGET_MS,
     })
     return NextResponse.json({ success: true, ...result })
   } catch (error) {

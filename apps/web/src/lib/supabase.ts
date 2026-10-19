@@ -690,6 +690,7 @@ export interface Database {
           latest_store_opened_at: string | null
           website_url: string | null
           store_locator_url: string | null
+          linkedin_url: string | null
           created_at: string
         }
         Insert: {
@@ -702,6 +703,7 @@ export interface Database {
           latest_store_opened_at?: string | null
           website_url?: string | null
           store_locator_url?: string | null
+          linkedin_url?: string | null
           created_at?: string
         }
         Update: {
@@ -714,6 +716,58 @@ export interface Database {
           latest_store_opened_at?: string | null
           website_url?: string | null
           store_locator_url?: string | null
+          linkedin_url?: string | null
+        }
+        Relationships: []
+      }
+      brand_openings: {
+        Row: {
+          id: string
+          brand_id: string
+          location: string
+          opening_date: string
+          opening_date_original: string
+          date_precision: 'day' | 'month' | 'quarter' | 'season'
+          is_date_estimated: boolean
+          status: 'confirmed' | 'planned'
+          source_url: string | null
+          source_file: string | null
+          source_file_sha256: string | null
+          source_row: number | null
+          import_batch_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          location: string
+          opening_date: string
+          opening_date_original: string
+          date_precision: 'day' | 'month' | 'quarter' | 'season'
+          is_date_estimated: boolean
+          status?: 'confirmed' | 'planned'
+          source_url?: string | null
+          source_file?: string | null
+          source_file_sha256?: string | null
+          source_row?: number | null
+          import_batch_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          location?: string
+          opening_date?: string
+          opening_date_original?: string
+          date_precision?: 'day' | 'month' | 'quarter' | 'season'
+          is_date_estimated?: boolean
+          status?: 'confirmed' | 'planned'
+          source_url?: string | null
+          source_file?: string | null
+          source_file_sha256?: string | null
+          source_row?: number | null
+          import_batch_id?: string | null
+          created_at?: string
         }
         Relationships: []
       }

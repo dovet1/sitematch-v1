@@ -1,5 +1,6 @@
 import {
   acquisitiveSignal,
+  REQUIREMENT_REACH_MILES,
   areaCoversRegion,
   assembleMatches,
   buildPills,
@@ -187,6 +188,7 @@ describe('acquisitiveSignal', () => {
     useClasses: [],
     nationwide: false,
     nearbyPlaces: [],
+    nearestPlaceMiles: null,
     otherPlaces: [],
     otherPlaceCount: 0,
     ...over,
@@ -237,11 +239,18 @@ const chFacts: TradingFacts = {
   fetchedAt: '2026-09-18T00:00:00.000Z',
 }
 
+const reqEvidence = (over: Partial<RequirementEvidence>): RequirementEvidence => ({
+  count: 1, sizeMin: null, sizeMax: null, useClasses: [], nationwide: false,
+  nearbyPlaces: [], nearestPlaceMiles: null, otherPlaces: [], otherPlaceCount: 0, ...over,
+})
+const named = { level: 'high' as const, requirements: reqEvidence({ nearbyPlaces: ['Leeds'] }), news: null, planning: null }
+const nationwide = { level: 'high' as const, requirements: reqEvidence({ nationwide: true }), news: null, planning: null }
+
 describe('scoreMatch', () => {
   it('is the sum of the parts shown as pills', () => {
     const m = baseMatch({
       useClass: { codes: ['E'], matches: true },
-      acquisitive: { level: 'high', requirements: null, news: null, planning: null },
+      acquisitive: named,
       locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 },
       nearest: { miles: 3.1, storeName: null, town: null },
     })
@@ -258,6 +267,14 @@ describe('scoreMatch', () => {
       netAssets: { status: 'filed' as const, value: 1e9 },
     }
     expect(scoreMatch(baseMatch({ tradingFacts: facts })).score).toBe(scoreMatch(baseMatch({})).score)
+  })
+  it('scores a requirement naming the site above a nationwide one, above evidence elsewhere', () => {
+    const points = (acquisitive: BrandMatch['acquisitive']) =>
+      scoreMatch(baseMatch({ acquisitive })).parts.find((p) => p.component === 'acquisitive')?.points
+    expect(points(named)).toBe(30)
+    expect(points(nationwide)).toBe(25)
+    expect(points({ level: 'medium', requirements: reqEvidence({ otherPlaces: ['London'] }), news: null, planning: null })).toBe(15)
+    expect(points({ ...named, requirements: reqEvidence({ nearbyPlaces: ['Leeds'], nationwide: true }) })).toBe(30)
   })
   it('scores a store under a mile away as a blocker (no points)', () => {
     const { parts } = scoreMatch(baseMatch({ nearest: { miles: 0.6, storeName: null, town: null } }))
@@ -300,7 +317,7 @@ describe('sortMatches', () => {
   const a = baseMatch({ brandId: 'a', name: 'Aldi', score: 90, nearest: { miles: 3, storeName: null, town: null } })
   const g = baseMatch({
     brandId: 'g', name: 'Greggs', score: 70, nearest: { miles: 20, storeName: null, town: null },
-    acquisitive: { level: 'high', requirements: null, news: null, planning: null },
+    acquisitive: named,
   })
   const f = baseMatch({ brandId: 'f', name: 'Fettle', score: 50 })
   it('orders by the chosen key', () => {
@@ -308,6 +325,24 @@ describe('sortMatches', () => {
     expect(sortMatches([f, g, a], 'acquisitive').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'gap').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'name').map((m) => m.brandId)).toEqual(['a', 'f', 'g'])
+  })
+  it('puts a brand that named the location ahead of a nationwide one on equal scores', () => {
+    const n = baseMatch({ brandId: 'n', name: 'Aardvark', score: 70, acquisitive: nationwide })
+    const p = baseMatch({ brandId: 'p', name: 'Zebra', score: 70, acquisitive: named })
+    const o = baseMatch({ brandId: 'o', name: 'Aaa', score: 70 })
+    expect(sortMatches([o, n, p], 'best').map((m) => m.brandId)).toEqual(['p', 'n', 'o'])
+    expect(sortMatches([o, n, p], 'acquisitive').map((m) => m.brandId)).toEqual(['p', 'n', 'o'])
+  })
+  it('puts the closer named target first on equal scores, region-only after measured places', () => {
+    const at = (id: string, miles: number | null) =>
+      baseMatch({
+        brandId: id, name: 'Same', score: 70,
+        acquisitive: { ...named, requirements: reqEvidence({ nearbyPlaces: ['X'], nearestPlaceMiles: miles }) },
+      })
+    const far = at('far', 20)
+    const near = at('near', 3)
+    const region = at('region', null)
+    expect(sortMatches([region, far, near], 'best').map((m) => m.brandId)).toEqual(['near', 'far', 'region'])
   })
 })
 
@@ -365,6 +400,25 @@ describe('assembleMatches', () => {
     ...over,
   })
 
+  it('lists target places within reach closest first, region matches last', () => {
+    const { matches } = assembleMatches(
+      input({
+        requirements: [
+          {
+            brandId: 'aldi', sizeMin: 8000, sizeMax: 20000, useClasses: ['E'],
+            locations: [
+              { name: 'Yorkshire', lat: null, lon: null },
+              { name: 'Wakefield', lat: 53.683, lon: -1.499 },
+              { name: 'Headingley', lat: 53.819, lon: -1.577 },
+            ],
+            contacts: [],
+          },
+        ],
+      })
+    )
+    const req = matches.find((m) => m.brandId === 'aldi')!.acquisitive!.requirements!
+    expect(req.nearbyPlaces).toEqual(['Headingley', 'Wakefield', 'Yorkshire'])
+  })
   it('returns size-fitting, use-class-compatible brands ranked by score', () => {
     const { matches, considered } = assembleMatches(input())
     expect(considered).toBe(4)
@@ -372,6 +426,7 @@ describe('assembleMatches', () => {
     const aldi = matches[0]
     expect(aldi.acquisitive?.level).toBe('high')
     expect(aldi.acquisitive?.requirements?.nearbyPlaces).toEqual(['Leeds'])
+    expect(aldi.acquisitive?.requirements?.nearestPlaceMiles).toBeLessThan(REQUIREMENT_REACH_MILES)
     expect(aldi.contacts.primary?.id).toBe('rh')
     expect(aldi.contacts.coversRegion).toBe(true)
     expect(aldi.locationType?.names).toEqual(['Owlcotes'])

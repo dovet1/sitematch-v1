@@ -137,7 +137,11 @@ export function demographicFit(site: SiteTown | null, profile: DemographicSignal
   const sizeProfile = shared.find((p) => p.signalName === SIZE_SIGNAL)
   const demographic = shared.filter((p) => p.signalName !== SIZE_SIGNAL)
   if (demographic.length === 0) return null
-  const size = sizeProfile ? scoreSignal(site, sizeProfile) : null
+  // Size is judged on the town's population against the populations of the brand's towns: its
+  // rank among towns of a similar size says nothing about how big it is.
+  const size = sizeProfile
+    ? { ...scoreSignal(site, sizeProfile), ...signalFit(site.values[SIZE_SIGNAL], sizeProfile) }
+    : null
 
   const bestPerCategory = new Map<string, DemographicSignalProfile>()
   for (const p of demographic) {
@@ -187,6 +191,35 @@ export interface DemographicReason {
   sitePosition: SignalPosition
 }
 
+// One measure the score read, for the "Why this fit" breakdown. Ranks are 0..1 among towns of a
+// similar size.
+export interface DemographicBreakdownRow {
+  signalName: string
+  direction: 'higher' | 'lower'
+  position: SignalPosition
+  siteRank: number
+  // The brand's typical (median) town.
+  median: number
+  // The brand's towns: middle half (p25..p75) and most of them (p10..p90).
+  typical: [number, number]
+  range: [number, number]
+  // 0..1: how well the site sits in the brand's spread.
+  fit: number
+  // This measure's share of the score (0..1, the shares sum to 1).
+  weight: number
+}
+
+export interface DemographicBreakdown {
+  // 0..1, null for 'any' (nothing to score against).
+  score: number | null
+  // How many of the brand's towns the profile was built from.
+  townCount: number
+  // How often the profile picked out the brand's real towns in the backtest; null for 'any'.
+  backtestAuc: number | null
+  // Every measure the score read, most distinctive first (at most MAX_FIT_SIGNALS).
+  signals: DemographicBreakdownRow[]
+}
+
 export interface DemographicMatch {
   // 'any': the brand's towns are typical for their size on every measure.
   band: DemographicFitBand | 'any'
@@ -196,7 +229,11 @@ export interface DemographicMatch {
   // The most distinctive measures, most distinctive first (at most two).
   reasons: DemographicReason[]
   size: { position: SignalPosition; sitePopulation: number; typicalMin: number; typicalMax: number } | null
+  breakdown: DemographicBreakdown
 }
+
+// What the pill's tooltip needs; the breakdown is for the card's "Why this fit" panel.
+export type DemographicSummary = Omit<DemographicMatch, 'breakdown'>
 
 export interface DemographicMatchInput {
   site: (SiteTown & { townName: string }) | null
@@ -228,22 +265,43 @@ export function demographicMatch(input: DemographicMatchInput): DemographicMatch
       }
     : null
   const base = { basis: useFascia ? ('fascia' as const) : ('brand' as const), townName: site.townName, size }
+  const townCount = (profile.find((p) => p.signalName === SIZE_SIGNAL) ?? profile[0]).buaCount
 
   // "Trades in all kinds of towns" is a description of the estate, not a prediction, so it needs
   // no backtest behind it.
-  if (fit.basis === 'broad') return { band: 'any', reasons: [], ...base }
+  if (fit.basis === 'broad') {
+    return { band: 'any', reasons: [], ...base, breakdown: { score: null, townCount, backtestAuc: null, signals: [] } }
+  }
 
   if (!score || score.broad || score.aucDemographics == null || score.aucDemographics < MIN_VALIDATED_AUC) {
     return null
   }
+  const direction = (s: DemographicSignalFit) => (s.profile.medianRank > 0.5 ? ('higher' as const) : ('lower' as const))
+  const weight = fit.signals.reduce((sum, s) => sum + s.profile.distinctiveness, 0)
   return {
     band: fit.band,
     reasons: fit.signals.slice(0, 2).map((s) => ({
       signalName: s.signalName,
-      direction: s.profile.medianRank > 0.5 ? 'higher' : 'lower',
+      direction: direction(s),
       sitePosition: s.position,
     })),
     ...base,
+    breakdown: {
+      score: fit.score,
+      townCount,
+      backtestAuc: score.aucDemographics,
+      signals: fit.signals.map((s) => ({
+        signalName: s.signalName,
+        direction: direction(s),
+        position: s.position,
+        siteRank: s.siteRank,
+        median: s.profile.medianRank,
+        typical: [s.profile.rankP25, s.profile.rankP75],
+        range: [s.profile.rankP10, s.profile.rankP90],
+        fit: s.fit,
+        weight: s.profile.distinctiveness / weight,
+      })),
+    },
   }
 }
 
@@ -278,6 +336,12 @@ function words(signalName: string) {
   )
 }
 
+// "Gail's" -> "Gail's", "Greggs" -> "Greggs'", "Waitrose" -> "Waitrose's".
+export function possessive(name: string): string {
+  if (/['’]s$/i.test(name)) return name
+  return /s$/i.test(name) ? `${name}'` : `${name}'s`
+}
+
 function joinAnd(parts: string[]): string {
   return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
 }
@@ -292,10 +356,10 @@ function formatPeople(n: number): string {
 }
 
 // Plain-English lines for the pill's tooltip.
-export function describeDemographic(d: DemographicMatch, brandName: string): string[] {
+export function describeDemographic(d: DemographicSummary, brandName: string): string[] {
   const town = d.townName
   const lines: string[] = []
-  const whose = d.basis === 'brand' ? `${brandName}'s towns (across the whole brand)` : `${brandName}'s towns`
+  const whose = d.basis === 'brand' ? `${possessive(brandName)} towns (across the whole brand)` : `${possessive(brandName)} towns`
   if (d.band === 'any') {
     lines.push(`${whose} are typical for their size on every measure, so ${town} fits as well as most.`)
   } else {
@@ -306,17 +370,167 @@ export function describeDemographic(d: DemographicMatch, brandName: string): str
     else if (matched.length === 0) lines.push(`${town} is not in line with them on ${joinAnd(missed)}.`)
     else lines.push(`${town} is in line with them on ${joinAnd(matched)}, but not on ${joinAnd(missed)}.`)
   }
-  if (d.size) {
-    const range = `${formatPeople(d.size.typicalMin)}–${formatPeople(d.size.typicalMax)}`
-    const verdict =
-      d.size.position === 'below'
-        ? 'smaller than most of their towns'
-        : d.size.position === 'above'
-          ? 'larger than most of their towns'
-          : 'a typical size for them'
-    lines.push(`Town size: ${town} (${formatPeople(d.size.sitePopulation)} people) is ${verdict}; their towns are usually ${range}.`)
-  }
+  const size = sizeLine(d)
+  if (size) lines.push(size)
   return lines
+}
+
+function sizeLine(d: DemographicSummary): string | null {
+  if (!d.size) return null
+  const range = `${formatPeople(d.size.typicalMin)}–${formatPeople(d.size.typicalMax)}`
+  const verdict =
+    d.size.position === 'below'
+      ? 'smaller than most of their towns'
+      : d.size.position === 'above'
+        ? 'larger than most of their towns'
+        : 'a typical size for them'
+  return `Town size: ${d.townName} (${formatPeople(d.size.sitePopulation)} people) is ${verdict}; their towns are usually ${range}.`
+}
+
+// ---------------------------------------------------------------------------
+// "Why this fit" — every measure the score read, what it was worth and how the town did on it
+// ---------------------------------------------------------------------------
+
+export interface DemographicExplanationRow {
+  signalName: string
+  topic: string
+  // "Their towns: more affluent than most towns their size"
+  lean: string
+  // "Guildford: more affluent than 88 in 100 towns its size"
+  site: string
+  // "Their typical town: more affluent than 81 in 100"
+  theirs: string
+  verdict: string
+  inLine: boolean
+  points: number
+  maxPoints: number
+  // For the bar: all 0..1, left to right from "lower" to "higher".
+  siteRank: number
+  typical: [number, number]
+  range: [number, number]
+  // The bar's ends: "less affluent" .. "more affluent".
+  ends: [string, string]
+}
+
+export interface DemographicExplanation {
+  heading: string
+  // One line: does the town look like theirs, and the score.
+  summary: string
+  // Why these measures, why towns are compared by size, and why it matters. Empty for 'any'.
+  why: { title: string; text: string }[]
+  rows: DemographicExplanationRow[]
+  size: string | null
+  basis: string
+}
+
+const BAND_HEADING: Record<DemographicMatch['band'], string> = {
+  good: 'Good fit',
+  partial: 'Partial fit',
+  weak: 'Weak fit',
+  any: 'Any town',
+}
+
+const BAND_SUMMARY: Record<DemographicFitBand, (town: string, brand: string) => string> = {
+  good: (town, brand) => `${town} looks like the kind of town ${brand} opens in.`,
+  partial: (town, brand) => `${town} looks partly like the kind of town ${brand} opens in.`,
+  weak: (town, brand) => `${town} does not look much like the kind of town ${brand} opens in.`,
+}
+
+const pct = (x: number) => Math.round(x * 100)
+
+// Whole points out of 100 for each measure's share, by largest remainder so they add up to 100.
+export function sharePoints(weights: number[]): number[] {
+  const raw = weights.map((w) => w * 100)
+  const out = raw.map(Math.floor)
+  const order = raw.map((r, i) => ({ i, rem: r - Math.floor(r) })).sort((a, z) => z.rem - a.rem || a.i - z.i)
+  for (let k = 0, left = 100 - out.reduce((s, x) => s + x, 0); k < left && k < order.length; k++) out[order[k].i]++
+  return out
+}
+
+// Rows are worded in the direction the brand leans, so the numbers count the same way for the
+// town and for theirs: "less rural than 95 in 100", never "higher than 5%".
+function explainRow(s: DemographicBreakdownRow, town: string, maxPoints: number): DemographicExplanationRow {
+  const w = words(s.signalName)
+  const lean = w[s.direction]
+  const outOf100 = (rank: number) => (s.direction === 'higher' ? pct(rank) : 100 - pct(rank))
+  const away = s.position === 'low' || s.position === 'below' ? w.lower : w.higher
+  const verdict =
+    s.position === 'typical'
+      ? 'Matches their towns'
+      : s.position === 'low' || s.position === 'high'
+        ? `Close: slightly ${away} than most of their towns`
+        : `Does not match: ${away} than 9 in 10 of their towns`
+  return {
+    signalName: s.signalName,
+    topic: w.topic.charAt(0).toUpperCase() + w.topic.slice(1),
+    lean: `Their towns: ${lean} than most towns their size`,
+    site: `${town}: ${lean} than ${outOf100(s.siteRank)} in 100 towns its size`,
+    theirs: `Their typical town: ${lean} than ${outOf100(s.median)} in 100`,
+    verdict,
+    inLine: inLine(s.position),
+    points: Math.round(s.fit * maxPoints),
+    maxPoints,
+    siteRank: s.siteRank,
+    typical: s.typical,
+    range: s.range,
+    ends: [w.lower, w.higher],
+  }
+}
+
+export function explainDemographic(d: DemographicMatch, brandName: string): DemographicExplanation {
+  const town = d.townName
+  const b = d.breakdown
+  const theirs = possessive(brandName)
+  const towns = `${b.townCount} of ${theirs} towns${d.basis === 'brand' ? ' (across the whole brand)' : ''}`
+  const basis = `Built from ${towns}.`
+
+  if (d.band === 'any' || b.score == null) {
+    return {
+      heading: BAND_HEADING.any,
+      summary: `${theirs} towns are ordinary for their size on every measure we read, so there is no pattern for ${town} to match or miss. It fits as well as most towns.`,
+      why: [],
+      rows: [],
+      size: sizeLine(d),
+      basis,
+    }
+  }
+
+  const max = sharePoints(b.signals.map((s) => s.weight))
+  const rows = b.signals.map((s, i) => explainRow(s, town, max[i]))
+  const n = rows.length
+  const leans = joinAnd(b.signals.map((s) => words(s.signalName)[s.direction]))
+  const why = [
+    {
+      title: n === 1 ? 'Why this measure' : `Why these ${n} measures`,
+      text:
+        `We looked at ${towns} and compared each with towns of the same size. ` +
+        `${n === 1 ? 'This is the way' : `These are the ${n} ways`} their towns stand out most: ${leans}. ` +
+        `That is the pattern of where ${brandName} chooses to open.`,
+    },
+    {
+      title: 'Why it matters',
+      text:
+        `A site in a town that fits the pattern looks like the places ${brandName} already picks, so it is more likely to suit them.` +
+        (b.backtestAuc == null
+          ? ''
+          : ` We checked: shown one of their real towns and a similar-sized town they are not in, the pattern picked the real one ${pct(b.backtestAuc)}% of the time (guessing would get 50%).`),
+    },
+    {
+      title: 'Why compare towns of the same size',
+      text: 'Bigger towns have more of almost everything, so each town is compared only with towns its own size. That way this is about the kind of town, not how big it is.',
+    },
+  ]
+  return {
+    heading: BAND_HEADING[d.band],
+    summary:
+      `${BAND_SUMMARY[d.band](town, brandName)} It scores ${pct(b.score)} out of 100 ` +
+      `(${pct(GOOD_FIT)}+ is good, ${pct(PARTIAL_FIT)}–${pct(GOOD_FIT) - 1} partial, under ${pct(PARTIAL_FIT)} weak). ` +
+      `The measures that set their towns apart most are worth the most points. This is not yet counted in the overall match score.`,
+    why,
+    rows,
+    size: sizeLine(d),
+    basis,
+  }
 }
 
 // ---------------------------------------------------------------------------

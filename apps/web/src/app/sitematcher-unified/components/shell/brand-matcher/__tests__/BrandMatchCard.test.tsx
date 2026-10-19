@@ -36,7 +36,7 @@ const rich = withScore({
     level: 'high',
     requirements: {
       count: 12, sizeMin: 8000, sizeMax: 20000, useClasses: ['E'], nationwide: false,
-      nearbyPlaces: ['Leeds'], otherPlaces: [], otherPlaceCount: 0,
+      nearbyPlaces: ['Leeds'], nearestPlaceMiles: 2, otherPlaces: [], otherPlaceCount: 0,
     },
     news: null,
     planning: { count: 5 },

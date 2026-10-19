@@ -1,6 +1,8 @@
 import {
   accountsTypeLabel,
   factsRowToTradingFacts,
+  figuresRefreshMessage,
+  formatPounds,
   normaliseCompanyNumber,
   profileToFactsRow,
   rankCandidates,
@@ -131,5 +133,47 @@ describe('suggestions', () => {
     expect(scoreCandidate('B&M', item('B & M RETAIL LIMITED'))).toBeGreaterThan(
       scoreCandidate('B&M', item('UK CONTRACTS B&M LTD'))
     )
+  })
+})
+
+describe('figuresRefreshMessage', () => {
+  const previous = {
+    turnover: 8_986_000, turnover_status: 'extracted' as const, turnover_page: 11,
+    net_assets: null, net_assets_status: 'unread' as const, net_assets_page: null,
+  }
+
+  it('says what was read, from where, and what it replaced', () => {
+    expect(
+      figuresRefreshMessage(
+        {
+          kind: 'read',
+          figures: {
+            turnover: 9_000_000, turnover_status: 'extracted', turnover_page: 11,
+            net_assets: -3_461_000, net_assets_status: 'filed',
+          },
+        },
+        previous,
+        '2024-12-29'
+      )
+    ).toEqual([
+      'Turnover: £9,000,000 from scanned accounts, PDF p. 11 (was £8,986,000).',
+      'Net assets: -£3,461,000 from the electronic accounts.',
+    ])
+  })
+  it('says when a figure was not found and what was kept', () => {
+    expect(figuresRefreshMessage({ kind: 'read', figures: {} }, previous, '2024-12-29')).toEqual([
+      'Turnover: not found in the accounts to 2024-12-29; kept £8,986,000.',
+      'Net assets: not found in the accounts to 2024-12-29; kept not read.',
+    ])
+  })
+  it('reports failures and unreadable filings without implying figures changed', () => {
+    expect(figuresRefreshMessage({ kind: 'failed', error: 'timeout' }, null, '2024-12-29')[0]).toBe(
+      'Reading the accounts to 2024-12-29 failed: timeout. Figures unchanged; try again.'
+    )
+    expect(figuresRefreshMessage({ kind: 'unreadable' }, null, null)[0]).toMatch(/^Could not read the latest accounts/)
+  })
+  it('formats exact pounds', () => {
+    expect(formatPounds(-3_461_000)).toBe('-£3,461,000')
+    expect(formatPounds(2)).toBe('£2')
   })
 })

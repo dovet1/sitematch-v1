@@ -8,19 +8,24 @@ import {
 import {
   CompanyNotFoundError,
   confirmBrandCompany,
-  refreshCompanyFacts,
+  refreshCompanyFactsWithOutcome,
   suggestCompaniesForBrand,
   unlinkBrandCompany,
 } from '@/lib/companies-house/service'
+import { figuresRefreshMessage } from '@/lib/companies-house/facts'
 
 export const dynamic = 'force-dynamic'
+// Refresh reads the accounts again; a scanned filing goes through a model and a page check.
+export const maxDuration = 120
 
 /**
  * A brand's Companies House link — the admin side of Brand Matcher's trading facts.
  *
  *   GET     link + cached facts + stored suggestions
  *   POST    { action: 'suggest' }  re-run the CH search for candidates
- *           { action: 'refresh' }  re-fetch the linked company's profile
+ *           { action: 'refresh' }  re-fetch the linked company's profile and read its latest
+ *                                  accounts again; `refreshMessage` in the response says what
+ *                                  happened to turnover and net assets
  *   PUT     { companyNumber }      confirm the brand's UK trading company
  *   DELETE                         remove the link (facts row is kept; other brands may share it)
  *
@@ -97,7 +102,15 @@ export async function POST(request: NextRequest, { params }: Params) {
         .maybeSingle()
       if (error) throw new Error(`link: ${error.message}`)
       if (!link) return NextResponse.json({ error: 'Brand has no linked company' }, { status: 400 })
-      await refreshCompanyFacts(db, (link as { company_number: string }).company_number)
+      const { facts, previous, outcome } = await refreshCompanyFactsWithOutcome(
+        db,
+        (link as { company_number: string }).company_number,
+        { rereadFigures: true }
+      )
+      return NextResponse.json({
+        ...(await loadState(id)),
+        refreshMessage: figuresRefreshMessage(outcome, previous, facts.last_accounts_made_up_to),
+      })
     } else {
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }

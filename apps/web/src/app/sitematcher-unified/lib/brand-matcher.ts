@@ -36,6 +36,8 @@ export const METERS_PER_MILE = 1609.344
 export const LOCATION_TYPE_RADIUS_MILES = 30
 // A requirement target within this distance counts as covering the site.
 export const REQUIREMENT_REACH_MILES = 25
+// Region-only requirement matches have no distance; they sort after every measured place.
+const UNMEASURED = 1e9
 // A store closer than this is a likely blocker (handoff: red NEAREST pill).
 export const BLOCKER_MILES = 1
 // Size tolerance outside a stated/observed range before a brand stops being a match.
@@ -338,6 +340,25 @@ export const SCORE_MAX: Record<ScorePart['component'], number> = {
 
 type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'locationType' | 'nearest'>
 
+// How directly a brand's requirements point at the site: 2 = names a place (or region) within
+// reach, 1 = nationwide (no locations listed), 0 = neither. A brand that asked for this area
+// outranks one that merely didn't rule it out, all else equal.
+export function requirementReach(m: Pick<BrandMatch, 'acquisitive'>): 0 | 1 | 2 {
+  const r = m.acquisitive?.requirements
+  if (!r) return 0
+  if (r.nearbyPlaces.length > 0) return 2
+  return r.nationwide ? 1 : 0
+}
+
+// Among brands that named a place within reach, the closer target first; region-only last.
+function nearestTarget(m: Pick<BrandMatch, 'acquisitive'>): number {
+  return requirementReach(m) === 2 ? m.acquisitive!.requirements!.nearestPlaceMiles ?? UNMEASURED : 2 * UNMEASURED
+}
+const byReach = (a: BrandMatch, b: BrandMatch) =>
+  requirementReach(b) - requirementReach(a) || nearestTarget(a) - nearestTarget(b)
+
+const ACQUISITIVE_POINTS = { named: 30, nationwide: 25, other: 15 } as const
+
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -345,7 +366,13 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
 
   add('size', m.size.state === 'fits' ? 30 : m.size.state === 'lower_end' || m.size.state === 'upper_end' ? 20 : 10)
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
-  if (m.acquisitive) add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
+  if (m.acquisitive) {
+    const reach = requirementReach(m)
+    add(
+      'acquisitive',
+      reach === 2 ? ACQUISITIVE_POINTS.named : reach === 1 ? ACQUISITIVE_POINTS.nationwide : ACQUISITIVE_POINTS.other
+    )
+  }
   if (m.locationType) add('locationType', m.locationType.count > 0 ? Math.min(15, 5 + m.locationType.count) : 0)
   if (m.nearest) {
     const mi = m.nearest.miles
@@ -476,7 +503,9 @@ export function sortMatches(matches: BrandMatch[], sort: BrandMatcherSort): Bran
       return list.sort(byName)
     case 'acquisitive': {
       const rank = (m: BrandMatch) => (m.acquisitive?.level === 'high' ? 2 : m.acquisitive ? 1 : 0)
-      return list.sort((a, b) => rank(b) - rank(a) || b.score - a.score || byName(a, b))
+      return list.sort(
+        (a, b) => rank(b) - rank(a) || byReach(a, b) || b.score - a.score || byName(a, b)
+      )
     }
     case 'gap': {
       // Furthest nearest-store first; brands with no located store go last.
@@ -485,7 +514,7 @@ export function sortMatches(matches: BrandMatch[], sort: BrandMatcherSort): Bran
     }
     case 'best':
     default:
-      return list.sort((a, b) => b.score - a.score || byName(a, b))
+      return list.sort((a, b) => b.score - a.score || byReach(a, b) || byName(a, b))
   }
 }
 
@@ -606,26 +635,31 @@ function requirementEvidence(
   const maxs = reqs.map((r) => r.sizeMax).filter((n): n is number => n != null)
   const useClasses = Array.from(new Set(reqs.flatMap((r) => r.useClasses)))
   const nationwide = reqs.some((r) => r.locations.length === 0)
-  const nearby = new Set<string>()
+  // Closest distance per nearby place.
+  const nearby = new Map<string, number>()
   const other = new Set<string>()
   for (const r of reqs) {
     for (const l of r.locations) {
-      const near =
-        (l.lat != null && l.lon != null &&
-          milesBetween(site.lat, site.lon, l.lat, l.lon) <= REQUIREMENT_REACH_MILES) ||
-        areaCoversRegion(l.name, key)
-      ;(near ? nearby : other).add(shortPlace(l.name))
+      const miles = l.lat != null && l.lon != null ? milesBetween(site.lat, site.lon, l.lat, l.lon) : null
+      const name = shortPlace(l.name)
+      const dist =
+        miles != null && miles <= REQUIREMENT_REACH_MILES ? miles : areaCoversRegion(l.name, key) ? UNMEASURED : null
+      if (dist == null) other.add(name)
+      else nearby.set(name, Math.min(dist, nearby.get(name) ?? UNMEASURED))
     }
   }
-  for (const n of Array.from(nearby)) other.delete(n)
+  for (const n of Array.from(nearby.keys())) other.delete(n)
   const otherList = Array.from(other)
+  const nearbySorted = Array.from(nearby.entries()).sort((a, b) => a[1] - b[1])
+  const closest = nearbySorted[0]?.[1]
   return {
     count: reqs.length,
     sizeMin: mins.length ? Math.min(...mins) : null,
     sizeMax: maxs.length ? Math.max(...maxs) : null,
     useClasses,
     nationwide,
-    nearbyPlaces: Array.from(nearby).slice(0, 4),
+    nearbyPlaces: nearbySorted.slice(0, 4).map(([name]) => name),
+    nearestPlaceMiles: closest != null && closest < UNMEASURED ? Math.round(closest * 10) / 10 : null,
     otherPlaces: otherList.slice(0, 3),
     otherPlaceCount: otherList.length,
   }

@@ -12,21 +12,46 @@ export const TONE: Record<SignalTone, { label: string; bg: string; border: strin
   neutral: { label: 'text-[#5B6472]', bg: 'bg-[#F5F6FA]', border: 'border-[#E6E8EF]' },
 }
 
-export function SignalPill({ pill }: { pill: Pill }) {
+// With `onClick` the pill is a button that opens its explanation ("Why?" in the corner).
+export function SignalPill({ pill, onClick }: { pill: Pill; onClick?: () => void }) {
   const t = TONE[pill.tone]
-  return (
-    <div
-      title={pill.title}
-      className={`min-w-0 rounded-[10px] border px-3 py-2 ${t.bg} ${t.border}`}
-    >
-      <div className={`truncate text-[9.5px] font-bold uppercase tracking-[0.08em] ${t.label}`}>
-        {pill.label}
-      </div>
+  const body = (
+    <>
+      {onClick ? (
+        <div className={`flex items-center justify-between gap-1 text-[9.5px] font-bold uppercase tracking-[0.08em] ${t.label}`}>
+          <span className="truncate">{pill.label}</span>
+          <span className="flex-shrink-0 normal-case tracking-normal underline">Why?</span>
+        </div>
+      ) : (
+        <div className={`truncate text-[9.5px] font-bold uppercase tracking-[0.08em] ${t.label}`}>{pill.label}</div>
+      )}
       <div className="mt-0.5 truncate text-[12.5px] font-medium text-sm-ink">
         {pill.value}
         {pill.mark && <span className="ml-1">{pill.mark}</span>}
       </div>
-    </div>
+    </>
+  )
+  const box = `block w-full min-w-0 rounded-[10px] border px-3 py-2 text-left ${t.bg} ${t.border}`
+  if (!onClick) {
+    return (
+      <div title={pill.title} className={box}>
+        {body}
+      </div>
+    )
+  }
+  return (
+    <button
+      type="button"
+      title={pill.title}
+      aria-label={`${pill.label}: ${pill.value}. Why this fit?`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className={`${box} transition-shadow hover:shadow-[0_2px_8px_-4px_rgba(20,10,40,0.35)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet`}
+    >
+      {body}
+    </button>
   )
 }
 

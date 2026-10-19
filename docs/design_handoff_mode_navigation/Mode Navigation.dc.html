@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#EEECF6;font-family:'Inter',sans-serif}
+a{color:#7033FF;text-decoration:none}
+a:hover{color:#5421CC}
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:24px;padding:60px 60px 0;font-family:'Inter',sans-serif;color:#171419">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:980px">
+    <div style="font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.14em;font-size:12px;color:#7033FF">MODE NAVIGATION · TURN 2</div>
+    <div style="font-weight:700;font-size:36px;line-height:1.1;letter-spacing:-.02em">Combined: chooser on login, labelled rail day to day</div>
+    <div style="font-size:16.5px;color:#4A4451;line-height:1.6;text-wrap:pretty">Clickable. The chooser (<a href="#1c">1c</a>) shows on every login until “Don't show this again” is ticked. Pick a mode or skip to land in the app with the <a href="#1b">1b</a> rail; hover any icon for its card. Use “Simulate next login” to test the repeat behaviour.</div>
+  </div>
+  <div id="2a" data-screen-label="2a Combined flow" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="background:#171419;color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">2a</span>
+      <span style="font-weight:600;color:#4A4451">1c on login → 1b in app</span>
+      <span onClick="{{ simulateLogin }}" style="cursor:pointer;border:1.5px solid #E3DEFA;background:#fff;color:#5421CC;font-weight:700;font-size:13px;padding:7px 13px;border-radius:10px">Simulate next login</span>
+      <span style="font-size:13px;color:#7C7588">{{ loginNote }}</span>
+    </div>
+    <div style="position:relative;width:1440px;height:860px;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(23,20,25,.4);background:#fff">
+      <div style="position:absolute;top:0;left:0;right:0;height:62px;z-index:30;background:#fff;border-bottom:1px solid #EDEBE7;display:flex;align-items:center;padding:0 18px;gap:16px">
+        <div style="display:flex;align-items:center;gap:9px;width:230px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 8.5 12 3l8 5.5v7L12 21l-8-5.5v-7Z" stroke="#7033FF" stroke-width="2.4" stroke-linejoin="round"></path><path d="M8.5 12 12 9.2l3.5 2.8-3.5 2.8L8.5 12Z" fill="#7033FF"></path></svg><span style="font-weight:700;font-size:19px;color:#7033FF;letter-spacing:-.02em">SiteMatcher</span></div>
+        <div style="flex:1;display:flex;justify-content:center"><div style="width:460px;height:42px;background:#F5F4F2;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 18px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A857D" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1;font-size:14.5px;color:#8A857D">Search a town, postcode or address…</span><span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A8A29A">⌘K</span></div></div>
+        <div style="width:230px;display:flex;align-items:center;justify-content:flex-end;gap:12px"><span style="display:inline-flex;align-items:center;gap:8px;background:#7033FF;color:#fff;font-weight:700;font-size:14.5px;padding:10px 17px;border-radius:12px">Export</span><div style="width:34px;height:34px;border-radius:50%;border:1.5px solid #7033FF;color:#7033FF;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center">D</div></div>
+      </div>
+      <!-- 1b rail -->
+      <div onMouseLeave="{{ leave }}" style="position:absolute;top:62px;left:0;bottom:0;width:78px;z-index:26;background:#fff;border-right:1px solid #EDEBE7;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px">
+        <div onMouseEnter="{{ r0.enter }}" onClick="{{ r0.click }}" style="cursor:pointer;width:66px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:12px;background:{{ r0.bg }};color:{{ r0.fg }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg><span style="font-size:10.5px;font-weight:600">Assess</span></div>
+        <div onMouseEnter="{{ r1.enter }}" onClick="{{ r1.click }}" style="cursor:pointer;width:66px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:12px;background:{{ r1.bg }};color:{{ r1.fg }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="font-size:10.5px;font-weight:600">Gaps</span></div>
+        <div onMouseEnter="{{ r2.enter }}" onClick="{{ r2.click }}" style="cursor:pointer;width:66px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:12px;background:{{ r2.bg }};color:{{ r2.fg }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.2-.7L18 8.5 15.5 6 4.7 16.8 4 20Z"></path><path d="M14 7.5l2.5 2.5"></path></svg><span style="font-size:10.5px;font-weight:600">Sketch</span></div>
+        <div onMouseEnter="{{ r3.enter }}" onClick="{{ r3.click }}" style="cursor:pointer;width:66px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:12px;background:{{ r3.bg }};color:{{ r3.fg }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect><path d="M9 8.5h6M9 12.5h6M9 16.5h3"></path></svg><span style="font-size:10.5px;font-weight:600">Planning</span></div>
+        <div onMouseEnter="{{ r4.enter }}" onClick="{{ r4.click }}" style="cursor:pointer;width:66px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:12px;background:{{ r4.bg }};color:{{ r4.fg }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"></path><path d="M4 9v11h16V9"></path><path d="M9.5 20v-5.5h5V20"></path></svg><span style="font-size:10.5px;font-weight:600">Match</span></div>
+        <div onMouseEnter="{{ r5.enter }}" onClick="{{ r5.click }}" style="cursor:pointer;width:66px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:12px;background:{{ r5.bg }};color:{{ r5.fg }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"></path><path d="M3 13l9 5 9-5"></path></svg><span style="font-size:10.5px;font-weight:600">Directory</span></div>
+        <div style="flex:1"></div>
+        <div onClick="{{ openChooser }}" style="cursor:pointer;width:36px;height:36px;border-radius:50%;border:1.5px solid #7033FF;color:#7033FF;font-weight:700;display:flex;align-items:center;justify-content:center">?</div>
+      </div>
+      <!-- control panel -->
+      <div style="position:absolute;top:62px;left:78px;bottom:0;width:300px;z-index:20;background:#fff;border-right:1px solid #EDEBE7;padding:20px">
+        <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;font-size:11px;color:#7033FF">{{ panel.eyebrow }}</div>
+        <div style="font-size:13.5px;color:#57534E;line-height:1.5;margin-top:10px">{{ panel.desc }}</div>
+      </div>
+      <!-- hover card -->
+      <sc-if value="{{ showCard }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:{{ card.top }}px;left:90px;z-index:29;width:320px;background:#fff;border-radius:16px;box-shadow:0 24px 60px -18px rgba(23,20,25,.45),0 0 0 1px #EDEBE7;overflow:hidden;pointer-events:none">
+          <div style="height:110px;background:repeating-linear-gradient(45deg,#F3F1EC 0 10px,#EEEBE5 10px 20px);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A857D">preview · {{ card.name }}</div>
+          <div style="padding:16px 18px 18px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:700;font-size:16px">{{ card.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#A8A29A">{{ card.key }}</span></div>
+            <div style="font-size:13.5px;color:#4A4451;line-height:1.5;margin-top:6px">{{ card.desc }}</div>
+          </div>
+        </div>
+      </sc-if>
+      <div style="position:absolute;top:62px;left:378px;right:0;bottom:0;background:radial-gradient(60% 70% at 42% 52%,rgba(66,96,58,.75),transparent 70%),radial-gradient(40% 50% at 20% 60%,rgba(60,88,52,.6),transparent 70%),#0E1724"></div>
+      <!-- 1c chooser -->
+      <sc-if value="{{ chooser }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;top:62px;left:0;right:0;bottom:0;z-index:40;background:rgba(14,12,22,.6)"></div>
+        <div style="position:absolute;left:50%;top:calc(50% + 31px);transform:translate(-50%,-50%);width:1040px;z-index:41;background:#fff;border-radius:22px;box-shadow:0 40px 100px -30px rgba(0,0,0,.6);padding:34px 36px 28px">
+          <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;font-size:11px;color:#7033FF">WELCOME TO SITEMATCHER</div>
+          <div style="font-weight:700;font-size:30px;letter-spacing:-.02em;margin-top:8px">What do you want to do today?</div>
+          <div style="font-size:15px;color:#57534E;margin-top:6px">Pick a starting point. You can switch any time from the rail on the left.</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px">
+            <div onClick="{{ r0.pick }}" style="cursor:pointer;border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#7033FF;background:#F7F4FF">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></div>
+              <div style="font-weight:700;font-size:16px">Assess an area</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Click the map to see brands present and missing, catchment demographics and planning nearby.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Assess area →</div>
+            </div>
+            <div onClick="{{ r1.pick }}" style="cursor:pointer;border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#7033FF;background:#F7F4FF">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Find gaps for a brand</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Identify towns and retail centres where a brand trades, or doesn't yet.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Find gaps →</div>
+            </div>
+            <div onClick="{{ r2.pick }}" style="cursor:pointer;border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#7033FF;background:#F7F4FF">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.2-.7L18 8.5 15.5 6 4.7 16.8 4 20Z"></path><path d="M14 7.5l2.5 2.5"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Sketch a site</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Draw a site layout on the map, including parking.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">SiteSketcher →</div>
+            </div>
+            <div onClick="{{ r3.pick }}" style="cursor:pointer;border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#7033FF;background:#F7F4FF">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect><path d="M9 8.5h6M9 12.5h6M9 16.5h3"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Watch planning</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">See planning alerts across the whole UK and in your patch.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Planning monitor →</div>
+            </div>
+            <div onClick="{{ r4.pick }}" style="cursor:pointer;border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#7033FF;background:#F7F4FF">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"></path><path d="M4 9v11h16V9"></path><path d="M9.5 20v-5.5h5V20"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Match brands to a site</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">See which brands might fit a given site, and who to call at each.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Brand matcher →</div>
+            </div>
+            <div onClick="{{ r5.pick }}" style="cursor:pointer;border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#7033FF;background:#F7F4FF">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"></path><path d="M3 13l9 5 9-5"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Look up a brand</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Browse brands, their contacts, store estates, requirements and agents.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Directory →</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:22px">
+            <div onClick="{{ toggleDontShow }}" style="cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;color:#57534E"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid {{ cb.border }};background:{{ cb.bg }};color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center">{{ cb.tick }}</span>Don't show this again</div>
+            <span onClick="{{ skip }}" style="cursor:pointer;font-weight:600;font-size:13.5px;color:#7C7588">Skip, just show me the map</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:40px;padding:60px;font-family:'Inter',sans-serif;color:#171419">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:980px">
+    <div style="font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.14em;font-size:12px;color:#7033FF">MODE NAVIGATION · TURN 1</div>
+    <div style="font-weight:700;font-size:36px;line-height:1.1;letter-spacing:-.02em">Making the six modes legible on first landing</div>
+    <div style="font-size:16.5px;color:#4A4451;line-height:1.6;text-wrap:pretty">Today the rail is six unlabelled icons. Three ways to fix it: <a href="#1a">1a</a> a labelled rail that collapses once learned, <a href="#1b">1b</a> short labels under icons plus a hover card, <a href="#1c">1c</a> a one-time “What do you want to do?” chooser over the map. They combine well: 1c for first visit, then 1a or 1b day to day.</div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+
+    <!-- ══════ 1a LABELLED RAIL ══════ -->
+    <div id="1a" data-screen-label="1a Labelled rail" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="background:#171419;color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1a</span>
+        <span style="font-weight:600;color:#4A4451">Labelled rail — name + one-line purpose, collapses to icons</span>
+      </div>
+      <div style="position:relative;width:1440px;height:860px;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(23,20,25,.4);background:#fff">
+        <!-- topbar -->
+        <div style="position:absolute;top:0;left:0;right:0;height:62px;z-index:30;background:#fff;border-bottom:1px solid #EDEBE7;display:flex;align-items:center;padding:0 18px;gap:16px">
+          <div style="display:flex;align-items:center;gap:9px;width:230px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 8.5 12 3l8 5.5v7L12 21l-8-5.5v-7Z" stroke="#7033FF" stroke-width="2.4" stroke-linejoin="round"></path><path d="M8.5 12 12 9.2l3.5 2.8-3.5 2.8L8.5 12Z" fill="#7033FF"></path></svg><span style="font-weight:700;font-size:19px;color:#7033FF;letter-spacing:-.02em">SiteMatcher</span></div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="width:460px;height:42px;background:#F5F4F2;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 18px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A857D" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1;font-size:14.5px;color:#8A857D">Search a town, postcode or address…</span><span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A8A29A">⌘K</span></div></div>
+          <div style="width:230px;display:flex;align-items:center;justify-content:flex-end;gap:12px"><span style="display:inline-flex;align-items:center;gap:8px;background:#7033FF;color:#fff;font-weight:700;font-size:14.5px;padding:10px 17px;border-radius:12px">Export</span><div style="width:34px;height:34px;border-radius:50%;border:1.5px solid #7033FF;color:#7033FF;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center">D</div></div>
+        </div>
+        <!-- labelled rail -->
+        <div style="position:absolute;top:62px;left:0;bottom:0;width:236px;z-index:26;background:#fff;border-right:1px solid #EDEBE7;display:flex;flex-direction:column;padding:14px 10px;gap:4px">
+          <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;font-size:10.5px;color:#8A857D;padding:4px 10px 8px">MODES</div>
+          <div style="display:flex;gap:11px;padding:10px;border-radius:12px;background:#171419;color:#fff">
+            <svg style="flex:0 0 auto;margin-top:1px" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+            <div><div style="font-weight:700;font-size:14px">Assess area</div><div style="font-size:12px;color:#C9C4D4;line-height:1.4;margin-top:2px">Brands, demographics &amp; planning around a point</div></div>
+          </div>
+          <div style="display:flex;gap:11px;padding:10px;border-radius:12px;color:#171419">
+            <svg style="flex:0 0 auto;margin-top:1px;color:#57534E" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <div><div style="font-weight:700;font-size:14px">Find gaps</div><div style="font-size:12px;color:#7C7588;line-height:1.4;margin-top:2px">Towns where a brand is, or isn't</div></div>
+          </div>
+          <div style="display:flex;gap:11px;padding:10px;border-radius:12px;color:#171419">
+            <svg style="flex:0 0 auto;margin-top:1px;color:#57534E" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.2-.7L18 8.5 15.5 6 4.7 16.8 4 20Z"></path><path d="M14 7.5l2.5 2.5"></path></svg>
+            <div><div style="font-weight:700;font-size:14px">SiteSketcher</div><div style="font-size:12px;color:#7C7588;line-height:1.4;margin-top:2px">Sketch a site and parking on the map</div></div>
+          </div>
+          <div style="display:flex;gap:11px;padding:10px;border-radius:12px;color:#171419">
+            <svg style="flex:0 0 auto;margin-top:1px;color:#57534E" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect><path d="M9 8.5h6M9 12.5h6M9 16.5h3"></path></svg>
+            <div><div style="font-weight:700;font-size:14px">Planning monitor</div><div style="font-size:12px;color:#7C7588;line-height:1.4;margin-top:2px">Planning alerts, UK-wide and in your patch</div></div>
+          </div>
+          <div style="display:flex;gap:11px;padding:10px;border-radius:12px;color:#171419">
+            <svg style="flex:0 0 auto;margin-top:1px;color:#57534E" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"></path><path d="M4 9v11h16V9"></path><path d="M9.5 20v-5.5h5V20"></path></svg>
+            <div><div style="font-weight:700;font-size:14px">Brand matcher</div><div style="font-size:12px;color:#7C7588;line-height:1.4;margin-top:2px">Brands that fit a site, and who to call</div></div>
+          </div>
+          <div style="display:flex;gap:11px;padding:10px;border-radius:12px;color:#171419">
+            <svg style="flex:0 0 auto;margin-top:1px;color:#57534E" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"></path><path d="M3 13l9 5 9-5"></path></svg>
+            <div><div style="font-weight:700;font-size:14px">Directory</div><div style="font-size:12px;color:#7C7588;line-height:1.4;margin-top:2px">Brands, contacts, estates, requirements &amp; agents</div></div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:9px;padding:10px;color:#7C7588;font-size:12.5px;font-weight:600;border-top:1px solid #EDEBE7"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><path d="M9 4v16"></path></svg>Collapse to icons</div>
+        </div>
+        <!-- control panel -->
+        <div style="position:absolute;top:62px;left:236px;bottom:0;width:300px;z-index:24;background:#fff;border-right:1px solid #EDEBE7;padding:20px">
+          <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;font-size:11px;color:#7033FF">ASSESS AREA</div>
+          <div style="font-weight:700;font-size:19px;margin-top:8px;letter-spacing:-.01em">Drop a point</div>
+          <div style="font-size:13px;color:#57534E;line-height:1.5;margin-top:6px">Click anywhere on the map to assess what's trading nearby and what's missing.</div>
+          <div style="height:1px;background:#EDEBE7;margin:18px 0"></div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:12px"><span style="width:22px;height:22px;border-radius:50%;background:#F1ECFF;color:#7033FF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto">1</span><div><div style="font-weight:600;font-size:13.5px">Drop a pin</div><div style="font-size:13px;color:#7C7588;margin-top:2px">Click any point on the map</div></div></div>
+            <div style="display:flex;gap:12px"><span style="width:22px;height:22px;border-radius:50%;background:#F1ECFF;color:#7033FF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto">2</span><div><div style="font-weight:600;font-size:13.5px">Set the catchment</div><div style="font-size:13px;color:#7C7588;margin-top:2px">Radius, drive time or walk time</div></div></div>
+            <div style="display:flex;gap:12px"><span style="width:22px;height:22px;border-radius:50%;background:#F1ECFF;color:#7033FF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto">3</span><div><div style="font-weight:600;font-size:13.5px">Read the landscape</div><div style="font-size:13px;color:#7C7588;margin-top:2px">Brands present + brands missing</div></div></div>
+          </div>
+        </div>
+        <!-- map -->
+        <div style="position:absolute;top:62px;left:536px;right:0;bottom:0;background:radial-gradient(60% 70% at 42% 52%,rgba(66,96,58,.75),transparent 70%),radial-gradient(40% 50% at 20% 60%,rgba(60,88,52,.6),transparent 70%),#0E1724"></div>
+        <!-- annotation -->
+        <div style="position:absolute;left:560px;bottom:24px;z-index:28;max-width:420px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5);font-size:13px;line-height:1.5;color:#4A4451"><b style="color:#171419">Default expanded for new accounts.</b> After a user has opened 3+ modes, the rail auto-collapses to icons and remembers their preference.</div>
+      </div>
+    </div>
+
+    <!-- ══════ 1b LABELS + HOVER CARD ══════ -->
+    <div id="1b" data-screen-label="1b Labels + hover card" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="background:#171419;color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1b</span>
+        <span style="font-weight:600;color:#4A4451">Short labels under icons + hover card explaining each mode</span>
+      </div>
+      <div style="position:relative;width:1440px;height:860px;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(23,20,25,.4);background:#fff">
+        <div style="position:absolute;top:0;left:0;right:0;height:62px;z-index:30;background:#fff;border-bottom:1px solid #EDEBE7;display:flex;align-items:center;padding:0 18px;gap:16px">
+          <div style="display:flex;align-items:center;gap:9px;width:230px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 8.5 12 3l8 5.5v7L12 21l-8-5.5v-7Z" stroke="#7033FF" stroke-width="2.4" stroke-linejoin="round"></path><path d="M8.5 12 12 9.2l3.5 2.8-3.5 2.8L8.5 12Z" fill="#7033FF"></path></svg><span style="font-weight:700;font-size:19px;color:#7033FF;letter-spacing:-.02em">SiteMatcher</span></div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="width:460px;height:42px;background:#F5F4F2;border-radius:999px;display:flex;align-items:center;gap:10px;padding:0 18px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A857D" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex:1;font-size:14.5px;color:#8A857D">Search a town, postcode or address…</span><span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#A8A29A">⌘K</span></div></div>
+          <div style="width:230px;display:flex;align-items:center;justify-content:flex-end;gap:12px"><span style="display:inline-flex;align-items:center;gap:8px;background:#7033FF;color:#fff;font-weight:700;font-size:14.5px;padding:10px 17px;border-radius:12px">Export</span><div style="width:34px;height:34px;border-radius:50%;border:1.5px solid #7033FF;color:#7033FF;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center">D</div></div>
+        </div>
+        <!-- rail with labels -->
+        <div style="position:absolute;top:62px;left:0;bottom:0;width:78px;z-index:26;background:#fff;border-right:1px solid #EDEBE7;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px">
+          <div style="width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;background:#171419;color:#fff"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg><span style="font-size:10.5px;font-weight:600">Assess</span></div>
+          <div style="width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;background:#F1ECFF;color:#5421CC"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="font-size:10.5px;font-weight:600">Gaps</span></div>
+          <div style="width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;color:#57534E"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.2-.7L18 8.5 15.5 6 4.7 16.8 4 20Z"></path><path d="M14 7.5l2.5 2.5"></path></svg><span style="font-size:10.5px;font-weight:600">Sketch</span></div>
+          <div style="width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;color:#57534E"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect><path d="M9 8.5h6M9 12.5h6M9 16.5h3"></path></svg><span style="font-size:10.5px;font-weight:600">Planning</span></div>
+          <div style="width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;color:#57534E"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"></path><path d="M4 9v11h16V9"></path><path d="M9.5 20v-5.5h5V20"></path></svg><span style="font-size:10.5px;font-weight:600">Match</span></div>
+          <div style="width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:12px;color:#57534E"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"></path><path d="M3 13l9 5 9-5"></path></svg><span style="font-size:10.5px;font-weight:600">Directory</span></div>
+          <div style="flex:1"></div>
+          <div style="width:36px;height:36px;border-radius:50%;background:#171419;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center">N</div>
+        </div>
+        <!-- control panel -->
+        <div style="position:absolute;top:62px;left:78px;bottom:0;width:300px;z-index:20;background:#fff;border-right:1px solid #EDEBE7;padding:20px">
+          <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;font-size:11px;color:#7033FF">ASSESS AREA</div>
+          <div style="font-weight:700;font-size:19px;margin-top:8px;letter-spacing:-.01em">Drop a point</div>
+          <div style="font-size:13px;color:#57534E;line-height:1.5;margin-top:6px">Click anywhere on the map to assess what's trading nearby and what's missing.</div>
+        </div>
+        <!-- hover card on Gaps -->
+        <div style="position:absolute;top:142px;left:90px;z-index:29;width:320px;background:#fff;border-radius:16px;box-shadow:0 24px 60px -18px rgba(23,20,25,.45),0 0 0 1px #EDEBE7;overflow:hidden">
+          <div style="position:absolute;left:-6px;top:22px;width:12px;height:12px;background:#fff;transform:rotate(45deg);box-shadow:-1px 1px 0 #EDEBE7"></div>
+          <div style="height:120px;background:repeating-linear-gradient(45deg,#F3F1EC 0 10px,#EEEBE5 10px 20px);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A857D">preview gif · gap map</div>
+          <div style="padding:16px 18px 18px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:700;font-size:16px">Find gaps</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#A8A29A">G</span></div>
+            <div style="font-size:13.5px;color:#4A4451;line-height:1.5;margin-top:6px">Quickly see which towns or retail centres a brand trades in, and which it doesn't.</div>
+            <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.12em;font-size:10px;color:#8A857D;margin-top:14px">GOOD FOR</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+              <span style="background:#F5F4F2;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px">Expansion planning</span>
+              <span style="background:#F5F4F2;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px">Pitching a brand</span>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;top:62px;left:378px;right:0;bottom:0;background:radial-gradient(60% 70% at 42% 52%,rgba(66,96,58,.75),transparent 70%),radial-gradient(40% 50% at 20% 60%,rgba(60,88,52,.6),transparent 70%),#0E1724"></div>
+        <div style="position:absolute;left:402px;bottom:24px;z-index:28;max-width:420px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5);font-size:13px;line-height:1.5;color:#4A4451"><b style="color:#171419">Keeps the map wide.</b> Labels give enough to recognise a mode; the card appears after a 300 ms hover with a short looping preview and a keyboard shortcut.</div>
+      </div>
+    </div>
+
+    <!-- ══════ 1c FIRST-LANDING CHOOSER ══════ -->
+    <div id="1c" data-screen-label="1c First-landing chooser" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="background:#171419;color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;padding:6px 13px;border-radius:999px">1c</span>
+        <span style="font-weight:600;color:#4A4451">First landing — “What do you want to do?” chooser over the map</span>
+      </div>
+      <div style="position:relative;width:1440px;height:860px;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(23,20,25,.4);background:#fff">
+        <div style="position:absolute;top:0;left:0;right:0;height:62px;z-index:30;background:#fff;border-bottom:1px solid #EDEBE7;display:flex;align-items:center;padding:0 18px;gap:16px">
+          <div style="display:flex;align-items:center;gap:9px;width:230px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 8.5 12 3l8 5.5v7L12 21l-8-5.5v-7Z" stroke="#7033FF" stroke-width="2.4" stroke-linejoin="round"></path><path d="M8.5 12 12 9.2l3.5 2.8-3.5 2.8L8.5 12Z" fill="#7033FF"></path></svg><span style="font-weight:700;font-size:19px;color:#7033FF;letter-spacing:-.02em">SiteMatcher</span></div>
+          <div style="flex:1"></div>
+          <div style="width:34px;height:34px;border-radius:50%;border:1.5px solid #7033FF;color:#7033FF;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center">D</div>
+        </div>
+        <div style="position:absolute;top:62px;left:0;right:0;bottom:0;background:radial-gradient(60% 70% at 50% 52%,rgba(66,96,58,.75),transparent 70%),radial-gradient(40% 50% at 30% 60%,rgba(60,88,52,.6),transparent 70%),#0E1724"></div>
+        <div style="position:absolute;top:62px;left:0;right:0;bottom:0;background:rgba(14,12,22,.55)"></div>
+        <!-- chooser -->
+        <div style="position:absolute;left:50%;top:calc(50% + 31px);transform:translate(-50%,-50%);width:1040px;z-index:28;background:#fff;border-radius:22px;box-shadow:0 40px 100px -30px rgba(0,0,0,.6);padding:34px 36px 28px">
+          <div style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;font-size:11px;color:#7033FF">WELCOME TO SITEMATCHER</div>
+          <div style="font-weight:700;font-size:30px;letter-spacing:-.02em;margin-top:8px">What do you want to do today?</div>
+          <div style="font-size:15px;color:#57534E;margin-top:6px">Pick a starting point. You can switch any time from the rail on the left.</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:24px">
+            <div style="border:1.5px solid #7033FF;background:#F7F4FF;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#7033FF;color:#fff;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></div>
+              <div style="font-weight:700;font-size:16px">Assess an area</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Click the map to see brands present and missing, catchment demographics and planning nearby.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Assess area →</div>
+            </div>
+            <div style="border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;color:#171419;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Find gaps for a brand</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Identify towns and retail centres where a brand trades, or doesn't yet.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Find gaps →</div>
+            </div>
+            <div style="border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;color:#171419;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l3.2-.7L18 8.5 15.5 6 4.7 16.8 4 20Z"></path><path d="M14 7.5l2.5 2.5"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Sketch a site</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Draw a site layout on the map, including parking.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">SiteSketcher →</div>
+            </div>
+            <div style="border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;color:#171419;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.5"></rect><path d="M9 8.5h6M9 12.5h6M9 16.5h3"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Watch planning</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">See planning alerts across the whole UK and in your patch.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Planning monitor →</div>
+            </div>
+            <div style="border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;color:#171419;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.4-4.5H5.4L4 9Z"></path><path d="M4 9v11h16V9"></path><path d="M9.5 20v-5.5h5V20"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Match brands to a site</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">See which brands might fit a given site, and who to call at each.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Brand matcher →</div>
+            </div>
+            <div style="border:1px solid #EDEBE7;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#F5F4F2;color:#171419;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"></path><path d="M3 13l9 5 9-5"></path></svg></div>
+              <div style="font-weight:700;font-size:16px">Look up a brand</div>
+              <div style="font-size:13.5px;color:#4A4451;line-height:1.5">Browse brands, their contacts, store estates, requirements and agents.</div>
+              <div style="font-weight:700;font-size:13px;color:#7033FF;margin-top:auto">Directory →</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:22px">
+            <div style="display:flex;align-items:center;gap:9px;font-size:13px;color:#57534E"><span style="width:18px;height:18px;border-radius:5px;border:1.5px solid #CFCAC2"></span>Don't show this again</div>
+            <span style="font-weight:600;font-size:13.5px;color:#7C7588">Skip, just show me the map</span>
+          </div>
+        </div>
+        <!-- rail ghost -->
+        <div style="position:absolute;top:62px;left:0;bottom:0;width:58px;z-index:26;background:#fff;border-right:1px solid #EDEBE7;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px">
+          <div style="width:40px;height:40px;border-radius:50%;background:#171419"></div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#F5F4F2"></div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#F5F4F2"></div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#F5F4F2"></div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#F5F4F2"></div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#F5F4F2"></div>
+          <div style="flex:1"></div>
+          <div style="width:40px;height:40px;border-radius:50%;border:1.5px solid #7033FF;color:#7033FF;font-weight:700;display:flex;align-items:center;justify-content:center">?</div>
+        </div>
+        <div style="position:absolute;left:70px;bottom:22px;z-index:28;max-width:360px;background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5);font-size:13px;line-height:1.5;color:#4A4451">Reopen anytime from <b style="color:#171419">?</b> in the rail.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MODES = [
+  { name: 'Assess area', key: 'A', desc: 'Click the map to see brands present and missing, catchment demographics and planning applications nearby.' },
+  { name: 'Find gaps', key: 'G', desc: 'Quickly identify towns or retail centres where brands exist, or don\u2019t.' },
+  { name: 'SiteSketcher', key: 'S', desc: 'Quickly sketch out a site on the map, including parking.' },
+  { name: 'Planning monitor', key: 'P', desc: 'See planning alerts across the whole UK and in your patch.' },
+  { name: 'Brand matcher', key: 'M', desc: 'See which brands might be a good fit for a site, and who to call at each brand.' },
+  { name: 'Directory', key: 'D', desc: 'Brands, their contacts, store estates, and any linked requirements or agents acting for them.' }
+];
+const LS = 'sm-modenav-dontshow';
+class Component extends DCLogic {
+  state = { active: 0, hover: null, dontShow: false, chooser: true, logins: 1 };
+  componentDidMount() {
+    const d = localStorage.getItem(LS) === '1';
+    this.setState({ dontShow: d, chooser: !d });
+  }
+  setDont(v) { localStorage.setItem(LS, v ? '1' : '0'); this.setState({ dontShow: v }); }
+  renderVals() {
+    const s = this.state;
+    const rail = {};
+    MODES.forEach((m, i) => {
+      const on = s.active === i, hov = s.hover === i;
+      rail['r' + i] = {
+        bg: on ? '#171419' : hov ? '#F1ECFF' : 'transparent',
+        fg: on ? '#fff' : hov ? '#5421CC' : '#57534E',
+        enter: () => this.setState({ hover: i }),
+        click: () => this.setState({ active: i, hover: null }),
+        pick: () => this.setState({ active: i, chooser: false })
+      };
+    });
+    const h = s.hover != null ? MODES[s.hover] : null;
+    const a = MODES[s.active];
+    return {
+      ...rail,
+      leave: () => this.setState({ hover: null }),
+      showCard: !!h && !s.chooser,
+      card: h ? { ...h, top: 62 + 12 + s.hover * 62 - 8 } : { top: 0 },
+      panel: { eyebrow: a.name.toUpperCase(), desc: a.desc },
+      chooser: s.chooser,
+      cb: { border: s.dontShow ? '#7033FF' : '#CFCAC2', bg: s.dontShow ? '#7033FF' : '#fff', tick: s.dontShow ? '✓' : '' },
+      toggleDontShow: () => this.setDont(!s.dontShow),
+      skip: () => this.setState({ chooser: false }),
+      openChooser: () => this.setState({ chooser: true, hover: null }),
+      simulateLogin: () => this.setState(p => ({ logins: p.logins + 1, chooser: !p.dontShow, active: 0, hover: null })),
+      loginNote: 'Login #' + s.logins + (s.dontShow ? ' · chooser off (reopen via ? in the rail)' : ' · chooser on')
+    };
+  }
+}
+</script>
+</body>
+</html>
