@@ -733,7 +733,13 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
           brandScore: dem.scores.get(demographicKey(b.id, null)) ?? null,
         })
       : null
-    const demographicGap = dem && !demographic ? (dem.site ? 'no_profile' : 'no_town') : null
+    // A profile we hold but the backtest did not back is 'unproven', not missing.
+    const hasProfile =
+      !!dem &&
+      ((fasciaId != null && (dem.profiles.get(demographicKey(b.id, fasciaId))?.length ?? 0) > 0) ||
+        (dem.profiles.get(demographicKey(b.id, null))?.length ?? 0) > 0)
+    const demographicGap =
+      dem && !demographic ? (!dem.site ? 'no_town' : hasProfile ? 'unproven' : 'no_profile') : null
     const contacts = rankContacts(
       [...(input.brandContacts.get(b.id) ?? []), ...reqs.flatMap((r) => r.contacts)],
       key

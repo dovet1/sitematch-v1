@@ -451,7 +451,8 @@ describe('assembleMatches', () => {
     it('says why there is no demographic read', () => {
       const tiny = assembleMatches(input({ demographics, query: { sqft: 1000, useClass: 'E', postcode: 'LS6 2AT' } }))
         .matches.find((m) => m.brandId === 'tiny')!
-      expect(tiny.demographicGap).toBe('no_profile')
+      // Tiny has a profile, but its backtest score is below the bar.
+      expect(tiny.demographicGap).toBe('unproven')
       const noTown = assembleMatches(input({ demographics: { ...demographics, site: null } })).matches
       expect(noTown.every((m) => m.demographicGap === 'no_town')).toBe(true)
     })

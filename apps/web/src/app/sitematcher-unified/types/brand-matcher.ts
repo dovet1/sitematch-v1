@@ -178,9 +178,10 @@ export interface BrandMatch {
   // Does the site's town look like the towns the brand trades in? Absent when there is nothing
   // validated to say (brand-matcher-demographics.ts).
   demographic?: DemographicMatch | null
-  // Why there is no demographic read: the site is outside every town we profile, or the brand
-  // has no profile the backtest backs. Absent when demographics were not loaded.
-  demographicGap?: 'no_town' | 'no_profile' | null
+  // Why there is no demographic read: the site is outside every town we profile, the brand has
+  // too few towns to profile, or it has a profile the backtest did not back. Absent when
+  // demographics were not loaded.
+  demographicGap?: 'no_town' | 'no_profile' | 'unproven' | null
   // Points out of 100 across the signals we hold data for; missing signals are left out.
   score: number
   scoreParts: ScorePart[]
