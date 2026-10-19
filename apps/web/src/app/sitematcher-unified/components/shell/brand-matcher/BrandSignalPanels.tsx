@@ -13,7 +13,7 @@ import {
   formLabel,
   LOCATION_TYPE_RADIUS_MILES,
 } from '../../../lib/brand-matcher'
-import { measureWords, type DemographicMeasure } from '../../../lib/brand-matcher-demographics'
+import { formatPeople, measureWords, type DemographicMatch, type DemographicMeasure } from '../../../lib/brand-matcher-demographics'
 import type {
   BrandMatch,
   BrandMatcherQuery,
@@ -409,6 +409,7 @@ export function DemographicsPanel({ match }: PanelProps) {
           Compared with built-up areas of a similar size, {name}&apos;s areas are typical on every measure, so {town} fits as
           well as most.
         </PanelTitle>
+        <TownSize size={d.size} brand={name} town={town} />
         <Footnote>
           Each {name} store&apos;s built-up area is compared with built-up areas of a similar size, so this reflects the kind
           of place rather than its size.
@@ -433,6 +434,7 @@ export function DemographicsPanel({ match }: PanelProps) {
         {measures.length > 0 &&
           ` Compared with built-up areas of a similar size, ${name}'s stand out on ${counted(measures.length, 'measure')}, and ${town} matches ${matched} of them.`}
       </PanelTitle>
+      <TownSize size={d.size} brand={name} town={town} />
       <div className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[12.5px] text-[#4B4A55]">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-[#1C1B22]" />
@@ -456,6 +458,30 @@ export function DemographicsPanel({ match }: PanelProps) {
         of place rather than its size. Only measures where {name}&apos;s areas differ from the norm are shown.
         {d.basis === 'brand' && ` This uses all of ${name}'s stores, as the fascia nearest your size has too few to profile.`}
       </Footnote>
+    </div>
+  )
+}
+
+// Town size sits outside the fit and the score (it would outweigh every other measure), so it is
+// shown on its own for the reader to judge.
+function TownSize({ size, brand, town }: { size: DemographicMatch['size']; brand: string; town: string }) {
+  if (!size) return null
+  const verdict =
+    size.position === 'below'
+      ? `smaller than most of ${brand}'s areas`
+      : size.position === 'above'
+        ? `larger than most of ${brand}'s areas`
+        : `a typical size for ${brand}`
+  return (
+    <div className="flex flex-col gap-1 rounded-[10px] bg-[#FBFAFE] px-3.5 py-3 shadow-[inset_0_0_0_1px_#F2F0F7]">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[13px] font-bold text-[#1C1B22]">Town size</span>
+        <span className="text-[12px] font-semibold text-[#8A8895]">Not scored</span>
+      </div>
+      <p className="text-[13.5px] leading-[1.45] text-[#4B4A55]">
+        {town} has {formatPeople(size.sitePopulation)} people, {verdict}. {brand}&apos;s areas usually have{' '}
+        {formatPeople(size.typicalMin)}–{formatPeople(size.typicalMax)} people.
+      </p>
     </div>
   )
 }

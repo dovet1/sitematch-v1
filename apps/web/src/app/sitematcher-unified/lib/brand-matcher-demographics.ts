@@ -346,7 +346,7 @@ function joinAnd(parts: string[]): string {
 
 const inLine = (p: SignalPosition) => p === 'typical' || p === 'low' || p === 'high'
 
-function formatPeople(n: number): string {
+export function formatPeople(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`
   if (n >= 10_000) return `${Math.round(n / 1000)}k`
   if (n >= 1_000) return `${(n / 1000).toFixed(1)}k`
