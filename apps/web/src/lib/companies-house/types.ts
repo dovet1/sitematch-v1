@@ -58,6 +58,16 @@ export interface ChDocumentMetadata {
 // 'filed': read from iXBRL tags. 'extracted': read by a model from a scanned (PDF-only) filing.
 export type FigureStatus = 'filed' | 'extracted' | 'not_published' | 'unread'
 
+// What a facts refresh did about turnover and net assets. 'read' carries only the figures that
+// were found (possibly none); 'unreadable' means the latest filing could not be read at all (not
+// for the accounts date, no iXBRL or PDF, or a PDF too long to send).
+export type FiguresOutcome =
+  | { kind: 'kept' }
+  | { kind: 'no_accounts' }
+  | { kind: 'unreadable' }
+  | { kind: 'read'; figures: Partial<Pick<CompanyFactsRow, 'turnover' | 'turnover_status' | 'turnover_page' | 'net_assets' | 'net_assets_status' | 'net_assets_page'>> }
+  | { kind: 'failed'; error: string }
+
 // A company_facts row, as stored.
 export interface CompanyFactsRow {
   company_number: string

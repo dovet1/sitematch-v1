@@ -5,7 +5,7 @@
 // never rated. Labels here describe the register; none of them judge a company.
 
 import type { TradingFacts } from '@/app/sitematcher-unified/types/brand-matcher'
-import type { ChAddress, ChCompanyProfile, ChSearchItem, CompanyFactsRow } from './types'
+import type { ChAddress, ChCompanyProfile, ChSearchItem, CompanyFactsRow, FiguresOutcome } from './types'
 
 // ---------------------------------------------------------------------------
 // Company numbers
@@ -170,6 +170,68 @@ export function factsRowToTradingFacts(row: FactsFields): TradingFacts {
     turnover: figure(row.turnover, row.turnover_status, row.turnover_page),
     netAssets: figure(row.net_assets, row.net_assets_status, row.net_assets_page),
     fetchedAt: row.fetched_at,
+  }
+}
+
+// Exact pounds for the admin page, which is checked against the filing ("-£3,461,000").
+export function formatPounds(n: number): string {
+  return `${n < 0 ? '-' : ''}£${Math.abs(Math.round(n)).toLocaleString('en-GB')}`
+}
+
+type FigureFields = Pick<
+  CompanyFactsRow,
+  'turnover' | 'turnover_status' | 'turnover_page' | 'net_assets' | 'net_assets_status' | 'net_assets_page'
+>
+
+// Where a stored figure came from, for the admin page.
+export function figureSource(status: CompanyFactsRow['turnover_status'], page: number | null | undefined): string {
+  if (status === 'extracted') return page != null ? `read from scanned accounts, PDF p. ${page}` : 'read from scanned accounts'
+  if (status === 'filed') return 'filed'
+  if (status === 'not_published') return 'not published in the accounts'
+  return 'not read'
+}
+
+// One line per figure saying what an admin "Refresh facts" did, so a changed or missing figure
+// is never silent.
+export function figuresRefreshMessage(
+  outcome: FiguresOutcome,
+  previous: Partial<FigureFields> | null,
+  madeUpTo: string | null
+): string[] {
+  const period = madeUpTo ? `the accounts to ${madeUpTo}` : 'the latest accounts'
+  switch (outcome.kind) {
+    case 'no_accounts':
+      return ['No accounts filed yet, so there are no figures to read.']
+    case 'kept':
+      return [`Figures for ${period} were already read and are unchanged.`]
+    case 'unreadable':
+      return [
+        `Could not read ${period} automatically (no electronic or PDF copy for that date, or a PDF over 80 pages). Figures unchanged.`,
+      ]
+    case 'failed':
+      return [`Reading ${period} failed: ${outcome.error}. Figures unchanged; try again.`]
+    case 'read': {
+      const f = outcome.figures
+      const line = (
+        label: string,
+        value: number | null | undefined,
+        status: CompanyFactsRow['turnover_status'] | undefined,
+        page: number | null | undefined,
+        was: number | null | undefined,
+        wasStatus: CompanyFactsRow['turnover_status'] | undefined
+      ) => {
+        if (value == null || !status) {
+          return `${label}: not found in ${period}; kept ${wasStatus && was != null ? formatPounds(was) : figureSource(wasStatus ?? 'unread', null)}.`
+        }
+        const from = status === 'filed' ? 'from the electronic accounts' : `from scanned accounts, PDF p. ${page}`
+        const change = was == null ? '' : Number(was) === value ? ' (unchanged)' : ` (was ${formatPounds(Number(was))})`
+        return `${label}: ${formatPounds(value)} ${from}${change}.`
+      }
+      return [
+        line('Turnover', f.turnover, f.turnover_status, f.turnover_page, previous?.turnover, previous?.turnover_status),
+        line('Net assets', f.net_assets, f.net_assets_status, f.net_assets_page, previous?.net_assets, previous?.net_assets_status),
+      ]
+    }
   }
 }
 

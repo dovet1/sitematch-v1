@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   accountsTypeLabel,
   companiesHouseUrl,
+  figureSource,
+  formatPounds,
   statusLabel,
 } from '@/lib/companies-house/facts'
 import type { CompanyFactsRow } from '@/lib/companies-house/types'
@@ -35,6 +37,8 @@ interface State {
     company_facts: CompanyFactsRow | null
   } | null
   suggestions: (Candidate & { searched_at: string })[]
+  // Only on a refresh response: what happened to turnover and net assets.
+  refreshMessage?: string[]
 }
 
 const fmtDate = (iso: string | null | undefined) =>
@@ -49,6 +53,7 @@ export function CompaniesHouseSection({ brandId, brandName }: { brandId: string;
   const [query, setQuery] = useState(brandName)
   const [searchResults, setSearchResults] = useState<Candidate[] | null>(null)
   const [manualNumber, setManualNumber] = useState('')
+  const [refreshMessage, setRefreshMessage] = useState<string[] | null>(null)
 
   const call = useCallback(
     async (label: string, input: RequestInfo, init?: RequestInit) => {
@@ -104,12 +109,16 @@ export function CompaniesHouseSection({ brandId, brandName }: { brandId: string;
     }
   }
 
-  const action = (name: 'suggest' | 'refresh') =>
-    call(name, url, {
+  const action = (name: 'suggest' | 'refresh') => {
+    setRefreshMessage(null)
+    return call(name, url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: name }),
-    }).then(apply)
+    })
+      .then(apply)
+      .then((body) => setRefreshMessage(body?.refreshMessage ?? null))
+  }
 
   const unlink = async () => {
     if (!window.confirm(`Remove the Companies House link for ${brandName}? Brand Matcher stops showing its facts.`)) return
@@ -169,7 +178,7 @@ export function CompaniesHouseSection({ brandId, brandName }: { brandId: string;
                 disabled={busy != null}
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
               >
-                {busy === 'refresh' ? 'Refreshing…' : 'Refresh facts'}
+                {busy === 'refresh' ? 'Reading accounts…' : 'Refresh facts'}
               </button>
               <button
                 onClick={() => setChanging((v) => !v)}
@@ -196,13 +205,24 @@ export function CompaniesHouseSection({ brandId, brandName }: { brandId: string;
               <Fact label="SIC codes" value={facts.sic_codes.join(', ') || '—'} />
               <Fact label="Registered office" value={facts.registered_office} wide />
               <Fact
-                label="Turnover / net assets"
-                value="Not read yet — accounts parsing is a later phase"
-                wide
+                label="Turnover"
+                value={figureText(facts.turnover, facts.turnover_status, facts.turnover_page)}
               />
+              <Fact
+                label="Net assets"
+                value={figureText(facts.net_assets, facts.net_assets_status, facts.net_assets_page)}
+              />
+              <Fact label="Figures for accounts to" value={fmtDate(facts.figures_period_end)} />
               <Fact label="Fetched" value={fmtDate(facts.fetched_at)} />
               <Fact label="Confirmed" value={fmtDate(state.link.confirmed_at)} />
             </dl>
+          )}
+          {refreshMessage && (
+            <div className="mt-4 rounded-md border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900">
+              {refreshMessage.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -276,6 +296,15 @@ export function CompaniesHouseSection({ brandId, brandName }: { brandId: string;
       )}
     </div>
   )
+}
+
+function figureText(
+  value: number | null,
+  status: CompanyFactsRow['turnover_status'],
+  page: number | null
+): string {
+  const source = figureSource(status, page)
+  return value != null ? `${formatPounds(Number(value))} (${source})` : source.charAt(0).toUpperCase() + source.slice(1)
 }
 
 function Fact({ label, value, wide = false }: { label: string; value: string | null; wide?: boolean }) {
