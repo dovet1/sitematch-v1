@@ -68,7 +68,7 @@ export function FileUploadSection({
           <div>
             <p className="font-medium mb-1">Optional columns:</p>
             <code className="bg-white px-2 py-1 rounded text-xs">
-              fascia, postcode, town, lat, lon, google_place_id
+              fascia, postcode, town, lat, lon, google_place_id, allow_duplicate
             </code>
           </div>
           <div>
@@ -96,6 +96,7 @@ Shell Reading,456 Bath Rd,Shell,Petrol,RG1 2BB,Reading,51.454,-0.972`}
               <p><strong>First-time import:</strong> Rows without lat/lon are geocoded with Mapbox. Rows without lat/lon + google_place_id are validated with Google Places (must be within 10m).</p>
               <p><strong>Retry import:</strong> Rows with lat/lon AND google_place_id skip Google validation (manual review assumed).</p>
               <p>Coordinates must be within UK bounds (lat: 49-61, lon: -8 to 2)</p>
+              <p><strong>Duplicates:</strong> A row is skipped if its Google place already has a store of the same brand, or matches an earlier row in the file. Set <strong>allow_duplicate</strong> to yes to import it anyway.</p>
             </div>
           </div>
         </div>
