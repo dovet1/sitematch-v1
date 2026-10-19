@@ -463,6 +463,39 @@ describe('assembleMatches', () => {
       expect(assembleMatches(input()).matches.every((m) => m.demographic == null)).toBe(true)
     })
 
+    describe('split estates', () => {
+      // Fettle trades in city centres and at motorway services, so its estate is profiled in two
+      // parts: affluent city areas, and roadside areas that are anything but.
+      const split = (siteType: 'dense' | 'sparse') => ({
+        site: { townName: 'Leeds', siteType, values: { affluence_high: 112 }, ranks: { affluence_high: 0.8 } },
+        profiles: new Map([
+          [demographicKey('fettle', null), prof(0.6, 0.2)],
+          [demographicKey('fettle', null, 'dense'), prof(0.8, 0.6)],
+          [demographicKey('fettle', null, 'sparse'), prof(0.2, 0.6)],
+        ]),
+        scores: new Map([
+          [demographicKey('fettle', null), { broad: false, aucDemographics: 0.55 }],
+          [demographicKey('fettle', null, 'dense'), { broad: false, aucDemographics: 0.8, heldOut: 47 }],
+          [demographicKey('fettle', null, 'sparse'), { broad: false, aucDemographics: 0.8, heldOut: 20 }],
+        ]),
+      })
+      const fettle = (siteType: 'dense' | 'sparse') =>
+        assembleMatches(input({ demographics: split(siteType) })).matches.find((m) => m.brandId === 'fettle')!
+
+      it('judges a site only against the stores in areas like its own', () => {
+        expect(fettle('dense').demographic).toMatchObject({ band: 'good', basis: 'brand', siteType: 'dense' })
+        expect(fettle('sparse').demographic).toMatchObject({ band: 'weak', basis: 'brand', siteType: 'sparse' })
+      })
+
+      it('never falls back to the whole estate once it is split', () => {
+        const dem = split('sparse')
+        dem.scores.set(demographicKey('fettle', null, 'sparse'), { broad: false, aucDemographics: 0.58, heldOut: 20 })
+        const m = assembleMatches(input({ demographics: dem })).matches.find((x) => x.brandId === 'fettle')!
+        expect(m.demographic).toBeNull()
+        expect(m.demographicGap).toBe('no_profile')
+      })
+    })
+
     it('exports the fit', () => {
       const csv = matchesToCsv(assembleMatches(withFascias).matches, { sqft: 14000, useClass: 'E', postcode: 'LS6 2AT' })
       const [header, ...rows] = csv.split('\n')

@@ -10,6 +10,7 @@ import {
   signalFit,
   siteTown,
   sizeBands,
+  validatedAucBar,
   type DemographicSignalProfile,
   type SiteTown,
 } from '../brand-matcher-demographics'
@@ -285,8 +286,29 @@ describe('demographicMatch', () => {
   })
 })
 
+describe('validatedAucBar', () => {
+  it('is 0.65 for a well-tested profile and stricter for a small one', () => {
+    expect(validatedAucBar(undefined)).toBe(0.65)
+    expect(validatedAucBar(40)).toBe(0.65)
+    expect(validatedAucBar(12)).toBe(0.65)
+    expect(validatedAucBar(6)).toBeCloseTo(0.6939, 3)
+    expect(validatedAucBar(8)).toBeCloseTo(0.6679, 3)
+  })
+
+  it('holds back a small profile that clears 0.65 only by a little', () => {
+    const base = {
+      site: { ...site({ affluence_high: 0.75 }), townName: 'Reading' },
+      fasciaProfile: [signal({ distinctiveness: 0.6 })],
+      brandProfile: null,
+      brandScore: null,
+    }
+    expect(demographicMatch({ ...base, fasciaScore: { broad: false, aucDemographics: 0.68, heldOut: 6 } })).toBeNull()
+    expect(demographicMatch({ ...base, fasciaScore: { broad: false, aucDemographics: 0.68, heldOut: 30 } })).not.toBeNull()
+  })
+})
+
 describe('describeDemographic', () => {
-  it('says how the brand leans and where the town sits', () => {
+  it('says how the brand leans and where the site sits', () => {
     const lines = describeDemographic(
       {
         band: 'partial',
@@ -301,14 +323,19 @@ describe('describeDemographic', () => {
       'Waitrose'
     )
     expect(lines).toEqual([
-      "Compared with towns of a similar size, Waitrose's towns are more affluent and more car-dependent.",
-      'Reading is in line with them on affluence, but not on walkability.',
-      'Town size: Reading (8.4k people) is smaller than most of their towns; their towns are usually 20k–61k.',
+      "Compared with areas of a similar density, the areas around Waitrose's stores are more affluent and more car-dependent.",
+      'The area around the site in Reading is in line with them on affluence, but not on walkability.',
+      "Local population: 8.4k people live within 1km of the site, fewer than around most of their stores; their stores usually have 20k–61k.",
     ])
   })
 
-  it('names the whole brand when its estate stood in, and handles "any town"', () => {
-    const lines = describeDemographic({ band: 'any', basis: 'brand', townName: 'Leeds', reasons: [], size: null }, 'Greggs')
-    expect(lines).toEqual(["Greggs's towns (across the whole brand) are typical for their size on every measure, so Leeds fits as well as most."])
+  it('names the part of a split estate, and the whole brand when its estate stood in', () => {
+    const lines = describeDemographic(
+      { band: 'any', basis: 'brand', siteType: 'sparse', townName: 'Leeds', reasons: [], size: null },
+      'Greggs'
+    )
+    expect(lines).toEqual([
+      "The areas around Greggs's stores in less dense areas (across the whole brand) are typical for their density on every measure, so this site fits as well as most.",
+    ])
   })
 })

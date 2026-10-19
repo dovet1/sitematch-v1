@@ -1,21 +1,33 @@
-// Brand Matcher demographic fit: does the town a site is in look like the towns a brand already
-// trades in? Pure — the route will score with it and the backtest script measures it.
+// Brand Matcher demographic fit: does the area around a site look like the areas around a brand's
+// stores? Pure — the route scores with it.
 //
-// "Town" is the ONS built-up area (BUA). Every town's demographic signals are ranked against towns
-// of a similar size (rebuild_bua_demographic_ranks, migration 20261023020000), so "affluent" means
-// affluent for its size: compared with all towns, every brand's loudest trait was simply "bigger
-// towns than usual". A brand's profile is the spread (p10..p90) of those ranks across its towns.
-// The site's town is scored against the signals that set the brand apart; a brand whose towns are
-// typical on every signal trades anywhere, so any town fits it.
+// Each store, and the site, is measured by its local catchment: the census neighbourhoods (LSOAs)
+// within 1km, or 3km / 5km where fewer than 5,000 people live within 1km (migration
+// 20261027000000). Every catchment's signals are ranked against catchments of a similar density,
+// so "affluent" means affluent for an area that busy. A brand's profile is the spread (p10..p90)
+// of those ranks across its stores' areas. The site is scored against the signals that set the
+// brand apart; a brand whose areas are typical on every signal trades anywhere.
 //
-// Town size is kept out of the score and reported on its own: it is easy to judge for yourself,
-// and left in it would outweigh every demographic signal.
+// Estates that mix denser and less dense sites (a city-centre chain with motorway services) are
+// profiled in two parts, and a site is judged only against the part that matches its own density:
+// one spread across both described neither (Leon: 0.57 as one estate, 0.80 for its denser sites).
 //
-// Phase 1: shown as a pill only, never added to the match score, until the backtest shows it
-// predicts where brands trade.
+// Local population (people within 1km) is kept out of the score and reported on its own: it is
+// easy to judge for yourself, and left in it would outweigh every demographic signal.
+//
+// Earlier versions measured whole built-up areas ("towns"); the town functions below still back
+// the old town backtest script.
 
-// Kept in step with brand_demographic_profiles_min_buas in the migration.
+// Kept in step with brand_demographic_profiles_min_buas (the town version).
 export const MIN_PROFILE_BUAS = 8
+// The fewest store areas a catchment profile is built from. Kept in step with
+// brand_catchment_profiles_min_sites; the backtest needs 6 to score one.
+export const MIN_PROFILE_SITES = 5
+// An area is "dense" when at least this many people live within 1km. Kept in step with
+// rebuild_lsoa_catchments().
+export const DENSE_POPULATION_1KM = 5000
+
+export type SiteType = 'dense' | 'sparse'
 // Size bands, kept in step with rebuild_bua_demographic_ranks(): up to 200 towns, closing early
 // once the next town is more than twice the smallest's population if the band has 50 already.
 export interface SizeBandRules {
@@ -53,11 +65,12 @@ export interface DemographicSignalProfile {
   distinctiveness: number
 }
 
-// The site's town: each signal's value and its size-adjusted rank, as brand_matcher_site_bua
-// returns them.
+// The site's area: each signal's value and its density-adjusted rank, as
+// brand_matcher_site_catchment returns them, and whether the area is dense.
 export interface SiteTown {
   values: Record<string, number>
   ranks: Record<string, number>
+  siteType?: SiteType
 }
 
 export type DemographicFitBand = 'good' | 'partial' | 'weak'
@@ -169,15 +182,26 @@ export function demographicFit(site: SiteTown | null, profile: DemographicSignal
 // The card — which profile to use, whether it has earned a pill, and the words on it
 // ---------------------------------------------------------------------------
 
-// A profile's fit is shown only where the backtest found it picks out the brand's real towns at
-// least this often against towns of the same size it is not in (0.5 = a coin toss). The backtest
-// put 52 of 128 profiled fascias at or above this; below it the pill would mislead as often as help.
+// A profile's fit is shown only where the backtest found it picks out the brand's real areas at
+// least this often against areas of the same density it is not in (0.5 = a coin toss); below it
+// the pill would mislead as often as help.
 export const MIN_VALIDATED_AUC = 0.65
 
-// One row of brand_demographic_backtest_results.
+// With few stores a profile can clear 0.65 by luck: tested on 6 areas, a profile with no real
+// signal does so about one time in ten. So small profiles must clear the bar a coin toss would
+// clear only one time in twenty (one-sided 5%, using the AUC's standard error with many
+// negatives, sqrt(1 / 12n)). From about 12 tested areas this is just 0.65.
+export function validatedAucBar(heldOut: number | null | undefined): number {
+  if (!heldOut || heldOut <= 0) return MIN_VALIDATED_AUC
+  return Math.max(MIN_VALIDATED_AUC, 0.5 + 1.645 * Math.sqrt(1 / (12 * heldOut)))
+}
+
+// One row of brand_catchment_backtest_results.
 export interface BacktestScore {
   broad: boolean
   aucDemographics: number | null
+  // Store areas tested. Omitted: judged against MIN_VALIDATED_AUC alone.
+  heldOut?: number | null
 }
 
 export interface DemographicReason {
@@ -201,10 +225,14 @@ export interface DemographicMeasure {
 }
 
 export interface DemographicMatch {
-  // 'any': the brand's towns are typical for their size on every measure.
+  // 'any': the brand's areas are typical for their density on every measure.
   band: DemographicFitBand | 'any'
-  // Whose towns: the fascia's own, or the whole brand's when the fascia has too few.
+  // Whose stores: the fascia's own, or the whole brand's when the fascia has too few.
   basis: 'fascia' | 'brand'
+  // Set when the estate was split by density: the site was compared only with the brand's stores
+  // in areas like its own (dense or sparse).
+  siteType?: SiteType | null
+  // Where the site is: its built-up area, else its local authority.
   townName: string
   // The most distinctive measures, most distinctive first (at most two).
   reasons: DemographicReason[]
@@ -220,6 +248,9 @@ export interface DemographicMatchInput {
   fasciaScore: BacktestScore | null
   brandProfile: DemographicSignalProfile[] | null
   brandScore: BacktestScore | null
+  // Whether each profile is the part of a split estate matching the site's density.
+  fasciaSplit?: boolean
+  brandSplit?: boolean
 }
 
 // null means show nothing: no town or profile to compare, or a profile the backtest did not back.
@@ -242,13 +273,19 @@ export function demographicMatch(input: DemographicMatchInput): DemographicMatch
         typicalMax: fit.size.profile.p75,
       }
     : null
-  const base = { basis: useFascia ? ('fascia' as const) : ('brand' as const), townName: site.townName, size }
+  const split = useFascia ? input.fasciaSplit : input.brandSplit
+  const base = {
+    basis: useFascia ? ('fascia' as const) : ('brand' as const),
+    siteType: split && site.siteType ? site.siteType : null,
+    townName: site.townName,
+    size,
+  }
 
   // "Trades in all kinds of towns" is a description of the estate, not a prediction, so it needs
   // no backtest behind it.
   if (fit.basis === 'broad') return { band: 'any', reasons: [], measures: [], ...base }
 
-  if (!score || score.broad || score.aucDemographics == null || score.aucDemographics < MIN_VALIDATED_AUC) {
+  if (!score || score.broad || score.aucDemographics == null || score.aucDemographics < validatedAucBar(score.heldOut)) {
     return null
   }
   return {
@@ -353,30 +390,39 @@ export function formatPeople(n: number): string {
   return String(Math.round(n))
 }
 
+// Whose stores the site is compared with, for sentences: "Leon's stores", "Leon's stores in
+// denser areas", "Greggs's stores (across the whole brand)".
+export function comparedStores(d: Pick<DemographicMatch, 'basis' | 'siteType'>, brandName: string): string {
+  const kind = d.siteType === 'dense' ? ' in denser areas' : d.siteType === 'sparse' ? ' in less dense areas' : ''
+  return `${brandName}'s stores${kind}${d.basis === 'brand' ? ' (across the whole brand)' : ''}`
+}
+
 // Plain-English lines for the pill's tooltip.
 export function describeDemographic(d: DemographicMatch, brandName: string): string[] {
-  const town = d.townName
   const lines: string[] = []
-  const whose = d.basis === 'brand' ? `${brandName}'s towns (across the whole brand)` : `${brandName}'s towns`
+  const whose = `the areas around ${comparedStores(d, brandName)}`
   if (d.band === 'any') {
-    lines.push(`${whose} are typical for their size on every measure, so ${town} fits as well as most.`)
+    lines.push(`${capitalise(whose)} are typical for their density on every measure, so this site fits as well as most.`)
   } else {
-    lines.push(`Compared with towns of a similar size, ${whose} are ${joinAnd(d.reasons.map((r) => words(r.signalName)[r.direction]))}.`)
+    lines.push(`Compared with areas of a similar density, ${whose} are ${joinAnd(d.reasons.map((r) => words(r.signalName)[r.direction]))}.`)
     const matched = d.reasons.filter((r) => inLine(r.sitePosition)).map((r) => words(r.signalName).topic)
     const missed = d.reasons.filter((r) => !inLine(r.sitePosition)).map((r) => words(r.signalName).topic)
-    if (missed.length === 0) lines.push(`${town} is in line with them on ${joinAnd(matched)}.`)
-    else if (matched.length === 0) lines.push(`${town} is not in line with them on ${joinAnd(missed)}.`)
-    else lines.push(`${town} is in line with them on ${joinAnd(matched)}, but not on ${joinAnd(missed)}.`)
+    const here = `The area around the site in ${d.townName}`
+    if (missed.length === 0) lines.push(`${here} is in line with them on ${joinAnd(matched)}.`)
+    else if (matched.length === 0) lines.push(`${here} is not in line with them on ${joinAnd(missed)}.`)
+    else lines.push(`${here} is in line with them on ${joinAnd(matched)}, but not on ${joinAnd(missed)}.`)
   }
   if (d.size) {
     const range = `${formatPeople(d.size.typicalMin)}–${formatPeople(d.size.typicalMax)}`
     const verdict =
       d.size.position === 'below'
-        ? 'smaller than most of their towns'
+        ? 'fewer than around most of their stores'
         : d.size.position === 'above'
-          ? 'larger than most of their towns'
-          : 'a typical size for them'
-    lines.push(`Town size: ${town} (${formatPeople(d.size.sitePopulation)} people) is ${verdict}; their towns are usually ${range}.`)
+          ? 'more than around most of their stores'
+          : 'typical for them'
+    lines.push(
+      `Local population: ${formatPeople(d.size.sitePopulation)} people live within 1km of the site, ${verdict}; their stores usually have ${range}.`
+    )
   }
   return lines
 }

@@ -27,6 +27,7 @@ import {
   type DemographicMatch,
   type DemographicSignalProfile,
   type SiteTown,
+  type SiteType,
 } from './brand-matcher-demographics'
 
 export const METERS_PER_MILE = 1609.344
@@ -571,15 +572,39 @@ export interface AssembleInput {
 }
 
 // What the route loads for the demographic pill. Profiles and scores are keyed by
-// demographicKey(brandId, fasciaId) — fasciaId null for the brand as a whole.
+// demographicKey(brandId, fasciaId, siteType) — fasciaId null for the brand as a whole, siteType
+// 'all' for every store or 'dense' / 'sparse' for one part of a split estate.
 export interface DemographicsInput {
   site: (SiteTown & { townName: string }) | null
   profiles: Map<string, DemographicSignalProfile[]>
   scores: Map<string, BacktestScore>
 }
 
-export function demographicKey(brandId: string, fasciaId: string | null | undefined): string {
-  return `${brandId}|${fasciaId ?? ''}`
+export function demographicKey(
+  brandId: string,
+  fasciaId: string | null | undefined,
+  siteType: SiteType | 'all' = 'all'
+): string {
+  return `${brandId}|${fasciaId ?? ''}|${siteType}`
+}
+
+// A unit's profile for this site: the part of its estate matching the site's density when the
+// estate is split, otherwise all its stores. A split estate never falls back to all its stores —
+// it was split because one spread across both kinds of site described neither.
+function profileFor(
+  dem: DemographicsInput,
+  brandId: string,
+  fasciaId: string | null
+): { profile: DemographicSignalProfile[]; score: BacktestScore | null; split: boolean } | null {
+  const siteType = dem.site?.siteType
+  if (siteType) {
+    const key = demographicKey(brandId, fasciaId, siteType)
+    const profile = dem.profiles.get(key)
+    if (profile) return { profile, score: dem.scores.get(key) ?? null, split: true }
+  }
+  const key = demographicKey(brandId, fasciaId)
+  const profile = dem.profiles.get(key)
+  return profile ? { profile, score: dem.scores.get(key) ?? null, split: false } : null
 }
 
 // Most evidence lines (requirements, news) carried per brand.
@@ -720,17 +745,21 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
         )[0]
       : null
 
-    // The fascia nearest the site's size has its own profile when it trades in enough towns;
+    // The fascia nearest the site's size has its own profile when it trades in enough areas;
     // otherwise the whole brand's stands in.
     const fasciaId = typical?.fasciaId ?? null
     const dem = input.demographics
+    const fasciaPick = dem && fasciaId ? profileFor(dem, b.id, fasciaId) : null
+    const brandPick = dem ? profileFor(dem, b.id, null) : null
     const demographic = dem
       ? demographicMatch({
           site: dem.site,
-          fasciaProfile: fasciaId ? dem.profiles.get(demographicKey(b.id, fasciaId)) ?? null : null,
-          fasciaScore: fasciaId ? dem.scores.get(demographicKey(b.id, fasciaId)) ?? null : null,
-          brandProfile: dem.profiles.get(demographicKey(b.id, null)) ?? null,
-          brandScore: dem.scores.get(demographicKey(b.id, null)) ?? null,
+          fasciaProfile: fasciaPick?.profile ?? null,
+          fasciaScore: fasciaPick?.score ?? null,
+          fasciaSplit: fasciaPick?.split,
+          brandProfile: brandPick?.profile ?? null,
+          brandScore: brandPick?.score ?? null,
+          brandSplit: brandPick?.split,
         })
       : null
     const demographicGap = dem && !demographic ? (dem.site ? 'no_profile' : 'no_town') : null
