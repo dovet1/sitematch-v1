@@ -51,93 +51,99 @@ export function BrandMatcherResults() {
 
   return (
     <div>
-      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-sm-border bg-sm-surface/95 px-8 py-4 backdrop-blur">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-sm-ink">
-              {sorted.length} {sorted.length === 1 ? 'brand' : 'brands'} matched
-            </h1>
-            {elapsedMs != null && (
-              <span className="rounded-full bg-[#EAF8F1] px-2 py-0.5 text-[11.5px] font-semibold text-[#177E4E]">
-                in {(elapsedMs / 1000).toFixed(1)}s
-              </span>
-            )}
-            {query.widen && (
-              <span className="rounded-full bg-[#FBF7EE] px-2 py-0.5 text-[11.5px] font-semibold text-[#B7860B]">
-                widened criteria
-              </span>
-            )}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Chip>{formatSqft(query.sqft)} sq ft</Chip>
-            <Chip>{classLabel(query.useClass)}</Chip>
-            <Chip>{site.postcode}</Chip>
-            {site.centre && (
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF8F1] px-3 py-1 text-[12.5px] font-medium text-[#177E4E]"
-                title={site.centre.classification}
+      {/* The summary bar and the column headings stick together, so the headings stay in view while
+          the cards scroll under them. */}
+      <header className="sticky top-0 z-10 border-b border-sm-border bg-sm-surface/95 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-8 py-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-[22px] font-bold tracking-[-0.02em] text-sm-ink">
+                {sorted.length} {sorted.length === 1 ? 'brand' : 'brands'} matched
+              </h1>
+              {elapsedMs != null && (
+                <span className="rounded-full bg-[#EAF8F1] px-2 py-0.5 text-[11.5px] font-semibold text-[#177E4E]">
+                  in {(elapsedMs / 1000).toFixed(1)}s
+                </span>
+              )}
+              {query.widen && (
+                <span className="rounded-full bg-[#FBF7EE] px-2 py-0.5 text-[11.5px] font-semibold text-[#B7860B]">
+                  widened criteria
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Chip>{formatSqft(query.sqft)} sq ft</Chip>
+              <Chip>{classLabel(query.useClass)}</Chip>
+              <Chip>{site.postcode}</Chip>
+              {site.centre && (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF8F1] px-3 py-1 text-[12.5px] font-medium text-[#177E4E]"
+                  title={site.centre.classification}
+                >
+                  <Store size={12} />
+                  {site.centre.name}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={editSite}
+                className="rounded-full border border-sm-border px-3 py-1 text-[12.5px] font-medium text-sm-ink2 transition-colors hover:border-sm-border-hard hover:text-sm-ink"
               >
-                <Store size={12} />
-                {site.centre.name}
-              </span>
-            )}
+                Edit site
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <label className="relative">
+              <span className="sr-only">Sort</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as BrandMatcherSort)}
+                className="appearance-none rounded-xl border border-sm-border bg-sm-surface py-2.5 pl-4 pr-9 text-[13.5px] font-medium text-sm-ink outline-none hover:border-sm-border-hard"
+              >
+                {SORTS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    Sort: {s.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm-ink3" />
+            </label>
             <button
               type="button"
-              onClick={editSite}
-              className="rounded-full border border-sm-border px-3 py-1 text-[12.5px] font-medium text-sm-ink2 transition-colors hover:border-sm-border-hard hover:text-sm-ink"
+              onClick={() => downloadCsv(result, sort)}
+              disabled={sorted.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl bg-sm-violet px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-sm-violet-deep disabled:opacity-50"
             >
-              Edit site
+              <Download size={15} />
+              Export list
             </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <label className="relative">
-            <span className="sr-only">Sort</span>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as BrandMatcherSort)}
-              className="appearance-none rounded-xl border border-sm-border bg-sm-surface py-2.5 pl-4 pr-9 text-[13.5px] font-medium text-sm-ink outline-none hover:border-sm-border-hard"
+        <div className="mx-auto max-w-[1480px] px-8">
+          {sorted.length > 0 && (
+            <div
+              className={`hidden gap-3.5 whitespace-nowrap px-[22px] pb-2.5 text-[11px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:grid ${ROW_GRID}`}
             >
-              {SORTS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  Sort: {s.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm-ink3" />
-          </label>
-          <button
-            type="button"
-            onClick={() => downloadCsv(result, sort)}
-            disabled={sorted.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl bg-sm-violet px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-sm-violet-deep disabled:opacity-50"
-          >
-            <Download size={15} />
-            Export list
-          </button>
+              <span />
+              <span>Brand</span>
+              <span className="grid grid-cols-5 gap-2.5 [&>span]:truncate">
+                <span>Unit size</span>
+                <span>Use class</span>
+                <span>Acquisitive</span>
+                <span title="Demographics">Demographics</span>
+                <span title="Nearest store">Nearest store</span>
+              </span>
+              <span>Turnover</span>
+              <span className="text-right">Fit / 100</span>
+              <span />
+            </div>
+          )}
         </div>
       </header>
 
       <div className="mx-auto max-w-[1480px] space-y-2.5 px-8 py-6">
-        {sorted.length > 0 && (
-          <div
-            className={`hidden gap-3.5 whitespace-nowrap px-[22px] text-[11px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:grid ${ROW_GRID}`}
-          >
-            <span />
-            <span>Brand</span>
-            <span className="grid grid-cols-5 gap-2.5 [&>span]:truncate">
-              <span>Unit size</span>
-              <span>Use class</span>
-              <span>Acquisitive</span>
-              <span title="Demographics">Demographics</span>
-              <span title="Nearest store">Nearest store</span>
-            </span>
-            <span>Turnover</span>
-            <span className="text-right">Fit / 100</span>
-            <span />
-          </div>
-        )}
         {sorted.map((m, i) => (
           <div key={m.brandId}>
             {showDivider && i === firstSparse && (
