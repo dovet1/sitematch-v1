@@ -126,7 +126,7 @@ export async function PUT(
       sqftMin: 'sqft_min',
       sqftMax: 'sqft_max',
       useClass: 'use_class',
-      useClassLabel: 'use_class_label',
+      classLabel: 'use_class_label',
       sector: 'sector',
       sectorLabel: 'sector_label',
       additionalNotes: 'additional_notes',

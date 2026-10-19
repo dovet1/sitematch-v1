@@ -79,7 +79,7 @@ export interface BrochureFormData {
   sqftMin?: number;
   sqftMax?: number;
   useClass?: string;
-  useClassLabel?: string;
+  classLabel?: string;
   sector?: string;
   sectorLabel?: string;
   additionalNotes?: string;

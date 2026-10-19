@@ -19,7 +19,7 @@ function rowToFormData(row: BrochureRow): Partial<BrochureFormData> {
     sector: row.sector || '',
     sectorLabel: row.sector_label || '',
     useClass: row.use_class || '',
-    useClassLabel: row.use_class_label || '',
+    classLabel: row.use_class_label || '',
     sqftMin: row.sqft_min || undefined,
     sqftMax: row.sqft_max || undefined,
     targetLocations: row.target_locations || [],
