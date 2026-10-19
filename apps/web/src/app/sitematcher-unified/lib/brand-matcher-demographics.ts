@@ -187,6 +187,19 @@ export interface DemographicReason {
   sitePosition: SignalPosition
 }
 
+// One measure on which the brand's towns differ from towns of their size, for the percentile
+// strip. Ranks are 0..100 against towns of a similar size.
+export interface DemographicMeasure {
+  signalName: string
+  direction: 'higher' | 'lower'
+  p10: number
+  p25: number
+  p75: number
+  p90: number
+  siteRank: number
+  sitePosition: SignalPosition
+}
+
 export interface DemographicMatch {
   // 'any': the brand's towns are typical for their size on every measure.
   band: DemographicFitBand | 'any'
@@ -195,6 +208,8 @@ export interface DemographicMatch {
   townName: string
   // The most distinctive measures, most distinctive first (at most two).
   reasons: DemographicReason[]
+  // Every measure the fit was read on (up to MAX_FIT_SIGNALS), most distinctive first.
+  measures?: DemographicMeasure[]
   size: { position: SignalPosition; sitePopulation: number; typicalMin: number; typicalMax: number } | null
 }
 
@@ -231,7 +246,7 @@ export function demographicMatch(input: DemographicMatchInput): DemographicMatch
 
   // "Trades in all kinds of towns" is a description of the estate, not a prediction, so it needs
   // no backtest behind it.
-  if (fit.basis === 'broad') return { band: 'any', reasons: [], ...base }
+  if (fit.basis === 'broad') return { band: 'any', reasons: [], measures: [], ...base }
 
   if (!score || score.broad || score.aucDemographics == null || score.aucDemographics < MIN_VALIDATED_AUC) {
     return null
@@ -241,6 +256,16 @@ export function demographicMatch(input: DemographicMatchInput): DemographicMatch
     reasons: fit.signals.slice(0, 2).map((s) => ({
       signalName: s.signalName,
       direction: s.profile.medianRank > 0.5 ? 'higher' : 'lower',
+      sitePosition: s.position,
+    })),
+    measures: fit.signals.map((s) => ({
+      signalName: s.signalName,
+      direction: s.profile.medianRank > 0.5 ? ('higher' as const) : ('lower' as const),
+      p10: s.profile.rankP10 * 100,
+      p25: s.profile.rankP25 * 100,
+      p75: s.profile.rankP75 * 100,
+      p90: s.profile.rankP90 * 100,
+      siteRank: s.siteRank * 100,
       sitePosition: s.position,
     })),
     ...base,
@@ -276,6 +301,43 @@ function words(signalName: string) {
       lower: `less ${signalName.replace(/_/g, ' ')}`,
     }
   )
+}
+
+// Panel wording for one measure: its name, the strip's two ends, and whether its phrases read
+// as adjectives ("more affluent": "is"/"are") or nouns ("more families": "has"/"have").
+const MEASURE: Record<string, { label: string; noun: boolean }> = {
+  affluence: { label: 'Affluence', noun: false },
+  professional_economy: { label: 'Professional jobs', noun: true },
+  car_dependency: { label: 'Walkability', noun: false },
+  stability: { label: 'How settled it is', noun: false },
+  student_presence: { label: 'Students', noun: true },
+  student_market: { label: 'Students', noun: true },
+  young_professionals: { label: 'Young professionals', noun: true },
+  family_market: { label: 'Families', noun: true },
+  empty_nesters: { label: 'Empty nesters', noun: true },
+  retirement_market: { label: 'Retirees', noun: true },
+  urbanity_urban_core: { label: 'How urban it is', noun: false },
+  urbanity_dense_urban: { label: 'How urban it is', noun: false },
+  urbanity_suburban: { label: 'How suburban it is', noun: false },
+  urbanity_rural: { label: 'How rural it is', noun: false },
+}
+
+const capitalise = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+
+export function measureWords(signalName: string): {
+  label: string
+  lowLabel: string
+  highLabel: string
+  higher: string
+  lower: string
+  noun: boolean
+} {
+  const w = words(signalName)
+  const m =
+    MEASURE[signalName] ??
+    MEASURE[signalName.replace(/_(high|medium|low|stable|mixed|transient|walkable|car_dependent|minimal|moderate|strong)$/, '')] ??
+    { label: capitalise(w.topic), noun: false }
+  return { label: m.label, lowLabel: capitalise(w.lower), highLabel: capitalise(w.higher), higher: w.higher, lower: w.lower, noun: m.noun }
 }
 
 function joinAnd(parts: string[]): string {

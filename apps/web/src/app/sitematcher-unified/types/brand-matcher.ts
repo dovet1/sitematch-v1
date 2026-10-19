@@ -46,6 +46,8 @@ export interface SizeFitSignal {
   basis: 'requirement' | 'estate'
   rangeMin: number | null
   rangeMax: number | null
+  // When the verdict was read against a requirement: the date it was listed with us.
+  postedAt?: string | null
 }
 
 export type AcquisitiveLevel = 'high' | 'medium'
@@ -61,6 +63,17 @@ export interface RequirementEvidence {
   nearbyPlaces: string[]
   otherPlaces: string[]
   otherPlaceCount: number
+  // One line per requirement, newest first, for the evidence list.
+  items?: RequirementItem[]
+}
+
+export interface RequirementItem {
+  sizeMin: number | null
+  sizeMax: number | null
+  useClasses: string[]
+  places: string[]
+  // ISO date the requirement was listed with us.
+  postedAt: string | null
 }
 
 export interface NewsEvidence {
@@ -91,6 +104,8 @@ export interface NearestStoreSignal {
   miles: number
   storeName: string | null
   town: string | null
+  // The three nearest stores, nearest first (absent until brand_matcher_brand_geo returns them).
+  stores?: { name: string | null; town: string | null; miles: number }[]
 }
 
 // A filed figure. 'unread' (we have not read the accounts) and 'not_published' (the filing
@@ -135,7 +150,7 @@ export interface BrandMatcherContacts {
   total: number
 }
 
-export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'locationType' | 'nearest'
+export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest'
 
 export interface ScorePart {
   component: ScoreComponent
@@ -160,9 +175,13 @@ export interface BrandMatch {
   // Typical unit for the band copy, from the estate profile (p25–p75), in sq ft.
   typicalRange: { min: number; max: number } | null
   contacts: BrandMatcherContacts
-  // Does the site's town look like the towns the brand trades in? Shown, never scored; absent
-  // when there is nothing validated to say (brand-matcher-demographics.ts).
+  // Does the site's town look like the towns the brand trades in? Absent when there is nothing
+  // validated to say (brand-matcher-demographics.ts).
   demographic?: DemographicMatch | null
+  // Why there is no demographic read: the site is outside every town we profile, or the brand
+  // has no profile the backtest backs. Absent when demographics were not loaded.
+  demographicGap?: 'no_town' | 'no_profile' | null
+  // Points out of 100 across the signals we hold data for; missing signals are left out.
   score: number
   scoreParts: ScorePart[]
 }

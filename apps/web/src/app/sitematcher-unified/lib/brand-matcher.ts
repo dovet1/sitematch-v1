@@ -17,14 +17,12 @@ import type {
   NewsEvidence,
   RequirementEvidence,
   ScorePart,
-  SignalTone,
   SizeFitSignal,
   SizeFitState,
   TradingFacts,
 } from '../types/brand-matcher'
 import {
   demographicMatch,
-  describeDemographic,
   type BacktestScore,
   type DemographicMatch,
   type DemographicSignalProfile,
@@ -121,6 +119,8 @@ export function classLabel(code: string): string {
 export interface SizeRange {
   min: number | null
   max: number | null
+  // ISO date a requirement was listed with us.
+  postedAt?: string | null
 }
 
 export interface EstateRange {
@@ -161,7 +161,7 @@ export function sizeFit(
     if (r.min == null && r.max == null) continue
     const lo = r.min ?? 0
     const hi = r.max ?? Infinity
-    const base = { basis: 'requirement' as const, rangeMin: r.min, rangeMax: r.max }
+    const base = { basis: 'requirement' as const, rangeMin: r.min, rangeMax: r.max, postedAt: r.postedAt ?? null }
     if (sqft >= lo && sqft <= hi) consider({ state: 'fits', ...base })
     else if (sqft > hi && sqft <= hi * (1 + tol)) consider({ state: 'larger', ...base })
     else if (sqft < lo && sqft >= lo * (1 - tol)) consider({ state: 'smaller', ...base })
@@ -325,19 +325,100 @@ export function acquisitiveSignal(
 }
 
 // ---------------------------------------------------------------------------
-// Score — attributable part by part to the pills on the card
+// Signals — one status and a short value per scored signal, for the collapsed row, the
+// breakdown and the CSV. Status is read from shape as well as colour (handoff 3d).
+// ---------------------------------------------------------------------------
+
+export type SignalKey = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest'
+export type SignalStatus = 'good' | 'caution' | 'poor' | 'none'
+
+export const SIGNAL_KEYS: SignalKey[] = ['size', 'useClass', 'acquisitive', 'demographics', 'nearest']
+
+export const SIGNAL_LABEL: Record<SignalKey, string> = {
+  size: 'Size fit',
+  useClass: 'Use class',
+  acquisitive: 'Acquisitive',
+  demographics: 'Demographics',
+  nearest: 'Nearest store',
+}
+
+// A store closer than this is a caution; closer than BLOCKER_MILES a likely blocker.
+export const CAUTION_MILES = 3
+
+export interface SignalSummary {
+  key: SignalKey
+  status: SignalStatus
+  // Short value for the row and breakdown, e.g. "Fits", "Class E", "3.1 mi".
+  value: string
+}
+
+const SIZE_SUMMARY: Record<SizeFitState, { value: string; status: SignalStatus }> = {
+  fits: { value: 'Fits', status: 'good' },
+  lower_end: { value: 'Lower end', status: 'caution' },
+  upper_end: { value: 'Upper end', status: 'caution' },
+  larger: { value: 'Above range', status: 'caution' },
+  smaller: { value: 'Below range', status: 'caution' },
+}
+
+const DEMOGRAPHIC_SUMMARY: Record<DemographicMatch['band'], { value: string; status: SignalStatus }> = {
+  good: { value: 'Strong', status: 'good' },
+  partial: { value: 'Partial', status: 'caution' },
+  weak: { value: 'Weak', status: 'poor' },
+  any: { value: 'Any area', status: 'good' },
+}
+
+type Summarisable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'demographic' | 'nearest'>
+
+export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<BrandMatcherQuery, 'useClass'>): SignalSummary {
+  const none: SignalSummary = { key, status: 'none', value: 'No data' }
+  switch (key) {
+    case 'size':
+      return { key, ...SIZE_SUMMARY[m.size.state] }
+    case 'useClass':
+      if (!m.useClass) return none
+      return m.useClass.matches
+        ? { key, status: 'good', value: classLabel(query.useClass) }
+        : { key, status: 'poor', value: m.useClass.codes.map(classLabel).join(', ') }
+    case 'acquisitive':
+      if (!m.acquisitive) return none
+      return m.acquisitive.level === 'high'
+        ? { key, status: 'good', value: 'High' }
+        : { key, status: 'caution', value: 'Medium' }
+    case 'demographics':
+      return m.demographic ? { key, ...DEMOGRAPHIC_SUMMARY[m.demographic.band] } : none
+    case 'nearest': {
+      if (!m.nearest) return none
+      const mi = m.nearest.miles
+      return {
+        key,
+        status: mi < BLOCKER_MILES ? 'poor' : mi < CAUTION_MILES ? 'caution' : 'good',
+        value: formatMiles(mi),
+      }
+    }
+  }
+}
+
+export function signalSummaries(m: Summarisable, query: Pick<BrandMatcherQuery, 'useClass'>): SignalSummary[] {
+  return SIGNAL_KEYS.map((k) => signalSummary(m, k, query))
+}
+
+// ---------------------------------------------------------------------------
+// Score — attributable part by part to the signals on the card
 // ---------------------------------------------------------------------------
 
 export const SCORE_MAX: Record<ScorePart['component'], number> = {
   size: 30,
   acquisitive: 30,
-  locationType: 15,
+  demographics: 15,
   nearest: 15,
   useClass: 10,
 }
 
-type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'locationType' | 'nearest'>
+type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'demographic' | 'nearest'>
 
+// A signal we hold no data for is left out of the score rather than counted against it: the
+// score is the points earned out of the points available from the signals we do hold, scaled to
+// 100 (handoff: "Based on n of 5 signals").
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -346,121 +427,30 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   add('size', m.size.state === 'fits' ? 30 : m.size.state === 'lower_end' || m.size.state === 'upper_end' ? 20 : 10)
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
   if (m.acquisitive) add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
-  if (m.locationType) add('locationType', m.locationType.count > 0 ? Math.min(15, 5 + m.locationType.count) : 0)
+  if (m.demographic) {
+    const band = m.demographic.band
+    add('demographics', band === 'good' || band === 'any' ? 15 : band === 'partial' ? 8 : 0)
+  }
   if (m.nearest) {
     const mi = m.nearest.miles
     // Distance is a gap: the further the nearest branch, the stronger the reason to take it.
-    add('nearest', mi >= 10 ? 15 : mi >= 3 ? 10 : mi >= BLOCKER_MILES ? 5 : 0)
+    add('nearest', mi >= 10 ? 15 : mi >= CAUTION_MILES ? 10 : mi >= BLOCKER_MILES ? 5 : 0)
   }
   // Trading facts are deliberately absent. Never score a company's finances.
-  return { score: parts.reduce((s, p) => s + p.points, 0), parts }
+  const earned = parts.reduce((s, p) => s + p.points, 0)
+  const available = parts.reduce((s, p) => s + p.max, 0)
+  return { score: available > 0 ? Math.round((100 * earned) / available) : 0, parts }
 }
 
 export function isSparse(m: Pick<BrandMatch, 'acquisitive'>): boolean {
   return m.acquisitive == null
 }
 
-// ---------------------------------------------------------------------------
-// Pills
-// ---------------------------------------------------------------------------
-
-export interface Pill {
-  key: string
-  label: string
-  value: string
-  tone: SignalTone
-  mark?: '✓' | '△'
-  title?: string
-}
-
-const SIZE_PILL: Record<SizeFitState, { value: string; tone: SignalTone; mark: '✓' | '△' }> = {
-  fits: { value: 'Fits', tone: 'green', mark: '✓' },
-  lower_end: { value: 'Lower end', tone: 'amber', mark: '△' },
-  upper_end: { value: 'Upper end', tone: 'amber', mark: '△' },
-  larger: { value: 'Larger', tone: 'amber', mark: '△' },
-  smaller: { value: 'Smaller', tone: 'amber', mark: '△' },
-}
-
-// null when there is nothing verifiable to put on the pill (figures not read yet).
+// null when there is nothing verifiable to show (figures not read yet).
 export function turnoverValue(facts: TradingFacts): string | null {
   if (facts.turnover.status === 'filed' || facts.turnover.status === 'extracted') return formatMoney(facts.turnover.value)
   if (facts.turnover.status === 'not_published') return 'Not disclosed'
   return null
-}
-
-export function buildPills(m: BrandMatch, query: Pick<BrandMatcherQuery, 'useClass'>): Pill[] {
-  const pills: Pill[] = []
-  const size = SIZE_PILL[m.size.state]
-  const range = formatSqftRange(m.size.rangeMin, m.size.rangeMax)
-  pills.push({
-    key: 'size',
-    label: 'Size fit',
-    ...size,
-    title: range
-      ? `${m.size.basis === 'requirement' ? 'Stated requirement' : 'Typical store'}: ${range}`
-      : undefined,
-  })
-  if (m.useClass) {
-    pills.push({
-      key: 'useClass',
-      label: 'Use class',
-      value: m.useClass.matches
-        ? classLabel(query.useClass)
-        : m.useClass.codes.map(classLabel).join(', '),
-      tone: m.useClass.matches ? 'green' : 'amber',
-      mark: m.useClass.matches ? '✓' : '△',
-    })
-  }
-  if (m.acquisitive) {
-    pills.push({
-      key: 'acquisitive',
-      label: 'Acquisitive',
-      value: m.acquisitive.level === 'high' ? 'High' : 'Medium',
-      tone: m.acquisitive.level === 'high' ? 'amber' : 'neutral',
-    })
-  }
-  const turnover = m.tradingFacts ? turnoverValue(m.tradingFacts) : null
-  if (turnover) {
-    // Always neutral: a trading fact is never coloured green or red.
-    pills.push({ key: 'turnover', label: 'Turnover', value: turnover, tone: 'neutral' })
-  }
-  if (m.locationType) {
-    const n = m.locationType.count
-    pills.push({
-      key: 'locationType',
-      label: formPlural(m.locationType.form),
-      value: n > 0 ? `Trades in ${n}` : `None in ${LOCATION_TYPE_RADIUS_MILES} mi`,
-      tone: n > 0 ? 'green' : 'neutral',
-    })
-  }
-  if (m.demographic) {
-    pills.push(demographicPill(m.demographic, m.name))
-  }
-  if (m.nearest) {
-    const blocker = m.nearest.miles < BLOCKER_MILES
-    pills.push({
-      key: 'nearest',
-      label: 'Nearest',
-      value: formatMiles(m.nearest.miles),
-      tone: blocker ? 'red' : 'neutral',
-      title: [m.nearest.storeName, blocker ? 'Existing store very close — likely blocker' : null]
-        .filter(Boolean)
-        .join(' · ') || undefined,
-    })
-  }
-  return pills
-}
-
-const DEMOGRAPHIC_PILL: Record<DemographicMatch['band'], { value: string; tone: SignalTone; mark?: '✓' | '△' }> = {
-  good: { value: 'Good fit', tone: 'green', mark: '✓' },
-  partial: { value: 'Partial fit', tone: 'amber', mark: '△' },
-  // A weak fit is a reason to look twice, not a blocker: never red.
-  weak: { value: 'Weak fit', tone: 'neutral' },
-  any: { value: 'Any town', tone: 'neutral' },
-}
-
-export function demographicPill(d: DemographicMatch, brandName: string): Pill {
-  return { key: 'demographic', label: 'Demographics', ...DEMOGRAPHIC_PILL[d.band], title: describeDemographic(d, brandName).join(' ') }
 }
 
 // ---------------------------------------------------------------------------
@@ -485,7 +475,9 @@ export function sortMatches(matches: BrandMatch[], sort: BrandMatcherSort): Bran
     }
     case 'best':
     default:
-      return list.sort((a, b) => b.score - a.score || byName(a, b))
+      // Brands with evidence they are acquiring come first: a score scaled over fewer signals
+      // must not lift a brand we know little about above one that is actively looking.
+      return list.sort((a, b) => Number(isSparse(a)) - Number(isSparse(b)) || b.score - a.score || byName(a, b))
   }
 }
 
@@ -500,16 +492,19 @@ function csvCell(v: string | number | null | undefined): string {
 export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): string {
   const header = [
     'Rank', 'Brand', 'Category', 'Match score', 'Size fit', 'Use class', 'Acquisitive',
-    'Open requirements', 'Same location type', 'Demographic fit', 'Nearest store (mi)', 'Nearest store',
+    'Open requirements', 'Demographic fit', 'Nearest store (mi)', 'Nearest store',
     'Primary contact', 'Role', 'Email', 'Phone',
   ]
   const rows = matches.map((m, i) => {
-    const pills = buildPills(m, query)
-    const pill = (k: string) => pills.find((p) => p.key === k)?.value ?? ''
+    const signals = signalSummaries(m, query)
+    const value = (k: SignalKey) => {
+      const sig = signals.find((x) => x.key === k)
+      return sig && sig.status !== 'none' ? sig.value : ''
+    }
     const c = m.contacts.primary
     return [
-      i + 1, m.name, m.category, `${m.score}%`, pill('size'), pill('useClass'), pill('acquisitive'),
-      m.acquisitive?.requirements?.count ?? '', pill('locationType'), pill('demographic'),
+      i + 1, m.name, m.category, `${m.score}/100`, value('size'), value('useClass'), value('acquisitive'),
+      m.acquisitive?.requirements?.count ?? '', value('demographics'),
       m.nearest ? m.nearest.miles.toFixed(1) : '', m.nearest?.storeName ?? '',
       c?.name ?? '', c?.title ?? '', c?.email ?? '', c?.phone ?? '',
     ].map(csvCell).join(',')
@@ -537,6 +532,8 @@ export interface RawRequirement {
   useClasses: string[]
   locations: { name: string; lat: number | null; lon: number | null }[]
   contacts: BrandMatcherContact[]
+  // ISO date the requirement was listed with us.
+  createdAt?: string | null
 }
 
 export interface RawNewsItem {
@@ -555,6 +552,8 @@ export interface RawBrandGeo {
   sameFormCount: number | null
   sameFormNames: string[]
   sameFormNearestMeters: number | null
+  // The three nearest stores, nearest first; empty when the RPC predates them.
+  nearestStores?: { name: string | null; town: string | null; meters: number }[]
 }
 
 export interface AssembleInput {
@@ -582,6 +581,9 @@ export interface DemographicsInput {
 export function demographicKey(brandId: string, fasciaId: string | null | undefined): string {
   return `${brandId}|${fasciaId ?? ''}`
 }
+
+// Most evidence lines (requirements, news) carried per brand.
+export const MAX_EVIDENCE_ITEMS = 20
 
 function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (d: number) => (d * Math.PI) / 180
@@ -619,6 +621,16 @@ function requirementEvidence(
   }
   for (const n of Array.from(nearby)) other.delete(n)
   const otherList = Array.from(other)
+  const items = [...reqs]
+    .sort((a, z) => (z.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    .slice(0, MAX_EVIDENCE_ITEMS)
+    .map((r) => ({
+      sizeMin: r.sizeMin,
+      sizeMax: r.sizeMax,
+      useClasses: r.useClasses,
+      places: Array.from(new Set(r.locations.map((l) => shortPlace(l.name)))),
+      postedAt: r.createdAt ? r.createdAt.slice(0, 10) : null,
+    }))
   return {
     count: reqs.length,
     sizeMin: mins.length ? Math.min(...mins) : null,
@@ -628,6 +640,7 @@ function requirementEvidence(
     nearbyPlaces: Array.from(nearby).slice(0, 4),
     otherPlaces: otherList.slice(0, 3),
     otherPlaceCount: otherList.length,
+    items,
   }
 }
 
@@ -658,7 +671,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
 
     const size = sizeFit(
       query.sqft,
-      reqs.map((r) => ({ min: r.sizeMin, max: r.sizeMax })),
+      reqs.map((r) => ({ min: r.sizeMin, max: r.sizeMax, postedAt: r.createdAt ? r.createdAt.slice(0, 10) : null })),
       estate,
       query.widen
     )
@@ -670,7 +683,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
 
     const newsItems = (newsByBrand.get(b.id) ?? []).sort((a, z) => z.date.localeCompare(a.date))
     const news: NewsEvidence | null = newsItems.length
-      ? { count: newsItems.length, items: newsItems.slice(0, 3).map(({ brandId: _b, ...n }) => n) }
+      ? { count: newsItems.length, items: newsItems.slice(0, MAX_EVIDENCE_ITEMS).map(({ brandId: _b, ...n }) => n) }
       : null
     const acquisitive = acquisitiveSignal(
       requirementEvidence(reqs, site, key),
@@ -689,7 +702,14 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
           }
         : null
     const nearest = g
-      ? { miles: g.nearestMeters / METERS_PER_MILE, storeName: g.nearestName, town: g.nearestTown }
+      ? {
+          miles: g.nearestMeters / METERS_PER_MILE,
+          storeName: g.nearestName,
+          town: g.nearestTown,
+          ...(g.nearestStores?.length
+            ? { stores: g.nearestStores.map((x) => ({ name: x.name, town: x.town, miles: x.meters / METERS_PER_MILE })) }
+            : {}),
+        }
       : null
 
     // Typical unit for the band copy: the fascia range nearest the site's size.
@@ -713,13 +733,14 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
           brandScore: dem.scores.get(demographicKey(b.id, null)) ?? null,
         })
       : null
+    const demographicGap = dem && !demographic ? (dem.site ? 'no_profile' : 'no_town') : null
     const contacts = rankContacts(
       [...(input.brandContacts.get(b.id) ?? []), ...reqs.flatMap((r) => r.contacts)],
       key
     )
 
     const partial = { size, useClass, acquisitive, locationType, nearest }
-    const { score, parts } = scoreMatch(partial)
+    const { score, parts } = scoreMatch({ ...partial, demographic })
     matches.push({
       brandId: b.id,
       name: b.name,
@@ -732,6 +753,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
       typicalRange: typical ? { min: typical.p25, max: typical.p75 } : null,
       contacts,
       demographic,
+      demographicGap,
       score,
       scoreParts: parts,
     })

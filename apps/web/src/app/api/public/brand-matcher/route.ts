@@ -79,6 +79,7 @@ interface RequirementRow {
   brand_id: string
   site_size_min: number | null
   site_size_max: number | null
+  created_at: string | null
   requirement_locations: { place_name: string | null; coordinates: unknown }[] | null
   requirement_use_classes: { use_classes: { code: string } | null }[] | null
   requirement_contacts: ContactRow[] | null
@@ -152,7 +153,7 @@ async function loadRequirements(db: Db): Promise<RawRequirement[]> {
     db
       .from('requirements')
       .select(
-        'brand_id, site_size_min, site_size_max, ' +
+        'brand_id, site_size_min, site_size_max, created_at, ' +
           'requirement_locations(place_name, coordinates), ' +
           'requirement_use_classes(use_classes(code)), ' +
           'requirement_contacts(id, contact_name, contact_title, contact_email, contact_phone, contact_area, is_primary_contact)'
@@ -176,6 +177,7 @@ async function loadRequirements(db: Db): Promise<RawRequirement[]> {
       .filter((l) => l.place_name)
       .map((l) => ({ name: l.place_name as string, ...parseLonLat(l.coordinates) })),
     contacts: (r.requirement_contacts ?? []).map(toContact),
+    createdAt: r.created_at,
   }))
 }
 
@@ -341,6 +343,8 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
     same_form_count: number | null
     same_form_names: string[] | null
     same_form_nearest_m: number | null
+    // Added by migration 20261025000000; absent until it is applied.
+    nearest_stores?: { name: string | null; town: string | null; distance_m: number }[] | null
   }[]) {
     map.set(r.brand_id, {
       storeCount: Number(r.store_count),
@@ -350,6 +354,7 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
       sameFormCount: r.same_form_count == null ? null : Number(r.same_form_count),
       sameFormNames: r.same_form_names ?? [],
       sameFormNearestMeters: r.same_form_nearest_m,
+      nearestStores: (r.nearest_stores ?? []).map((x) => ({ name: x.name, town: x.town, meters: x.distance_m })),
     })
   }
   return map

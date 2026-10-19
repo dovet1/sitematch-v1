@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrandMatchCard } from '../BrandMatchCard'
@@ -30,21 +31,34 @@ const rich = withScore({
   domain: null,
   category: 'Discount grocery',
   storeCount: 990,
-  size: { state: 'fits', basis: 'requirement', rangeMin: 8000, rangeMax: 20000 },
+  size: { state: 'fits', basis: 'requirement', rangeMin: 10000, rangeMax: 18000, postedAt: '2026-10-03' },
   useClass: { codes: ['E'], matches: true },
   acquisitive: {
     level: 'high',
     requirements: {
       count: 12, sizeMin: 8000, sizeMax: 20000, useClasses: ['E'], nationwide: false,
       nearbyPlaces: ['Leeds'], otherPlaces: [], otherPlaceCount: 0,
+      items: [
+        { sizeMin: 8000, sizeMax: 20000, useClasses: ['E'], places: ['Leeds', 'Bradford'], postedAt: '2026-10-03' },
+      ],
     },
-    news: null,
+    news: {
+      count: 1,
+      items: [{ headline: 'Aldi confirms 40 new UK stores this year', url: 'https://example.com/aldi', date: '2026-09-22', upcoming: false }],
+    },
     planning: { count: 5 },
   },
   tradingFacts: null,
   locationType: { form: 'retail_park', count: 10, names: ['Owlcotes', 'Crown Point', 'Kirkstall Bridge'], nearestMiles: 3 },
-  nearest: { miles: 3.1, storeName: 'Aldi Kirkstall', town: 'Leeds' },
-  typicalRange: null,
+  nearest: {
+    miles: 3.1, storeName: 'Aldi Kirkstall', town: 'Leeds',
+    stores: [
+      { name: 'Aldi Kirkstall', town: 'Leeds', miles: 3.1 },
+      { name: 'Aldi Headingley', town: 'Leeds', miles: 4.2 },
+      { name: 'Aldi Horsforth', town: 'Leeds', miles: 5.8 },
+    ],
+  },
+  typicalRange: { min: 14000, max: 20000 },
   contacts: {
     primary: { id: 'rh', name: 'Rebecca Hale', title: 'Property Acquisitions', area: 'North & Yorkshire', email: 'r.hale@aldi.co.uk', phone: '01827 711 812', isPrimary: false },
     coversRegion: true,
@@ -73,79 +87,123 @@ const sparse = withScore({
   contacts: { primary: null, coversRegion: false, others: [], total: 0 },
 })
 
-function renderCard(match: BrandMatch, expanded = true, onExpandedChange = jest.fn()) {
-  render(
+function Harness({ match, startExpanded, onChange }: { match: BrandMatch; startExpanded: boolean; onChange: jest.Mock }) {
+  const [expanded, setExpanded] = useState(startExpanded)
+  return (
     <BrandMatchCard
       match={match}
-      rank={1}
       query={query}
       site={site}
       expanded={expanded}
-      onExpandedChange={onExpandedChange}
+      onExpandedChange={(open) => {
+        onChange(open)
+        setExpanded(open)
+      }}
     />
   )
-  return onExpandedChange
 }
 
-beforeAll(() => {
-  Element.prototype.scrollIntoView = jest.fn()
-})
+function renderCard(match: BrandMatch, expanded = true) {
+  const onChange = jest.fn()
+  render(<Harness match={match} startExpanded={expanded} onChange={onChange} />)
+  return onChange
+}
 
-describe('BrandMatchCard — rich brand', () => {
-  it('shows the pills, the location band, the evidence and a region contact', () => {
-    renderCard(rich)
-    expect(screen.getByText('Size fit')).toBeInTheDocument()
-    expect(screen.getByText('Acquisitive')).toBeInTheDocument()
-    expect(screen.getByText('Trades in 10')).toBeInTheDocument()
-    expect(screen.getByText('Already trades in your type of location.')).toBeInTheDocument()
-    expect(screen.getByText(/Owlcotes, Crown Point and Kirkstall Bridge/)).toBeInTheDocument()
-    expect(screen.getByText('12 open requirements')).toBeInTheDocument()
-    expect(screen.getByText(/within reach of your site/)).toBeInTheDocument()
+const demographic = {
+  band: 'partial' as const,
+  basis: 'fascia' as const,
+  townName: 'Leeds',
+  reasons: [],
+  size: null,
+  measures: [
+    { signalName: 'affluence_low', direction: 'lower' as const, p10: 15, p25: 25, p75: 48, p90: 60, siteRank: 38, sitePosition: 'typical' as const },
+    { signalName: 'car_dependency', direction: 'lower' as const, p10: 40, p25: 58, p75: 82, p90: 92, siteRank: 30, sitePosition: 'below' as const },
+  ],
+}
+
+describe('BrandMatchCard — collapsed row', () => {
+  it('shows a status glyph and value per signal, the fit score and the contact count', () => {
+    renderCard({ ...rich, nearest: { miles: 0.6, storeName: null, town: null } }, false)
+    expect(screen.getAllByRole('img', { name: 'Good' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('img', { name: 'Concern' })).toBeInTheDocument()
+    expect(screen.getByText('0.6 mi')).toBeInTheDocument()
+    // No demographic read: a dash and "No data", never a guess.
+    expect(screen.getByRole('img', { name: 'No data' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '3 contacts' })).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  it('opens on the contacts list from the contacts button', async () => {
+    const onChange = renderCard(rich, false)
+    await userEvent.click(screen.getByRole('button', { name: '3 contacts' }))
+    expect(onChange).toHaveBeenCalledWith(true)
     expect(screen.getByText('Covers your region')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Contact Rebecca Hale' })).toHaveAttribute(
-      'href',
-      expect.stringContaining('mailto:r.hale@aldi.co.uk')
-    )
-    expect(screen.getByRole('link', { name: 'Or email all three at once' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Email all three' })).toHaveAttribute(
       'href',
       expect.stringContaining('r.hale@aldi.co.uk,d.marsh@aldi.co.uk,property@aldi.co.uk')
     )
-    expect(screen.getByRole('img', { name: 'Match score 95%' })).toBeInTheDocument()
   })
+})
 
-  it('never renders a Companies House column or turnover pill without facts', () => {
+describe('BrandMatchCard — expanded card', () => {
+  it('shows the score over the signals held and opens on the first signal worth a look', () => {
     renderCard(rich)
-    expect(screen.queryByText(/Companies House/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Turnover')).not.toBeInTheDocument()
+    // 80 of 85 points: demographics is missing, so it is left out.
+    expect(screen.getByText('94')).toBeInTheDocument()
+    expect(screen.getByText('Based on 4 of 5 signals')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Demographics/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Too few stores to profile')).toBeInTheDocument()
   })
 
-  it('Contact on a collapsed card expands it', async () => {
-    const onChange = renderCard(rich, false)
-    await userEvent.click(screen.getByRole('button', { name: 'Contact' }))
-    expect(onChange).toHaveBeenCalledWith(true)
+  it('swaps the panel when a breakdown row is picked', async () => {
+    renderCard(rich)
+    await userEvent.click(screen.getByRole('button', { name: /Acquisitive/ }))
+    expect(screen.getByText('Acquisitive: high')).toBeInTheDocument()
+    expect(screen.getByText('8k–20k sq ft, Class E, Leeds, Bradford')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Aldi confirms 40 new UK stores this year/ })).toHaveAttribute('href', 'https://example.com/aldi')
+
+    await userEvent.click(screen.getByRole('button', { name: /Size fit/ }))
+    expect(screen.getByText('Size fit: fits')).toBeInTheDocument()
+    expect(screen.getByText(/inside the size range of Aldi's existing stores and its live requirement/)).toBeInTheDocument()
+    expect(screen.getByText('Live requirement 10k–18k')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Nearest store/ }))
+    expect(screen.getByText('Nearest store: 3.1 mi')).toBeInTheDocument()
+    expect(screen.getByText('Aldi Horsforth')).toBeInTheDocument()
+    expect(screen.getByText(/also trades in 10 other retail parks within 30 miles/)).toBeInTheDocument()
+  })
+
+  it('shows only the demographic measures the brand stands out on', async () => {
+    renderCard({ ...rich, demographic })
+    expect(screen.getByText('Demographics: partial')).toBeInTheDocument()
+    expect(screen.getByText(/stand out on 2 measures, and Leeds matches 1 of them/)).toBeInTheDocument()
+    expect(screen.getByText('Affluence')).toBeInTheDocument()
+    expect(screen.getByText("Doesn't match")).toBeInTheDocument()
+    expect(screen.getByText(/Leeds is less affluent than 62 in 100/)).toBeInTheDocument()
+  })
+
+  it('never renders financial figures without Companies House facts', async () => {
+    renderCard(rich)
+    await userEvent.click(screen.getByRole('button', { name: /Financials/ }))
+    expect(screen.getByText('No Companies House match')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Search Companies House/ })).toBeInTheDocument()
   })
 })
 
 describe('BrandMatchCard — sparse brand', () => {
-  it('shows only what we can verify', () => {
+  it('leaves missing signals out of the score and says so', async () => {
     renderCard(sparse)
-    expect(screen.queryByText('Acquisitive')).not.toBeInTheDocument()
-    expect(screen.queryByText('The evidence')).not.toBeInTheDocument()
-    expect(screen.getByText('Matched on size and location.')).toBeInTheDocument()
-    expect(
-      screen.getByText(/typical unit is 12,000–16,000 sq ft, and they already trade in one retail park — Owlcotes, 42 miles away\./)
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/We could not find any evidence that Fettle Home is acquiring at the moment/)
-    ).toBeInTheDocument()
+    expect(screen.getByText('Based on 2 of 5 signals')).toBeInTheDocument()
+    // Opens on the first signal that isn't good: no use class stated.
+    expect(screen.getByText('Use class not confirmed')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Acquisitive/ }))
+    expect(screen.getByText('Acquisitive: no evidence')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'rob@sitematcher.co.uk' })).toBeInTheDocument()
-    expect(screen.getByText('What we verified')).toBeInTheDocument()
   })
 
-  it('uses the empty contact treatment with a Request a contact action', () => {
+  it('offers Request a contact when we hold no contact', async () => {
     renderCard(sparse)
-    expect(screen.getByText('No named acquisitions contact')).toBeInTheDocument()
-    expect(screen.getByText('none on file')).toBeInTheDocument()
+    expect(screen.getByText('No named contact')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Request a contact' })).toHaveAttribute(
       'href',
       expect.stringContaining('mailto:rob@sitematcher.co.uk')
@@ -167,35 +225,35 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     fetchedAt: '2026-09-18T00:00:00.000Z',
   }
 
-  it('shows register facts without implying figures were not filed', () => {
-    renderCard({ ...rich, tradingFacts: facts })
-    expect(screen.getByText('Companies House — published facts')).toBeInTheDocument()
-    expect(screen.getByText('ALDI STORES LIMITED · 02321869')).toBeInTheDocument()
-    expect(screen.getByText('Filed on time')).toBeInTheDocument()
+  async function openFinancials(match: BrandMatch) {
+    renderCard(match)
+    await userEvent.click(screen.getByRole('button', { name: /Financials/ }))
+  }
+
+  it('shows register facts without implying figures were not filed', async () => {
+    await openFinancials({ ...rich, tradingFacts: facts })
+    expect(screen.getByText('ALDI STORES LIMITED, active', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('On time')).toBeInTheDocument()
     expect(screen.getByText('31 Dec 2024')).toBeInTheDocument()
-    // Unread figures: no row, no pill, and never "Not disclosed".
+    // Unread figures: no row, and never "Not disclosed".
     expect(screen.queryByText('Latest turnover')).not.toBeInTheDocument()
-    expect(screen.queryByText('Turnover')).not.toBeInTheDocument()
     expect(screen.queryByText('Not disclosed')).not.toBeInTheDocument()
     expect(
       screen.getByText(/SiteMatcher does not rate, score or comment on a company.s financial standing — including covenant strength/)
     ).toBeInTheDocument()
   })
 
-  it('shows filed figures neutrally', () => {
-    renderCard({
-      ...rich,
-      tradingFacts: { ...facts, turnover: { status: 'filed', value: 17.9e9 }, netAssets: { status: 'filed', value: 4.1e9 } },
-    })
-    const pill = screen.getByText('Turnover').parentElement as HTMLElement
-    expect(within(pill).getByText('£17.9bn')).toBeInTheDocument()
-    expect(pill.className).toContain('bg-[#F5F6FA]')
-    expect(screen.getByText('Companies House — trading facts')).toBeInTheDocument()
+  it('shows filed turnover on the row and in the panel, never scored', async () => {
+    const match = { ...rich, tradingFacts: { ...facts, turnover: { status: 'filed' as const, value: 17.9e9 }, netAssets: { status: 'filed' as const, value: 4.1e9 } } }
+    await openFinancials(match)
+    expect(screen.getByText('£17.9bn · not scored ›')).toBeInTheDocument()
+    const panel = screen.getByText('Latest turnover').parentElement as HTMLElement
+    expect(within(panel).getByText('£17.9bn')).toBeInTheDocument()
     expect(screen.queryByText(/scanned accounts/)).not.toBeInTheDocument()
   })
 
-  it('says where figures read from scanned accounts came from', () => {
-    renderCard({
+  it('says where figures read from scanned accounts came from', async () => {
+    await openFinancials({
       ...rich,
       tradingFacts: {
         ...facts,
@@ -203,20 +261,18 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
         netAssets: { status: 'extracted', value: -3_461_000, page: 12 },
       },
     })
-    const pill = screen.getByText('Turnover').parentElement as HTMLElement
-    expect(within(pill).getByText('£9m')).toBeInTheDocument()
     expect(screen.getByText(/Read automatically from scanned accounts \(PDF p\. 11, p\. 12\)/)).toBeInTheDocument()
   })
 
-  it('uses the small-company note only when turnover is genuinely not published', () => {
-    renderCard({ ...sparse, tradingFacts: { ...facts, turnover: { status: 'not_published' } } })
+  it('uses the small-company note only when turnover is genuinely not published', async () => {
+    await openFinancials({ ...sparse, tradingFacts: { ...facts, turnover: { status: 'not_published' } } })
     expect(screen.getAllByText('Not disclosed').length).toBeGreaterThan(0)
     expect(screen.getByText(/Small companies aren.t required to file turnover/)).toBeInTheDocument()
   })
 
-  it('offers the registered office when there is no named contact', () => {
+  it('offers the registered office when there is no named contact', async () => {
     renderCard({ ...sparse, tradingFacts: facts })
-    expect(screen.getByText(/we hold the registered office only/)).toBeInTheDocument()
-    expect(screen.getByText('Holly Lane, Atherstone, Warwickshire, CV9 2SQ')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /No named contact/ }))
+    expect(screen.getByText(/we hold the registered office only: Holly Lane, Atherstone/)).toBeInTheDocument()
   })
 })

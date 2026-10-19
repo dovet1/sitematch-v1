@@ -11,7 +11,7 @@ import {
   classLabel,
 } from '../../../lib/brand-matcher'
 import type { BrandMatcherResponse, BrandMatcherSort } from '../../../types/brand-matcher'
-import { BrandMatchCard } from './BrandMatchCard'
+import { BrandMatchCard, ROW_GRID } from './BrandMatchCard'
 
 const SORTS: { id: BrandMatcherSort; label: string }[] = [
   { id: 'best', label: 'Best match' },
@@ -45,7 +45,7 @@ export function BrandMatcherResults() {
 
   const { site, query } = result
   // Under Best match the brands with acquisitive evidence rank first; mark where the list turns
-  // to brands matched on size, location type and distance alone.
+  // to brands with none.
   const firstSparse = sort === 'best' ? sorted.findIndex(isSparse) : -1
   const showDivider = firstSparse > 0
 
@@ -119,17 +119,34 @@ export function BrandMatcherResults() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1480px] space-y-4 px-8 py-6">
+      <div className="mx-auto max-w-[1480px] space-y-2.5 px-8 py-6">
+        {sorted.length > 0 && (
+          <div
+            className={`hidden gap-3.5 whitespace-nowrap px-[22px] text-[11px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:grid ${ROW_GRID}`}
+          >
+            <span />
+            <span>Brand</span>
+            <span className="grid grid-cols-5 gap-2.5 [&>span]:truncate">
+              <span>Unit size</span>
+              <span>Use class</span>
+              <span>Acquisitive</span>
+              <span title="Demographics">Demographics</span>
+              <span title="Nearest store">Nearest store</span>
+            </span>
+            <span>Turnover</span>
+            <span className="text-right">Fit / 100</span>
+            <span />
+          </div>
+        )}
         {sorted.map((m, i) => (
           <div key={m.brandId}>
             {showDivider && i === firstSparse && (
-              <p className="mb-4 mt-2 text-[13px] text-sm-ink3">
-                Lower-ranked brands are matched on size, location type and distance alone.
+              <p className="mb-2.5 mt-4 text-[13px] text-sm-ink3">
+                We haven&apos;t found evidence that the brands below are acquiring at the moment.
               </p>
             )}
             <BrandMatchCard
               match={m}
-              rank={i + 1}
               query={query}
               site={site}
               expanded={expandedId === m.brandId}

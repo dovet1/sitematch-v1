@@ -2,7 +2,6 @@ import {
   acquisitiveSignal,
   areaCoversRegion,
   assembleMatches,
-  buildPills,
   demographicKey,
   formatSqftRange,
   isNationalArea,
@@ -12,6 +11,8 @@ import {
   regionKey,
   scoreMatch,
   shortCentreName,
+  signalSummaries,
+  signalSummary,
   sizeFit,
   sortMatches,
   type AssembleInput,
@@ -238,18 +239,28 @@ const chFacts: TradingFacts = {
 }
 
 describe('scoreMatch', () => {
-  it('is the sum of the parts shown as pills', () => {
+  it('scales the points earned to 100 across the signals we hold', () => {
     const m = baseMatch({
       useClass: { codes: ['E'], matches: true },
       acquisitive: { level: 'high', requirements: null, news: null, planning: null },
-      locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 },
       nearest: { miles: 3.1, storeName: null, town: null },
     })
     const { score, parts } = scoreMatch(m)
-    expect(parts.map((p) => p.component).sort()).toEqual(
-      ['acquisitive', 'locationType', 'nearest', 'size', 'useClass']
+    expect(parts.map((p) => p.component).sort()).toEqual(['acquisitive', 'nearest', 'size', 'useClass'])
+    // 30 + 10 + 30 + 10 earned of 30 + 10 + 30 + 15 available.
+    expect(score).toBe(Math.round((100 * 80) / 85))
+  })
+  it('leaves a missing signal out rather than counting it against the brand', () => {
+    expect(scoreMatch(baseMatch({})).score).toBe(100)
+    expect(scoreMatch(baseMatch({})).parts).toHaveLength(1)
+  })
+  it('scores demographics, not location type', () => {
+    const demographic = { band: 'partial' as const, basis: 'fascia' as const, townName: 'Leeds', reasons: [], size: null }
+    const { parts } = scoreMatch(
+      baseMatch({ demographic, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
     )
-    expect(score).toBe(30 + 10 + 30 + 15 + 10)
+    expect(parts.map((p) => p.component)).toEqual(['size', 'demographics'])
+    expect(parts[1]).toMatchObject({ points: 8, max: 15 })
   })
   it('never scores trading facts', () => {
     const facts = {
@@ -265,34 +276,34 @@ describe('scoreMatch', () => {
   })
 })
 
-describe('buildPills', () => {
-  it('drops the acquisitive pill for a sparse brand and keeps the verifiable ones', () => {
-    const pills = buildPills(
-      baseMatch({
-        useClass: { codes: ['E'], matches: true },
-        locationType: { form: 'retail_park', count: 1, names: ['Owlcotes'], nearestMiles: 42 },
-        nearest: { miles: 42, storeName: null, town: null },
-      }),
+describe('signalSummaries', () => {
+  it('gives every signal a status and value, with No data where we hold nothing', () => {
+    const signals = signalSummaries(
+      baseMatch({ useClass: { codes: ['E'], matches: true }, nearest: { miles: 42, storeName: null, town: null } }),
       { useClass: 'E' }
     )
-    expect(pills.map((p) => p.key)).toEqual(['size', 'useClass', 'locationType', 'nearest'])
-    expect(pills.find((p) => p.key === 'useClass')?.value).toBe('Class E')
-    expect(pills.find((p) => p.key === 'locationType')).toMatchObject({ label: 'retail parks', value: 'Trades in 1', tone: 'green' })
+    expect(signals.map((s) => [s.key, s.status, s.value])).toEqual([
+      ['size', 'good', 'Fits'],
+      ['useClass', 'good', 'Class E'],
+      ['acquisitive', 'none', 'No data'],
+      ['demographics', 'none', 'No data'],
+      ['nearest', 'good', '42 mi'],
+    ])
   })
-  it('shows no turnover pill while figures are unread', () => {
-    const pills = buildPills(baseMatch({ tradingFacts: chFacts }), { useClass: 'E' })
-    expect(pills.find((p) => p.key === 'turnover')).toBeUndefined()
+  it('marks a store under a mile away poor and one under three miles caution', () => {
+    const at = (miles: number) =>
+      signalSummary(baseMatch({ nearest: { miles, storeName: null, town: null } }), 'nearest', { useClass: 'E' }).status
+    expect(at(0.6)).toBe('poor')
+    expect(at(2)).toBe('caution')
+    expect(at(3.1)).toBe('good')
   })
-  it('colours a very near store red and turnover always neutral', () => {
-    const pills = buildPills(
-      baseMatch({
-        nearest: { miles: 0.6, storeName: 'Greggs Headingley', town: 'Leeds' },
-        tradingFacts: { ...chFacts, turnover: { status: 'not_published' } },
-      }),
+  it('reads a size outside the range as a caution, labelled by direction', () => {
+    const s = signalSummary(
+      baseMatch({ size: { state: 'larger', basis: 'requirement', rangeMin: 8000, rangeMax: 12000 } }),
+      'size',
       { useClass: 'E' }
     )
-    expect(pills.find((p) => p.key === 'nearest')?.tone).toBe('red')
-    expect(pills.find((p) => p.key === 'turnover')).toMatchObject({ value: 'Not disclosed', tone: 'neutral' })
+    expect(s).toMatchObject({ status: 'caution', value: 'Above range' })
   })
 })
 
@@ -304,7 +315,8 @@ describe('sortMatches', () => {
   })
   const f = baseMatch({ brandId: 'f', name: 'Fettle', score: 50 })
   it('orders by the chosen key', () => {
-    expect(sortMatches([f, g, a], 'best').map((m) => m.brandId)).toEqual(['a', 'g', 'f'])
+    // Best match puts brands with acquisitive evidence first, then orders by score.
+    expect(sortMatches([f, g, a], 'best').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'acquisitive').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'gap').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'name').map((m) => m.brandId)).toEqual(['a', 'f', 'g'])
@@ -425,15 +437,23 @@ describe('assembleMatches', () => {
     it('scores the fascia nearest the site size against its own towns', () => {
       const fettle = assembleMatches(withFascias).matches.find((m) => m.brandId === 'fettle')!
       expect(fettle.demographic).toMatchObject({ band: 'good', basis: 'fascia', townName: 'Leeds' })
-      const pill = buildPills(fettle, { useClass: 'E' }).find((p) => p.key === 'demographic')
-      expect(pill).toMatchObject({ label: 'Demographics', value: 'Good fit', tone: 'green' })
-      expect(pill?.title).toContain("Fettle Home's towns are more affluent")
+      expect(signalSummary(fettle, 'demographics', { useClass: 'E' })).toMatchObject({ status: 'good', value: 'Strong' })
+      expect(fettle.demographic?.measures).toEqual([
+        expect.objectContaining({ signalName: 'affluence_high', direction: 'higher', siteRank: 80, sitePosition: 'typical' }),
+      ])
     })
 
-    it('never adds to the score', () => {
-      const plain = assembleMatches(input()).matches
-      const withDem = assembleMatches(withFascias).matches
-      expect(withDem.map((m) => m.score)).toEqual(plain.map((m) => m.score))
+    it('counts towards the score as one of the five signals', () => {
+      const fettle = assembleMatches(withFascias).matches.find((m) => m.brandId === 'fettle')!
+      expect(fettle.scoreParts.find((p) => p.component === 'demographics')).toMatchObject({ points: 15, max: 15 })
+    })
+
+    it('says why there is no demographic read', () => {
+      const tiny = assembleMatches(input({ demographics, query: { sqft: 1000, useClass: 'E', postcode: 'LS6 2AT' } }))
+        .matches.find((m) => m.brandId === 'tiny')!
+      expect(tiny.demographicGap).toBe('no_profile')
+      const noTown = assembleMatches(input({ demographics: { ...demographics, site: null } })).matches
+      expect(noTown.every((m) => m.demographicGap === 'no_town')).toBe(true)
     })
 
     it('shows nothing for a profile the backtest did not back, or with the flag off', () => {
@@ -448,7 +468,7 @@ describe('assembleMatches', () => {
       const [header, ...rows] = csv.split('\n')
       const col = header.split(',').indexOf('Demographic fit')
       expect(col).toBeGreaterThan(-1)
-      expect(rows.map((r) => r.split(',')[col])).toContain('Good fit')
+      expect(rows.map((r) => r.split(',')[col])).toContain('Strong')
     })
   })
 })
