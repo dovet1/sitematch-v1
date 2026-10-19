@@ -179,7 +179,7 @@ describe('BrandMatchCard — expanded card', () => {
     expect(screen.getByText(/stand out on 2 measures, and Leeds matches 1 of them/)).toBeInTheDocument()
     expect(screen.getByText('Affluence')).toBeInTheDocument()
     expect(screen.getByText("Doesn't match")).toBeInTheDocument()
-    expect(screen.getByText(/Leeds is less affluent than 62 in 100/)).toBeInTheDocument()
+    expect(screen.getByText(/Leeds is less affluent than 62% of similar-sized built-up areas in our records\./)).toBeInTheDocument()
   })
 
   it('never renders financial figures without Companies House facts', async () => {

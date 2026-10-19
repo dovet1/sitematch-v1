@@ -468,7 +468,9 @@ function MeasureBlock({ measure: m, brand, town, last }: { measure: DemographicM
   const brandLine = w.noun
     ? `${brand}'s areas usually have ${phrase} than others their size.`
     : `${brand}'s areas are usually ${phrase} than others their size.`
-  const siteLine = w.noun ? `${town} has ${phrase} than ${n} in 100.` : `${town} is ${phrase} than ${n} in 100.`
+  // Ranks are against built-up areas of a similar size, so say so rather than "all BUAs".
+  const versus = `${n}% of similar-sized built-up areas in our records`
+  const siteLine = w.noun ? `${town} has ${phrase} than ${versus}.` : `${town} is ${phrase} than ${versus}.`
   const span = (lo: number, hi: number) => ({ left: `${lo}%`, width: `${Math.max(0, hi - lo)}%` })
   return (
     <div className={`flex flex-col gap-2.5 border-t border-[#F2F0F7] py-4 ${last ? 'border-b' : ''}`}>
