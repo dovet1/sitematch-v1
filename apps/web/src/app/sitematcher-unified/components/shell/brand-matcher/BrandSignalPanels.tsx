@@ -13,7 +13,7 @@ import {
   formLabel,
   LOCATION_TYPE_RADIUS_MILES,
 } from '../../../lib/brand-matcher'
-import { formatPeople, measureWords, type DemographicMatch, type DemographicMeasure } from '../../../lib/brand-matcher-demographics'
+import { comparedStores, formatPeople, measureWords, type DemographicMatch, type DemographicMeasure } from '../../../lib/brand-matcher-demographics'
 import type {
   BrandMatch,
   BrandMatcherQuery,
@@ -393,27 +393,40 @@ export function DemographicsPanel({ match }: PanelProps) {
   const name = match.name
   if (!d) {
     return (
-      <EmptyPanel kicker="Demographics · not enough data" title={match.demographicGap === 'no_town' ? 'No built-up area to compare' : 'Too few stores to profile'}>
+      <EmptyPanel kicker="Demographics · not enough data" title={match.demographicGap === 'no_town' ? 'No census data here' : 'Too few stores to profile'}>
         {match.demographicGap === 'no_town'
-          ? `Your site isn't inside a built-up area we hold census data for, so we can't compare it with ${name}'s areas. Not scored.`
-          : `We can't yet build a demographic profile of ${name}'s areas that reliably predicts where it trades. Not scored.`}
+          ? `We only hold census data for England and Wales, so we can't compare the area around your site with ${name}'s. Not scored.`
+          : `We can't yet build a demographic profile of the areas around ${name}'s stores that reliably predicts where it trades. Not scored.`}
       </EmptyPanel>
     )
   }
 
-  const town = d.townName
+  const stores = comparedStores(d, name)
+  const kindNote =
+    d.siteType === 'dense'
+      ? ` ${name} trades in both denser and less dense areas, so your site, in a denser area, is compared only with its stores in similar areas.`
+      : d.siteType === 'sparse'
+        ? ` ${name} trades in both denser and less dense areas, so your site, in a less dense area, is compared only with its stores in similar areas.`
+        : ''
+  const footnote = (
+    <Footnote>
+      Each {name} store is measured by the area around it (1km in towns and cities, wider in the countryside) and compared with
+      areas of a similar density, so this reflects the kind of place rather than how busy it is.
+      {kindNote}
+      {d.band !== 'any' && ` Only measures where ${name}'s areas differ from the norm are shown.`}
+      {d.basis === 'brand' && ` This uses all of ${name}'s stores, as the fascia nearest your size has too few to profile.`}
+    </Footnote>
+  )
+
   if (d.band === 'any') {
     return (
       <div className="flex flex-col gap-4">
         <PanelTitle title="Demographics: any area">
-          Compared with built-up areas of a similar size, {name}&apos;s areas are typical on every measure, so {town} fits as
-          well as most.
+          Compared with areas of a similar density, the areas around {stores} are typical on every measure, so your site
+          fits as well as most.
         </PanelTitle>
-        <TownSize size={d.size} brand={name} town={town} />
-        <Footnote>
-          Each {name} store&apos;s built-up area is compared with built-up areas of a similar size, so this reflects the kind
-          of place rather than its size.
-        </Footnote>
+        <LocalPopulation size={d.size} brand={name} />
+        {footnote}
       </div>
     )
   }
@@ -422,81 +435,77 @@ export function DemographicsPanel({ match }: PanelProps) {
   const matched = measures.filter((m) => measureVerdict(m).inside).length
   const opener =
     d.band === 'good'
-      ? `${town} looks like the kind of built-up area ${name} opens in.`
+      ? `The area around your site in ${d.townName} looks like the areas ${name} trades in.`
       : d.band === 'partial'
-        ? `${town} is partly like the built-up areas ${name} opens in.`
-        : `${town} doesn't look much like the built-up areas ${name} opens in.`
+        ? `The area around your site in ${d.townName} is partly like the areas ${name} trades in.`
+        : `The area around your site in ${d.townName} doesn't look much like the areas ${name} trades in.`
 
   return (
     <div className="flex flex-col gap-4">
       <PanelTitle title={`Demographics: ${BAND_VERDICT[d.band]}`}>
         {opener}
         {measures.length > 0 &&
-          ` Compared with built-up areas of a similar size, ${name}'s stand out on ${counted(measures.length, 'measure')}, and ${town} matches ${matched} of them.`}
+          ` Compared with areas of a similar density, the areas around ${stores} stand out on ${counted(measures.length, 'measure')}, and your site matches ${matched} of them.`}
       </PanelTitle>
-      <TownSize size={d.size} brand={name} town={town} />
+      <LocalPopulation size={d.size} brand={name} />
       <div className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[12.5px] text-[#4B4A55]">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-[#1C1B22]" />
-          {town}
+          Your site
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-1.5 w-3.5 rounded-sm bg-[#9C85FF]" />
-          Half of {name}&apos;s areas
+          Half of {name}&apos;s stores
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-3.5 rounded-sm bg-[#E4DEF8]" />8 in 10 of {name}&apos;s areas
+          <span className="h-1.5 w-3.5 rounded-sm bg-[#E4DEF8]" />8 in 10 of {name}&apos;s stores
         </span>
       </div>
       <div className="flex flex-col">
         {measures.map((m, i) => (
-          <MeasureBlock key={m.signalName} measure={m} brand={name} town={town} last={i === measures.length - 1} />
+          <MeasureBlock key={m.signalName} measure={m} brand={name} last={i === measures.length - 1} />
         ))}
       </div>
-      <Footnote>
-        Each {name} store&apos;s built-up area is compared with built-up areas of a similar size, so this reflects the kind
-        of place rather than its size. Only measures where {name}&apos;s areas differ from the norm are shown.
-        {d.basis === 'brand' && ` This uses all of ${name}'s stores, as the fascia nearest your size has too few to profile.`}
-      </Footnote>
+      {footnote}
     </div>
   )
 }
 
-// Town size sits outside the fit and the score (it would outweigh every other measure), so it is
-// shown on its own for the reader to judge.
-function TownSize({ size, brand, town }: { size: DemographicMatch['size']; brand: string; town: string }) {
+// Local population sits outside the fit and the score (it would outweigh every other measure), so
+// it is shown on its own for the reader to judge.
+function LocalPopulation({ size, brand }: { size: DemographicMatch['size']; brand: string }) {
   if (!size) return null
   const verdict =
     size.position === 'below'
-      ? `smaller than most of ${brand}'s areas`
+      ? `fewer than around most of ${brand}'s stores`
       : size.position === 'above'
-        ? `larger than most of ${brand}'s areas`
-        : `a typical size for ${brand}`
+        ? `more than around most of ${brand}'s stores`
+        : `typical for ${brand}`
   return (
     <div className="flex flex-col gap-1 rounded-[10px] bg-[#FBFAFE] px-3.5 py-3 shadow-[inset_0_0_0_1px_#F2F0F7]">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[13px] font-bold text-[#1C1B22]">Town size</span>
+        <span className="text-[13px] font-bold text-[#1C1B22]">Local population</span>
         <span className="text-[12px] font-semibold text-[#8A8895]">Not scored</span>
       </div>
       <p className="text-[13.5px] leading-[1.45] text-[#4B4A55]">
-        {town} has {formatPeople(size.sitePopulation)} people, {verdict}. {brand}&apos;s areas usually have{' '}
-        {formatPeople(size.typicalMin)}–{formatPeople(size.typicalMax)} people.
+        {formatPeople(size.sitePopulation)} people live within 1km of your site, {verdict}. {brand}&apos;s stores usually have{' '}
+        {formatPeople(size.typicalMin)}–{formatPeople(size.typicalMax)}.
       </p>
     </div>
   )
 }
 
-function MeasureBlock({ measure: m, brand, town, last }: { measure: DemographicMeasure; brand: string; town: string; last: boolean }) {
+function MeasureBlock({ measure: m, brand, last }: { measure: DemographicMeasure; brand: string; last: boolean }) {
   const w = measureWords(m.signalName)
   const v = measureVerdict(m)
   const phrase = m.direction === 'higher' ? w.higher : w.lower
   const n = Math.round(m.direction === 'higher' ? m.siteRank : 100 - m.siteRank)
   const brandLine = w.noun
-    ? `${brand}'s areas usually have ${phrase} than others their size.`
-    : `${brand}'s areas are usually ${phrase} than others their size.`
-  // Ranks are against built-up areas of a similar size, so say so rather than "all BUAs".
-  const versus = `${n}% of similar-sized built-up areas in our records`
-  const siteLine = w.noun ? `${town} has ${phrase} than ${versus}.` : `${town} is ${phrase} than ${versus}.`
+    ? `The areas around ${brand}'s stores usually have ${phrase} than others as dense.`
+    : `The areas around ${brand}'s stores are usually ${phrase} than others as dense.`
+  // Ranks are against areas of a similar density, so say so rather than "all areas".
+  const versus = `${n}% of areas as dense in England and Wales`
+  const siteLine = w.noun ? `The area around your site has ${phrase} than ${versus}.` : `The area around your site is ${phrase} than ${versus}.`
   const span = (lo: number, hi: number) => ({ left: `${lo}%`, width: `${Math.max(0, hi - lo)}%` })
   return (
     <div className={`flex flex-col gap-2.5 border-t border-[#F2F0F7] py-4 ${last ? 'border-b' : ''}`}>

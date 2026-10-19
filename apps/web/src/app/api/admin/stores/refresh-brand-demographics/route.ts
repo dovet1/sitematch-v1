@@ -9,7 +9,7 @@ export const maxDuration = 60
 /**
  * "Refresh Brand Matcher demographics" — the button on /admin/stores/import.
  *
- * After stores are imported, each brand's town profile and its backtest score need rebuilding
+ * After stores are imported, each brand's catchment profiles and their backtest scores need rebuilding
  * before the Brand Matcher's demographic pill reflects them. That is a few minutes of work, so it
  * runs as a series of short steps: the button posts the cursor this route last returned until the
  * route says it is done. See lib/brand-matcher-demographics-refresh.ts.
@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
         }
       },
       rebuildProfiles: async (brandIds) => {
-        const { data, error } = await db.rpc('rebuild_brand_demographic_profiles', { p_brand_ids: brandIds })
+        const { data, error } = await db.rpc('rebuild_brand_catchment_profiles', { p_brand_ids: brandIds })
         if (error) throw error
         return Number(data ?? 0)
       },
       recordBacktest: async (level, from, to) => {
-        const { data, error } = await db.rpc('record_brand_demographic_backtest', {
+        const { data, error } = await db.rpc('record_brand_catchment_backtest', {
           p_level: level,
           p_unit_from: from,
           p_unit_to: to,

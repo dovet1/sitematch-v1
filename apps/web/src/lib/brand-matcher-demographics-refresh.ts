@@ -2,15 +2,19 @@
 // after another until done. Each database call stays well inside PostgREST's 8-second statement
 // cap, and each step inside one request.
 //
-//   profiles — rebuild_brand_demographic_profiles() for 10 brands at a time (every brand, so a
-//              brand that lost its stores loses its stale profile too). Placing stores in towns
-//              costs about 0.55 ms a store, so ten of the largest brands (up to ~2,800 stores each)
-//              could still pass 8 seconds: a batch that times out is split in half and retried.
-//   fascia   — record_brand_demographic_backtest('fascia', …) a few units at a time
+//   profiles — rebuild_brand_catchment_profiles() for 10 brands at a time (every brand, so a brand
+//              that lost its stores loses its stale profiles too). Placing stores in their census
+//              areas for the largest brands (~2,800 stores) takes a second or two; a batch that
+//              still times out is split in half and retried.
+//   fascia   — record_brand_catchment_backtest('fascia', …) a few profiles at a time (each fascia
+//              has up to three: all its stores, and its denser and less dense ones)
 //   brand    — the same per whole brand
 //
 // Scores are cleared when a level starts (unit 1), so while a refresh runs some cards may show no
 // demographic pill; they come back as the scores are recorded.
+//
+// The census catchments themselves (rebuild_lsoa_catchments, rebuild_lsoa_catchment_ranks) do
+// not change with store imports and are not part of this refresh.
 
 export type RefreshStage = 'profiles' | 'fascia' | 'brand' | 'done'
 

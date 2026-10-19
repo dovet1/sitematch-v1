@@ -18,7 +18,7 @@ import {
   type RawNewsItem,
   type RawRequirement,
 } from '@/app/sitematcher-unified/lib/brand-matcher'
-import type { BacktestScore, DemographicSignalProfile } from '@/app/sitematcher-unified/lib/brand-matcher-demographics'
+import type { BacktestScore, DemographicSignalProfile, SiteType } from '@/app/sitematcher-unified/lib/brand-matcher-demographics'
 import {
   BRAND_MATCHER_USE_CLASSES,
   type BrandMatcherCentre,
@@ -363,9 +363,10 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
 interface DemographicProfileRow {
   brand_id: string
   fascia_id: string | null
+  site_type: 'all' | SiteType
   signal_name: string
   signal_category: string
-  bua_count: number
+  site_count: number
   p10: number
   p25: number
   median: number
@@ -379,42 +380,57 @@ interface DemographicProfileRow {
   distinctiveness: number
 }
 
-// The site's town, the brands' town profiles and their backtest scores, for the demographic pill.
+// The site's local area, the brands' catchment profiles and their backtest scores, for the
+// demographic pill.
 async function loadDemographics(db: Db, site: BrandMatcherSite): Promise<DemographicsInput> {
-  const [town, profileRows, scoreRows] = await Promise.all([
-    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon }),
+  const [area, profileRows, scoreRows] = await Promise.all([
+    db.rpc('brand_matcher_site_catchment', { p_lat: site.lat, p_lon: site.lon }),
     selectAll<DemographicProfileRow>(() =>
       db
-        .from('brand_demographic_profiles')
+        .from('brand_catchment_profiles')
         .select(
-          'brand_id, fascia_id, signal_name, signal_category, bua_count, p10, p25, median, p75, p90, ' +
+          'brand_id, fascia_id, site_type, signal_name, signal_category, site_count, p10, p25, median, p75, p90, ' +
             'rank_p10, rank_p25, median_rank, rank_p75, rank_p90, distinctiveness'
         )
         .order('brand_id')
         .order('fascia_key')
+        .order('site_type')
         .order('signal_name')
     ),
-    selectAll<{ brand_id: string; fascia_id: string | null; broad: boolean; auc_demographics: number | null }>(() =>
+    selectAll<{
+      brand_id: string
+      fascia_id: string | null
+      site_type: 'all' | SiteType
+      held_out: number
+      broad: boolean
+      auc_demographics: number | null
+    }>(() =>
       db
-        .from('brand_demographic_backtest_results')
-        .select('brand_id, fascia_id, broad, auc_demographics')
+        .from('brand_catchment_backtest_results')
+        .select('brand_id, fascia_id, site_type, held_out, broad, auc_demographics')
         .order('brand_id')
         .order('fascia_key')
+        .order('site_type')
     ),
   ])
-  if (town.error) throw town.error
+  if (area.error) throw area.error
 
-  const row = (town.data ?? [])[0] as
-    | { bua_name: string; signals: Record<string, number> | null; ranks: Record<string, number> | null }
+  const row = (area.data ?? [])[0] as
+    | {
+        place_name: string
+        site_type: SiteType | null
+        signals: Record<string, number> | null
+        ranks: Record<string, number> | null
+      }
     | undefined
   const profiles = new Map<string, DemographicSignalProfile[]>()
   for (const r of profileRows) {
-    const key = demographicKey(r.brand_id, r.fascia_id)
+    const key = demographicKey(r.brand_id, r.fascia_id, r.site_type)
     const list = profiles.get(key) ?? []
     list.push({
       signalName: r.signal_name,
       category: r.signal_category,
-      buaCount: r.bua_count,
+      buaCount: r.site_count,
       p10: r.p10,
       p25: r.p25,
       median: r.median,
@@ -430,10 +446,16 @@ async function loadDemographics(db: Db, site: BrandMatcherSite): Promise<Demogra
     profiles.set(key, list)
   }
   const scores = new Map<string, BacktestScore>(
-    scoreRows.map((r) => [demographicKey(r.brand_id, r.fascia_id), { broad: r.broad, aucDemographics: r.auc_demographics }])
+    scoreRows.map((r) => [
+      demographicKey(r.brand_id, r.fascia_id, r.site_type),
+      { broad: r.broad, aucDemographics: r.auc_demographics, heldOut: r.held_out },
+    ])
   )
   return {
-    site: row?.signals && row.ranks ? { townName: row.bua_name, values: row.signals, ranks: row.ranks } : null,
+    site:
+      row?.signals && row.ranks
+        ? { townName: row.place_name, siteType: row.site_type ?? undefined, values: row.signals, ranks: row.ranks }
+        : null,
     profiles,
     scores,
   }
