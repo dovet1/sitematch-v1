@@ -114,7 +114,7 @@ const demographic = {
   basis: 'fascia' as const,
   townName: 'Leeds',
   reasons: [],
-  size: { position: 'typical' as const, sitePopulation: 812_000, typicalMin: 40_000, typicalMax: 310_000 },
+  size: { position: 'typical' as const, sitePopulation: 16_800, typicalMin: 9_000, typicalMax: 24_000 },
   measures: [
     { signalName: 'affluence_low', direction: 'lower' as const, p10: 15, p25: 25, p75: 48, p90: 60, siteRank: 38, sitePosition: 'typical' as const },
     { signalName: 'car_dependency', direction: 'lower' as const, p10: 40, p25: 58, p75: 82, p90: 92, siteRank: 30, sitePosition: 'below' as const },
@@ -176,11 +176,11 @@ describe('BrandMatchCard — expanded card', () => {
   it('shows only the demographic measures the brand stands out on', async () => {
     renderCard({ ...rich, demographic })
     expect(screen.getByText('Demographics: partial')).toBeInTheDocument()
-    expect(screen.getByText(/stand out on 2 measures, and Leeds matches 1 of them/)).toBeInTheDocument()
+    expect(screen.getByText(/stand out on 2 measures, and your site matches 1 of them/)).toBeInTheDocument()
     expect(screen.getByText('Affluence')).toBeInTheDocument()
-    expect(screen.getByText(/Leeds has 812k people, a typical size for Aldi\. Aldi's areas usually have 40k–310k people\./)).toBeInTheDocument()
+    expect(screen.getByText(/17k people live within 1km of your site, typical for Aldi\. Aldi's stores usually have 9\.0k–24k\./)).toBeInTheDocument()
     expect(screen.getByText("Doesn't match")).toBeInTheDocument()
-    expect(screen.getByText(/Leeds is less affluent than 62% of similar-sized built-up areas in our records\./)).toBeInTheDocument()
+    expect(screen.getByText(/The area around your site is less affluent than 62% of areas as dense in England and Wales\./)).toBeInTheDocument()
   })
 
   it('never renders financial figures without Companies House facts', async () => {

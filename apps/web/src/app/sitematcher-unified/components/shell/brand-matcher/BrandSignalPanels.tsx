@@ -392,11 +392,23 @@ export function DemographicsPanel({ match }: PanelProps) {
   const d = match.demographic
   const name = match.name
   if (!d) {
+    const gap = match.demographicGap
     return (
-      <EmptyPanel kicker="Demographics · not enough data" title={match.demographicGap === 'no_town' ? 'No census data here' : 'Too few stores to profile'}>
-        {match.demographicGap === 'no_town'
+      <EmptyPanel
+        kicker={gap === 'unproven' ? 'Demographics · not reliable enough' : 'Demographics · not enough data'}
+        title={
+          gap === 'no_town'
+            ? 'No census data here'
+            : gap === 'unproven'
+              ? 'Profile not reliable enough yet'
+              : 'Too few stores to profile'
+        }
+      >
+        {gap === 'no_town'
           ? `We only hold census data for England and Wales, so we can't compare the area around your site with ${name}'s. Not scored.`
-          : `We can't yet build a demographic profile of the areas around ${name}'s stores that reliably predicts where it trades. Not scored.`}
+          : gap === 'unproven'
+            ? `We have a demographic profile of the areas around ${name}'s stores, but when we tested it, it didn't pick out the places ${name} trades reliably enough to show. Not scored.`
+            : `${name} has too few stores in areas like this for us to build a reliable demographic profile. Not scored.`}
       </EmptyPanel>
     )
   }
