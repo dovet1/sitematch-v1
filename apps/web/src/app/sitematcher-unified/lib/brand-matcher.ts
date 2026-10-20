@@ -455,6 +455,49 @@ export function turnoverValue(facts: TradingFacts): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Sector filter
+// ---------------------------------------------------------------------------
+
+// Filter id for brands with no category, so they stay reachable once a sector is picked.
+export const NO_SECTOR = '__none__'
+
+// A brand's sector is its top-level category: the parent of "Parent · Child", else the category.
+export function brandSector(m: Pick<BrandMatch, 'category'>): string | null {
+  const c = m.category?.trim()
+  if (!c) return null
+  return c.split(' · ')[0]
+}
+
+export interface SectorOption {
+  id: string
+  name: string
+  count: number
+}
+
+// Sectors present in the matches, A–Z with "No sector listed" last.
+export function sectorOptions(matches: Pick<BrandMatch, 'category'>[]): SectorOption[] {
+  const counts = new Map<string, number>()
+  let none = 0
+  for (const m of matches) {
+    const s = brandSector(m)
+    if (s) counts.set(s, (counts.get(s) ?? 0) + 1)
+    else none++
+  }
+  const options = [...counts]
+    .map(([name, count]) => ({ id: name, name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+  if (none > 0) options.push({ id: NO_SECTOR, name: 'No sector listed', count: none })
+  return options
+}
+
+// No sectors selected means no filter.
+export function filterBySector<T extends Pick<BrandMatch, 'category'>>(matches: T[], sectors: string[]): T[] {
+  if (sectors.length === 0) return matches
+  const want = new Set(sectors)
+  return matches.filter((m) => want.has(brandSector(m) ?? NO_SECTOR))
+}
+
+// ---------------------------------------------------------------------------
 // Sort + export
 // ---------------------------------------------------------------------------
 

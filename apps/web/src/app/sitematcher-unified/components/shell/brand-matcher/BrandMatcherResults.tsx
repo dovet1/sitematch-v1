@@ -4,14 +4,17 @@ import { useMemo } from 'react'
 import { ChevronDown, Download, Store } from 'lucide-react'
 import { useBrandMatcherStore } from '../../../lib/stores/brand-matcher-store'
 import {
+  filterBySector,
   formatSqft,
   isSparse,
   matchesToCsv,
   sortMatches,
   classLabel,
+  sectorOptions,
 } from '../../../lib/brand-matcher'
-import type { BrandMatcherResponse, BrandMatcherSort } from '../../../types/brand-matcher'
+import type { BrandMatch, BrandMatcherResponse, BrandMatcherSort } from '../../../types/brand-matcher'
 import { BrandMatchCard, ROW_GRID } from './BrandMatchCard'
+import { BrandSectorFilter } from './BrandSectorFilter'
 
 const SORTS: { id: BrandMatcherSort; label: string }[] = [
   { id: 'best', label: 'Best match' },
@@ -20,8 +23,8 @@ const SORTS: { id: BrandMatcherSort; label: string }[] = [
   { id: 'name', label: 'Name A–Z' },
 ]
 
-function downloadCsv(result: BrandMatcherResponse, sort: BrandMatcherSort) {
-  const csv = matchesToCsv(sortMatches(result.matches, sort), result.query)
+function downloadCsv(result: BrandMatcherResponse, matches: BrandMatch[]) {
+  const csv = matchesToCsv(matches, result.query)
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const a = document.createElement('a')
   a.href = url
@@ -36,12 +39,25 @@ export function BrandMatcherResults() {
   const sort = useBrandMatcherStore((s) => s.sort)
   const expandedId = useBrandMatcherStore((s) => s.expandedId)
   const setSort = useBrandMatcherStore((s) => s.setSort)
+  const sectors = useBrandMatcherStore((s) => s.sectors)
+  const setSectors = useBrandMatcherStore((s) => s.setSectors)
   const setExpanded = useBrandMatcherStore((s) => s.setExpanded)
   const editSite = useBrandMatcherStore((s) => s.editSite)
   const run = useBrandMatcherStore((s) => s.run)
 
-  const sorted = useMemo(() => (result ? sortMatches(result.matches, sort) : []), [result, sort])
+  const sectorChoices = useMemo(() => (result ? sectorOptions(result.matches) : []), [result])
+  // The selection outlives a new search; a sector the new results don't contain is ignored
+  // rather than filtering the list to nothing.
+  const activeSectors = useMemo(
+    () => sectors.filter((id) => sectorChoices.some((o) => o.id === id)),
+    [sectors, sectorChoices]
+  )
+  const sorted = useMemo(
+    () => (result ? sortMatches(filterBySector(result.matches, activeSectors), sort) : []),
+    [result, activeSectors, sort]
+  )
   if (!result) return null
+  const filtered = activeSectors.length > 0
 
   const { site, query } = result
   // Under Best match the brands with acquisitive evidence rank first; mark where the list turns
@@ -58,7 +74,9 @@ export function BrandMatcherResults() {
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
               <h1 className="text-[22px] font-bold tracking-[-0.02em] text-sm-ink">
-                {sorted.length} {sorted.length === 1 ? 'brand' : 'brands'} matched
+                {filtered && `${sorted.length} of `}
+                {filtered ? result.matches.length : sorted.length}{' '}
+                {(filtered ? result.matches.length : sorted.length) === 1 ? 'brand' : 'brands'} matched
               </h1>
               {elapsedMs != null && (
                 <span className="rounded-full bg-[#EAF8F1] px-2 py-0.5 text-[11.5px] font-semibold text-[#177E4E]">
@@ -95,6 +113,9 @@ export function BrandMatcherResults() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {sectorChoices.length > 1 && (
+              <BrandSectorFilter options={sectorChoices} selected={activeSectors} onChange={setSectors} />
+            )}
             <label className="relative">
               <span className="sr-only">Sort</span>
               <select
@@ -112,7 +133,7 @@ export function BrandMatcherResults() {
             </label>
             <button
               type="button"
-              onClick={() => downloadCsv(result, sort)}
+              onClick={() => downloadCsv(result, sorted)}
               disabled={sorted.length === 0}
               className="inline-flex items-center gap-2 rounded-xl bg-sm-violet px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-sm-violet-deep disabled:opacity-50"
             >
@@ -163,6 +184,8 @@ export function BrandMatcherResults() {
 
         <EndCard
           empty={sorted.length === 0}
+          filtered={filtered}
+          onClearSectors={() => setSectors([])}
           widened={!!query.widen}
           onWiden={() => void run({ widen: true })}
           onEdit={editSite}
@@ -182,15 +205,40 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function EndCard({
   empty,
+  filtered,
+  onClearSectors,
   widened,
   onWiden,
   onEdit,
 }: {
   empty: boolean
+  filtered: boolean
+  onClearSectors: () => void
   widened: boolean
   onWiden: () => void
   onEdit: () => void
 }) {
+  if (filtered) {
+    return (
+      <div className="rounded-2xl border border-dashed border-sm-border-hard bg-sm-surface px-6 py-8 text-center">
+        <h2 className="text-[16px] font-semibold text-sm-ink">
+          {empty ? 'No brands in these sectors fit this unit' : 'That’s every brand in these sectors that fits your unit'}
+        </h2>
+        <p className="mx-auto mt-1.5 max-w-[640px] text-[13.5px] text-sm-ink2">
+          Clear the sector filter to see brands in every sector.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+          <button
+            type="button"
+            onClick={onClearSectors}
+            className="rounded-xl border border-sm-border px-4 py-2.5 text-[13.5px] font-semibold text-sm-ink transition-colors hover:border-sm-border-hard"
+          >
+            Show all sectors
+          </button>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="rounded-2xl border border-dashed border-sm-border-hard bg-sm-surface px-6 py-8 text-center">
       <h2 className="text-[16px] font-semibold text-sm-ink">

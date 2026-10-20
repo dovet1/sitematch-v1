@@ -3,6 +3,9 @@ import {
   areaCoversRegion,
   assembleMatches,
   demographicKey,
+  filterBySector,
+  NO_SECTOR,
+  sectorOptions,
   formatSqftRange,
   isNationalArea,
   matchesToCsv,
@@ -504,5 +507,33 @@ describe('assembleMatches', () => {
       expect(col).toBeGreaterThan(-1)
       expect(rows.map((r) => r.split(',')[col])).toContain('Strong')
     })
+  })
+})
+
+describe('sector filter', () => {
+  const brands = [
+    { name: 'A', category: 'Retail' },
+    { name: 'B', category: 'Gym' },
+    { name: 'C', category: 'Retail' },
+    { name: 'D', category: null },
+    { name: 'E', category: 'Leisure · Padel' },
+  ]
+
+  it('lists sectors present, A–Z, with unlisted last', () => {
+    expect(sectorOptions(brands)).toEqual([
+      { id: 'Gym', name: 'Gym', count: 1 },
+      { id: 'Leisure', name: 'Leisure', count: 1 },
+      { id: 'Retail', name: 'Retail', count: 2 },
+      { id: NO_SECTOR, name: 'No sector listed', count: 1 },
+    ])
+  })
+
+  it('keeps everything when nothing is selected', () => {
+    expect(filterBySector(brands, [])).toBe(brands)
+  })
+
+  it('keeps only the selected sectors, including unlisted brands', () => {
+    expect(filterBySector(brands, ['Retail', NO_SECTOR]).map((b) => b.name)).toEqual(['A', 'C', 'D'])
+    expect(filterBySector(brands, ['Leisure']).map((b) => b.name)).toEqual(['E'])
   })
 })

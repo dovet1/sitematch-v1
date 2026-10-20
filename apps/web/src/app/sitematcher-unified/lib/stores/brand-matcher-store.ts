@@ -25,6 +25,8 @@ interface BrandMatcherState {
   elapsedMs: number | null
   error: string | null
   sort: BrandMatcherSort
+  // Sector filter on the results (brandSector ids, or NO_SECTOR). Empty = every sector.
+  sectors: string[]
   expandedId: string | null
   brandsTracked: number | null
 
@@ -34,6 +36,7 @@ interface BrandMatcherState {
   showResults: () => void
   editSite: () => void
   setSort: (sort: BrandMatcherSort) => void
+  setSectors: (sectors: string[]) => void
   setExpanded: (id: string | null) => void
 }
 
@@ -47,6 +50,7 @@ export const useBrandMatcherStore = create<BrandMatcherState>((set, get) => ({
   elapsedMs: null,
   error: null,
   sort: 'best',
+  sectors: [],
   expandedId: null,
   brandsTracked: null,
 
@@ -113,5 +117,6 @@ export const useBrandMatcherStore = create<BrandMatcherState>((set, get) => ({
   },
 
   setSort: (sort) => set({ sort }),
+  setSectors: (sectors) => set({ sectors }),
   setExpanded: (expandedId) => set({ expandedId }),
 }))
