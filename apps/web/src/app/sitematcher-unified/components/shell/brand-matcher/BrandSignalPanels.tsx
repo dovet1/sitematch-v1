@@ -462,7 +462,7 @@ export function DemographicsPanel({ match, site }: PanelProps & { site: BrandMat
       </div>
       <StoreTownList brandId={match.brandId} brandName={name} site={site} />
       <Footnote>
-        Towns are built-up areas from the 2021 Census; a site or store just outside one takes the nearest within 1km. A close match has a population within {TOWN_MATCH_POPULATION_RATIO} times{' '}
+        Towns are built-up areas from the 2021 Census; a site or store just outside one takes the largest town within 1km. A close match has a population within {TOWN_MATCH_POPULATION_RATIO} times{' '}
         {town.name}&apos;s and an affluence index within {TOWN_MATCH_AFFLUENCE_POINTS} points (100 is the England and Wales
         average; it combines home ownership, professional and managerial jobs and degree-level qualifications). A partial match
         is within {TOWN_MATCH_POPULATION_RATIO ** 2} times and {TOWN_MATCH_AFFLUENCE_POINTS * 2} points.
