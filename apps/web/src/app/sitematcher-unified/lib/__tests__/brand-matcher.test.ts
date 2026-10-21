@@ -419,6 +419,12 @@ describe('assembleMatches', () => {
     const gym = matches.find((m) => m.brandId === 'gym')
     expect(gym?.useClass).toEqual({ codes: ['F'], matches: false })
   })
+  it('All use classes excludes no brand on use class, and counts every stated class as a match', () => {
+    const { matches } = assembleMatches(input({ query: { sqft: 14000, useClass: 'All', postcode: 'LS6 2AT' } }))
+    const gym = matches.find((m) => m.brandId === 'gym')
+    expect(gym?.useClass).toEqual({ codes: ['F'], matches: true })
+    expect(signalSummary(gym!, 'useClass', { useClass: 'All' })).toEqual({ key: 'useClass', status: 'good', value: 'Class F' })
+  })
   it('leaves the location-type signal out when the site is in no centre', () => {
     const { matches } = assembleMatches(input({ site: { ...site, centre: null } }))
     expect(matches.every((m) => m.locationType === null)).toBe(true)

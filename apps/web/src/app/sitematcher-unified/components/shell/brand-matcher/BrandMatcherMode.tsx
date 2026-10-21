@@ -5,6 +5,7 @@ import { useBrandMatcherStore } from '../../../lib/stores/brand-matcher-store'
 import { BrandMatcherHero } from './BrandMatcherHero'
 import { BrandMatcherScanning } from './BrandMatcherScanning'
 import { BrandMatcherResults } from './BrandMatcherResults'
+import { TrialBanner } from './TrialWelcome'
 
 // Brand Matcher: a full-pane, map-less mode like Directory — it replaces the left panel, map
 // and inspector. Entry -> matching -> ranked results (docs/design_handoff_contact_brands).
@@ -19,6 +20,7 @@ export function BrandMatcherMode() {
 
   return (
     <div ref={scrollRef} className="h-full min-w-0 flex-1 overflow-y-auto bg-sm-bg">
+      <TrialBanner />
       {phase === 'hero' && <BrandMatcherHero />}
       {phase === 'scanning' && <BrandMatcherScanning />}
       {phase === 'results' && <BrandMatcherResults />}

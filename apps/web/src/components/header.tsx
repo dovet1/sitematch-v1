@@ -39,6 +39,7 @@ export function Header() {
     pathname === '/sitesketcher-v2' ||
     pathname === '/siteanalyser' ||
     pathname === '/sitematcher-unified' ||
+    pathname === '/brand-matcher' ||
     pathname?.startsWith('/planning-alerts') ||
     pathname?.startsWith('/new-dashboard')
   ) {
@@ -49,7 +50,8 @@ export function Header() {
     return <GapFinderHeaderGate />
   }
 
-  return <SiteNavbar />
+  // The homepage runs a minimal nav (docs/design_handoff_homepage_trial): Articles is in the footer.
+  return <SiteNavbar minimal={pathname === '/'} />
 }
 
 function GapFinderHeaderGate() {
@@ -71,7 +73,7 @@ function GapFinderHeaderGate() {
   return <SiteNavbar />
 }
 
-export function SiteNavbar() {
+export function SiteNavbar({ minimal = false }: { minimal?: boolean } = {}) {
   const { user, loading, isAdmin } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const router = useRouter()
@@ -163,12 +165,13 @@ export function SiteNavbar() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
+          <nav className={`hidden md:flex items-center space-x-1 ${minimal ? 'ml-auto mr-2' : ''}`} aria-label="Main navigation">
             {navigationItems.map((item) => {
               if (!shouldShowNavItem(item)) return null;
 
               // Render Browse Requirements first
               if (!item.primary) {
+                if (minimal) return null;
                 return item.requiresAuth && !user ? (
                   <Link
                     key={item.href}
@@ -191,6 +194,7 @@ export function SiteNavbar() {
             })}
 
             {/* Tools Dropdown - Between Browse Requirements and Post Requirement */}
+            {!minimal && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -215,14 +219,16 @@ export function SiteNavbar() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            )}
 
-            {/* Articles Link */}
+            {!minimal && (
             <Link
               href="/articles"
               className="inline-flex items-center px-5 py-2.5 rounded-full font-medium text-[15px] transition-all duration-300 violet-bloom-touch text-sm-ink hover:text-sm-violet hover:bg-sm-violet-tint-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet focus-visible:outline-offset-2"
             >
               Articles
             </Link>
+            )}
 
             {/* Render Post Requirement (primary) last */}
             {navigationItems.map((item) => {
@@ -314,7 +320,7 @@ export function SiteNavbar() {
             {/* Secondary Navigation Links */}
             <nav className="space-y-2 mb-4">
               {/* Browse Requirements */}
-              {navigationItems.filter(item => !item.primary && shouldShowNavItem(item)).map((item) => (
+              {navigationItems.filter(item => !minimal && !item.primary && shouldShowNavItem(item)).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -325,6 +331,8 @@ export function SiteNavbar() {
                 </Link>
               ))}
 
+              {!minimal && (
+                <>
               {/* Tools Section */}
               <div className="space-y-2">
                 <div className="px-5 pt-[22px] pb-1.5 font-mono text-[11px] tracking-[1.4px] text-sm-violet-deep uppercase">
@@ -351,6 +359,8 @@ export function SiteNavbar() {
               >
                 Articles
               </Link>
+                </>
+              )}
             </nav>
 
             {/* Primary CTA - Prominent */}

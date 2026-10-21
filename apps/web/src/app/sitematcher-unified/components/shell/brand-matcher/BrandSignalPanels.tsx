@@ -224,6 +224,21 @@ export function UseClassPanel({ match, query }: PanelProps) {
     )
   }
   const theirs = u.codes.map(classLabel).join(', ')
+  if (query.useClass === 'All') {
+    return (
+      <div className="flex flex-col gap-4">
+        <PanelTitle title={`Use class: ${theirs}`}>
+          {`${match.name}'s requirements ask for ${theirs}. You searched every use class, so check your site's.`}
+        </PanelTitle>
+        <KvRows
+          rows={[
+            { label: 'Your site', value: classLabel(query.useClass) },
+            { label: `${match.name} typical use class`, value: theirs },
+          ]}
+        />
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col gap-4">
       <PanelTitle title={`Use class: ${u.matches ? classLabel(query.useClass) : theirs}`}>

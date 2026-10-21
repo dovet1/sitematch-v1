@@ -5,10 +5,14 @@
 // Use classes offered on the form. Residential (C) is not a unit a brand takes.
 export const BRAND_MATCHER_USE_CLASSES = ['E', 'B', 'F', 'Sui Generis'] as const
 export type BrandMatcherUseClass = (typeof BRAND_MATCHER_USE_CLASSES)[number]
+// A query can also ask for every use class (the homepage search's default): no brand is
+// excluded on use class, and the signal shows the brand's own classes.
+export const BRAND_MATCHER_ALL_USE_CLASSES = 'All'
+export type BrandMatcherQueryUseClass = BrandMatcherUseClass | typeof BRAND_MATCHER_ALL_USE_CLASSES
 
 export interface BrandMatcherQuery {
   sqft: number
-  useClass: BrandMatcherUseClass
+  useClass: BrandMatcherQueryUseClass
   postcode: string
   // Loosens the size tolerance and stops excluding brands on use class.
   widen?: boolean
@@ -240,3 +244,32 @@ export interface BrandMatcherStats {
 }
 
 export type BrandMatcherSort = 'best' | 'acquisitive' | 'gap' | 'name'
+
+// ---------------------------------------------------------------------------
+// Logged-out preview (/api/public/brand-matcher/preview, docs/design_handoff_homepage_trial).
+// Redacted server-side: no brand id, name, logo, domain or contact ever leaves the server, and
+// only the top rows carry their signals. The page blurs placeholders, it hides nothing real.
+
+export type BrandMatcherPreviewUseClass = 'all' | 'E' | 'SG'
+
+export interface BrandMatcherPreviewRow {
+  score: number
+  category: string | null
+  storeCount: number
+  // Row signals as the member list shows them (status + short value).
+  signals: { key: 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest'; status: 'good' | 'caution' | 'poor' | 'none'; value: string }[]
+  turnover: string | null
+  contactCount: number
+}
+
+export interface BrandMatcherPreviewList {
+  total: number
+  rows: BrandMatcherPreviewRow[]
+}
+
+export interface BrandMatcherPreviewResponse {
+  site: { postcode: string; centre: string | null }
+  sqft: number
+  // One list per use-class choice, so the header dropdown switches without a refetch.
+  lists: Record<BrandMatcherPreviewUseClass, BrandMatcherPreviewList>
+}
