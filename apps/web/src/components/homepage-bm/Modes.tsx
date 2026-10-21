@@ -38,7 +38,7 @@ export function Modes() {
       <RevealWrapper>
         <div className={NARROW}>
           <Eyebrow>Also included</Eyebrow>
-          <h2 className={`${H2} !text-[clamp(26px,3vw,38px)]`}>Everything else you need to market the site.</h2>
+          <h2 className={`${H2} !text-[clamp(26px,3vw,38px)]`}>Tools to help commercial agents</h2>
           <div className="mt-10 grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start gap-10 max-[720px]:grid-cols-1 max-[720px]:gap-0">
             <div className="flex flex-col border-t border-sm-border">
               {MODES.map((m, i) => {
