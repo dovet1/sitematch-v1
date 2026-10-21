@@ -4,6 +4,8 @@ import type {
   BrandMatcherQuery,
   BrandMatcherResponse,
   BrandMatcherStats,
+  BrandReportRequest,
+  BrandReportResponse,
   BrandStoreTownsResponse,
 } from '../../types/brand-matcher'
 
@@ -42,4 +44,15 @@ export async function fetchBrandStoreTowns(
   const res = await fetch(`/api/public/brand-matcher/towns?${params}`, { signal })
   if (!res.ok) throw new Error(await readError(res))
   return (await res.json()) as BrandStoreTownsResponse
+}
+
+export async function fetchBrandReport(request: BrandReportRequest, signal?: AbortSignal): Promise<BrandReportResponse> {
+  const res = await fetch('/api/public/brand-matcher/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,
+  })
+  if (!res.ok) throw new Error(await readError(res))
+  return (await res.json()) as BrandReportResponse
 }

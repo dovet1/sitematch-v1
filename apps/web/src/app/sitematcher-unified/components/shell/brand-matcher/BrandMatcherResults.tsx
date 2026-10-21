@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { ChevronDown, Download, Store } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ChevronDown, Store } from 'lucide-react'
 import { useBrandMatcherStore } from '../../../lib/stores/brand-matcher-store'
 import {
   filterBySector,
@@ -12,9 +12,19 @@ import {
   classLabel,
   sectorOptions,
 } from '../../../lib/brand-matcher'
-import type { BrandMatch, BrandMatcherResponse, BrandMatcherSort } from '../../../types/brand-matcher'
+import { byFit } from '../../../lib/brand-report'
+import { BRAND_REPORT_MAX, type BrandMatch, type BrandMatcherResponse, type BrandMatcherSort } from '../../../types/brand-matcher'
 import { BrandMatchCard, ROW_GRID } from './BrandMatchCard'
 import { BrandSectorFilter } from './BrandSectorFilter'
+import {
+  BrandReportDialog,
+  EMPTY_TOAST,
+  ExportMenu,
+  LIMIT_TOAST,
+  SelectionBar,
+  Toast,
+  useToast,
+} from './BrandReportExport'
 
 const SORTS: { id: BrandMatcherSort; label: string }[] = [
   { id: 'best', label: 'Best match' },
@@ -44,6 +54,11 @@ export function BrandMatcherResults() {
   const setExpanded = useBrandMatcherStore((s) => s.setExpanded)
   const editSite = useBrandMatcherStore((s) => s.editSite)
   const run = useBrandMatcherStore((s) => s.run)
+  const selectedIds = useBrandMatcherStore((s) => s.selectedIds)
+  const toggleSelected = useBrandMatcherStore((s) => s.toggleSelected)
+  const setSelected = useBrandMatcherStore((s) => s.setSelected)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [toast, showToast] = useToast()
 
   const sectorChoices = useMemo(() => (result ? sectorOptions(result.matches) : []), [result])
   // The selection outlives a new search; a sector the new results don't contain is ignored
@@ -56,8 +71,21 @@ export function BrandMatcherResults() {
     () => (result ? sortMatches(filterBySector(result.matches, activeSectors), sort) : []),
     [result, activeSectors, sort]
   )
+  const selectedMatches = useMemo(
+    () => (result ? result.matches.filter((m) => selectedIds.includes(m.brandId)) : []),
+    [result, selectedIds]
+  )
   if (!result) return null
   const filtered = activeSectors.length > 0
+  const full = selectedIds.length >= BRAND_REPORT_MAX
+
+  const toggle = (id: string) => {
+    if (toggleSelected(id) === 'full') showToast(LIMIT_TOAST)
+  }
+  const openReport = () => {
+    if (selectedIds.length === 0) showToast(EMPTY_TOAST)
+    else setDialogOpen(true)
+  }
 
   const { site, query } = result
   // Under Best match the brands with acquisitive evidence rank first; mark where the list turns
@@ -131,15 +159,13 @@ export function BrandMatcherResults() {
               </select>
               <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm-ink3" />
             </label>
-            <button
-              type="button"
-              onClick={() => downloadCsv(result, sorted)}
+            <ExportMenu
+              total={sorted.length}
+              selected={selectedIds.length}
               disabled={sorted.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-sm-violet px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-sm-violet-deep disabled:opacity-50"
-            >
-              <Download size={15} />
-              Export list
-            </button>
+              onCsv={() => downloadCsv(result, sorted)}
+              onPdf={openReport}
+            />
           </div>
         </div>
         <div className="mx-auto max-w-[1480px] px-8">
@@ -147,6 +173,7 @@ export function BrandMatcherResults() {
             <div
               className={`hidden gap-3.5 whitespace-nowrap px-[22px] pb-2.5 text-[11px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:grid ${ROW_GRID}`}
             >
+              <span />
               <span />
               <span>Brand</span>
               <span className="grid grid-cols-5 gap-2.5 [&>span]:truncate">
@@ -164,7 +191,7 @@ export function BrandMatcherResults() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1480px] space-y-2.5 px-8 py-6">
+      <div className={`mx-auto max-w-[1480px] space-y-2.5 px-8 pt-6 ${selectedIds.length > 0 ? 'pb-28' : 'pb-6'}`}>
         {sorted.map((m, i) => (
           <div key={m.brandId}>
             {showDivider && i === firstSparse && (
@@ -178,6 +205,11 @@ export function BrandMatcherResults() {
               site={site}
               expanded={expandedId === m.brandId}
               onExpandedChange={(open) => setExpanded(open ? m.brandId : null)}
+              selection={{
+                selected: selectedIds.includes(m.brandId),
+                limited: full && !selectedIds.includes(m.brandId),
+                onToggle: () => toggle(m.brandId),
+              }}
             />
           </div>
         ))}
@@ -191,6 +223,30 @@ export function BrandMatcherResults() {
           onEdit={editSite}
         />
       </div>
+
+      {/* The selection bar and toast float over the bottom of the results pane, centred on it. */}
+      <div className="pointer-events-none sticky bottom-0 z-20 h-0">
+        <div className="absolute bottom-[22px] left-0 right-0 flex flex-col items-center gap-3 px-4">
+          {toast && <Toast message={toast} />}
+          {selectedIds.length > 0 && !dialogOpen && (
+            <SelectionBar
+              count={selectedIds.length}
+              onSelectTop={() => setSelected(byFit(sorted).slice(0, BRAND_REPORT_MAX).map((m) => m.brandId))}
+              onClear={() => setSelected([])}
+              onCreate={openReport}
+            />
+          )}
+        </div>
+      </div>
+
+      {dialogOpen && (
+        <BrandReportDialog
+          matches={selectedMatches}
+          query={query}
+          onRemove={(id) => toggleSelected(id)}
+          onClose={() => setDialogOpen(false)}
+        />
+      )}
     </div>
   )
 }

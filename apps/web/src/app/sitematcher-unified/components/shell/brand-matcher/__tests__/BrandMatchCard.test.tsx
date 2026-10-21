@@ -92,8 +92,21 @@ const sparse = withScore({
   contacts: { primary: null, coversRegion: false, others: [], total: 0 },
 })
 
-function Harness({ match, startExpanded, onChange }: { match: BrandMatch; startExpanded: boolean; onChange: jest.Mock }) {
+function Harness({
+  match,
+  startExpanded,
+  onChange,
+  limited = false,
+  onToggle = jest.fn(),
+}: {
+  match: BrandMatch
+  startExpanded: boolean
+  onChange: jest.Mock
+  limited?: boolean
+  onToggle?: jest.Mock
+}) {
   const [expanded, setExpanded] = useState(startExpanded)
+  const [selected, setSelected] = useState(false)
   return (
     <BrandMatchCard
       match={match}
@@ -103,6 +116,14 @@ function Harness({ match, startExpanded, onChange }: { match: BrandMatch; startE
       onExpandedChange={(open) => {
         onChange(open)
         setExpanded(open)
+      }}
+      selection={{
+        selected,
+        limited,
+        onToggle: () => {
+          onToggle()
+          if (!limited) setSelected((v) => !v)
+        },
       }}
     />
   )
@@ -121,6 +142,31 @@ const storeTowns = [
   { name: 'Aldi Harrogate', town: 'Harrogate', miles: 14, bua: bua('Harrogate', 75_000, 131), band: 'none' as const, gap: 5.4 },
   { name: 'Aldi A1 services', town: null, miles: 20, bua: null, band: null, gap: null },
 ]
+
+describe('BrandMatchCard — report selection', () => {
+  it('ticks the brand without expanding the row', async () => {
+    const user = userEvent.setup()
+    const onChange = jest.fn()
+    render(<Harness match={rich} startExpanded={false} onChange={onChange} />)
+    const box = screen.getByRole('checkbox', { name: /Add Aldi to the PDF report/ })
+    expect(box).toHaveAttribute('aria-checked', 'false')
+    await user.click(box)
+    expect(box).toHaveAttribute('aria-checked', 'true')
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('marks the checkbox when the report is full', async () => {
+    const user = userEvent.setup()
+    const onToggle = jest.fn()
+    render(<Harness match={rich} startExpanded={false} onChange={jest.fn()} limited onToggle={onToggle} />)
+    const box = screen.getByRole('checkbox', { name: /Add Aldi/ })
+    expect(box).toHaveAttribute('aria-disabled', 'true')
+    expect(box).toHaveAttribute('title', 'Reports hold up to 20 brands')
+    await user.click(box)
+    expect(onToggle).toHaveBeenCalled()
+    expect(box).toHaveAttribute('aria-checked', 'false')
+  })
+})
 
 describe('BrandMatchCard — collapsed row', () => {
   it('shows a status glyph and value per signal, the fit score and the contact count', () => {
