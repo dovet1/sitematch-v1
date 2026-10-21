@@ -6,10 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { parseProPlan, PRO_TRIAL_DAYS } from '@/lib/pro-plan'
-import { readSiteParams, workspaceHref, type HomeUseClass, HOME_USE_CLASSES } from '@/lib/brand-matcher-link'
+import { readSiteParams, toQueryUseClass, workspaceHref, type HomeUseClass, HOME_USE_CLASSES } from '@/lib/brand-matcher-link'
 import { formatSqft, SIGNAL_LABEL } from '@/app/sitematcher-unified/lib/brand-matcher'
 import { ROW_GRID } from '@/app/sitematcher-unified/components/shell/brand-matcher/BrandMatchCard'
 import { SignalCell, plural } from '@/app/sitematcher-unified/components/shell/brand-matcher/BrandMatcherUi'
+import { BrandMatcherScanningView } from '@/app/sitematcher-unified/components/shell/brand-matcher/BrandMatcherScanning'
 import type { BrandMatcherPreviewResponse, BrandMatcherPreviewRow } from '@/app/sitematcher-unified/types/brand-matcher'
 import { AccountStep, TrialModal, type TrialGateCopy } from '@/components/trial/TrialModal'
 import { LockIcon, SiteMatcherLogo, TRIAL_TOOLS, ToolIcon, type TrialTool } from '@/components/trial/trial-ui'
@@ -43,6 +44,9 @@ export function BrandMatcherPreview() {
   const site = useMemo(() => readSiteParams(search), [search])
   const [useClass, setUseClass] = useState<HomeUseClass>(site?.useClass ?? 'all')
   const [load, setLoad] = useState<Load>({ state: 'loading' })
+  // The members' scanning screen plays until its steps finish, then the results show.
+  const [scanned, setScanned] = useState(false)
+  const finishScan = useCallback(() => setScanned(true), [])
   const [modal, setModal] = useState<null | { copy: TrialGateCopy; step: 'account' | 'card' }>(null)
   const plan = parseProPlan(search.get('plan'))
 
@@ -51,6 +55,7 @@ export function BrandMatcherPreview() {
     let cancelled = false
     const started = performance.now()
     setLoad({ state: 'loading' })
+    setScanned(false)
     fetch('/api/public/brand-matcher/preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -143,9 +148,17 @@ export function BrandMatcherPreview() {
                 Edit site
               </Link>
             </Notice>
-          ) : load.state === 'loading' ? (
-            <Notice title="Ranking brands for this site…" spinner />
-          ) : (
+          ) : !scanned ? (
+            <BrandMatcherScanningView
+              ready={load.state === 'ready'}
+              count={load.state === 'ready' ? load.data.considered : null}
+              sqft={site.sqft}
+              useClass={toQueryUseClass(useClass)}
+              postcode={site.postcode}
+              onDone={finishScan}
+              onCancel={() => router.push('/')}
+            />
+          ) : load.state === 'loading' ? null : (
             <>
               <PreviewHeader
                 data={load.data}
@@ -445,10 +458,9 @@ function PlaceholderRow({ rank }: { rank: number }) {
   )
 }
 
-function Notice({ title, spinner = false, children }: { title: string; spinner?: boolean; children?: React.ReactNode }) {
+function Notice({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-6 text-center">
-      {spinner && <span className="h-5 w-5 animate-spin rounded-full border-2 border-sm-violet-tint border-t-sm-violet" />}
       <h1 className="text-[18px] font-semibold text-sm-ink">{title}</h1>
       {children && <div className="text-[14px]">{children}</div>}
     </div>
