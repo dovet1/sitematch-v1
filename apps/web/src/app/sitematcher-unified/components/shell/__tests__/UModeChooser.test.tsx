@@ -38,7 +38,7 @@ describe('UModeChooser', () => {
       'aria-modal',
       'true'
     )
-    expect(screen.getByRole('button', { name: /Assess an area/ })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /Match brands to a site/ })).toHaveFocus()
   })
 
   it('switches mode and closes when a card is picked', async () => {
