@@ -279,3 +279,37 @@ export interface BrandMatcherPreviewResponse {
   // One list per use-class choice, so the header dropdown switches without a refetch.
   lists: Record<BrandMatcherPreviewUseClass, BrandMatcherPreviewList>
 }
+
+// ---------------------------------------------------------------------------
+// Brand report (/api/public/brand-matcher/report, docs/design_handoff_brand_report_export).
+// A shareable PDF of up to BRAND_REPORT_MAX brands. Contacts never reach it: the route builds each
+// brand field by field (toReportBrand in lib/brand-report.ts), so the payload has no contacts key.
+
+export const BRAND_REPORT_MAX = 20
+
+export type BrandReportPaper = 'a4' | 'letter'
+
+export interface BrandReportMeta {
+  preparedFor: string
+  preparedBy: string
+  company: string
+  note: string
+  paper: BrandReportPaper
+}
+
+export interface BrandReportRequest {
+  query: BrandMatcherQuery
+  brandIds: string[]
+}
+
+export type BrandReportBrand = Omit<BrandMatch, 'contacts'> & {
+  // The brand's best-matching stores for the Demographics section; null when not loaded.
+  storeTowns: BrandStoreTownsResponse | null
+}
+
+export interface BrandReportResponse {
+  site: BrandMatcherSite
+  query: BrandMatcherQuery
+  // Ordered by fit.
+  brands: BrandReportBrand[]
+}

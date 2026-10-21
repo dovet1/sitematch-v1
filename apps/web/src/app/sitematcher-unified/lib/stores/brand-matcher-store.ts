@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { fetchBrandMatches, fetchBrandMatcherStats } from '../services/brand-matcher-service'
-import type {
-  BrandMatcherResponse,
-  BrandMatcherSort,
-  BrandMatcherQueryUseClass,
+import {
+  BRAND_REPORT_MAX,
+  type BrandMatcherResponse,
+  type BrandMatcherSort,
+  type BrandMatcherQueryUseClass,
 } from '../../types/brand-matcher'
 
 // Brand Matcher mode state. Deliberately NOT reset by the workspace's setMode: a surveyor who
@@ -29,6 +30,8 @@ interface BrandMatcherState {
   sectors: string[]
   expandedId: string | null
   brandsTracked: number | null
+  // Brands ticked for the PDF report (at most BRAND_REPORT_MAX), kept for this search only.
+  selectedIds: string[]
 
   setForm: (patch: Partial<BrandMatcherForm>) => void
   loadStats: () => void
@@ -38,6 +41,9 @@ interface BrandMatcherState {
   setSort: (sort: BrandMatcherSort) => void
   setSectors: (sectors: string[]) => void
   setExpanded: (id: string | null) => void
+  // 'full' when the brand could not be added because the report is at its limit.
+  toggleSelected: (id: string) => 'added' | 'removed' | 'full'
+  setSelected: (ids: string[]) => void
 }
 
 let inflight: AbortController | null = null
@@ -53,6 +59,7 @@ export const useBrandMatcherStore = create<BrandMatcherState>((set, get) => ({
   sectors: [],
   expandedId: null,
   brandsTracked: null,
+  selectedIds: [],
 
   setForm: (patch) => set((s) => ({ form: { ...s.form, ...patch }, error: null })),
 
@@ -83,7 +90,7 @@ export const useBrandMatcherStore = create<BrandMatcherState>((set, get) => ({
     const controller = new AbortController()
     inflight = controller
     const started = performance.now()
-    set({ phase: 'scanning', result: null, error: null, expandedId: null, elapsedMs: null })
+    set({ phase: 'scanning', result: null, error: null, expandedId: null, elapsedMs: null, selectedIds: [] })
 
     try {
       const result = await fetchBrandMatches(
@@ -119,4 +126,16 @@ export const useBrandMatcherStore = create<BrandMatcherState>((set, get) => ({
   setSort: (sort) => set({ sort }),
   setSectors: (sectors) => set({ sectors }),
   setExpanded: (expandedId) => set({ expandedId }),
+
+  toggleSelected: (id) => {
+    const ids = get().selectedIds
+    if (ids.includes(id)) {
+      set({ selectedIds: ids.filter((x) => x !== id) })
+      return 'removed'
+    }
+    if (ids.length >= BRAND_REPORT_MAX) return 'full'
+    set({ selectedIds: [...ids, id] })
+    return 'added'
+  },
+  setSelected: (ids) => set({ selectedIds: Array.from(new Set(ids)).slice(0, BRAND_REPORT_MAX) }),
 }))

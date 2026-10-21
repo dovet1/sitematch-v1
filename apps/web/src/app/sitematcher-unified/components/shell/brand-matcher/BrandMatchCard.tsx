@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronUp } from 'lucide-react'
+import { Check, ChevronUp } from 'lucide-react'
 import { UBrandAvatar } from '../directory/UDirectoryPrimitives'
 import {
   classLabel,
@@ -13,7 +13,7 @@ import {
   type SignalKey,
   type SignalSummary,
 } from '../../../lib/brand-matcher'
-import type { BrandMatch, BrandMatcherQuery, BrandMatcherSite } from '../../../types/brand-matcher'
+import { BRAND_REPORT_MAX, type BrandMatch, type BrandMatcherQuery, type BrandMatcherSite } from '../../../types/brand-matcher'
 import { BrandContactsPanel, ContactAvatar, contactHref, requestContactHref } from './BrandContactsPanel'
 import { SignalCell, plural } from './BrandMatcherUi'
 import {
@@ -30,8 +30,50 @@ import {
 
 export type CardPanel = SignalKey | 'financials' | 'contacts'
 
-// Shared by the column header in BrandMatcherResults.
-export const ROW_GRID = 'lg:grid-cols-[44px_160px_minmax(0,1fr)_70px_64px_110px]'
+// Shared by the column header in BrandMatcherResults. The first column is the report checkbox.
+export const ROW_GRID = 'lg:grid-cols-[22px_44px_160px_minmax(0,1fr)_70px_64px_110px]'
+
+// Report selection (docs/design_handoff_brand_report_export). `limited`: the report is full and
+// this brand isn't in it, so ticking it shows the limit toast instead.
+export interface CardSelection {
+  selected: boolean
+  limited: boolean
+  onToggle: () => void
+}
+
+function SelectBox({ match, selection }: { match: BrandMatch; selection: CardSelection }) {
+  const { selected, limited, onToggle } = selection
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      aria-disabled={limited || undefined}
+      aria-label={`Add ${match.name} to the PDF report`}
+      title={limited ? `Reports hold up to ${BRAND_REPORT_MAX} brands` : undefined}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+      onKeyDown={(e) => e.stopPropagation()}
+      // A generous hit area around the 20px box.
+      className={'-m-2 flex items-center justify-center self-stretch p-2 ' + (limited ? 'cursor-default' : 'cursor-pointer')}
+    >
+      <span
+        className={
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition-colors ' +
+          (selected
+            ? 'border-[#7033FF] bg-[#7033FF] text-white'
+            : limited
+              ? 'border-[#CFCAD8] bg-white opacity-35'
+              : 'border-[#CFCAD8] bg-white group-hover:border-[#7033FF]')
+        }
+      >
+        {selected && <Check size={13} strokeWidth={3} />}
+      </span>
+    </button>
+  )
+}
 
 // The first signal worth a look, falling back to Acquisitive.
 export function defaultPanel(signals: SignalSummary[]): SignalKey {
@@ -53,12 +95,14 @@ export function BrandMatchCard({
   site,
   expanded,
   onExpandedChange,
+  selection,
 }: {
   match: BrandMatch
   query: BrandMatcherQuery
   site: BrandMatcherSite
   expanded: boolean
   onExpandedChange: (expanded: boolean) => void
+  selection: CardSelection
 }) {
   const signals = signalSummaries(match, query)
   const [panel, setPanel] = useState<CardPanel>(() => defaultPanel(signals))
@@ -69,7 +113,15 @@ export function BrandMatchCard({
   }
 
   if (!expanded) {
-    return <CollapsedRow match={match} signals={signals} onOpen={() => open(defaultPanel(signals))} onContacts={() => open('contacts')} />
+    return (
+      <CollapsedRow
+        match={match}
+        signals={signals}
+        selection={selection}
+        onOpen={() => open(defaultPanel(signals))}
+        onContacts={() => open('contacts')}
+      />
+    )
   }
   return (
     <ExpandedCard
@@ -77,6 +129,7 @@ export function BrandMatchCard({
       query={query}
       site={site}
       signals={signals}
+      selection={selection}
       panel={panel}
       onPanel={setPanel}
       onCollapse={() => onExpandedChange(false)}
@@ -87,11 +140,13 @@ export function BrandMatchCard({
 function CollapsedRow({
   match,
   signals,
+  selection,
   onOpen,
   onContacts,
 }: {
   match: BrandMatch
   signals: SignalSummary[]
+  selection: CardSelection
   onOpen: () => void
   onContacts: () => void
 }) {
@@ -111,16 +166,20 @@ function CollapsedRow({
         }
       }}
       className={
-        'grid cursor-pointer grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border border-[#E4E0F0] bg-white px-[22px] py-4 transition-shadow hover:shadow-[0_8px_24px_-18px_rgba(76,35,201,0.35)] ' +
+        'group grid cursor-pointer grid-cols-[22px_44px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border px-[22px] py-4 transition-[box-shadow,border-color,background-color] ' +
+        (selection.selected
+          ? 'border-[#7033FF] bg-[#FDFCFF] shadow-[0_0_0_1px_#7033FF] '
+          : 'border-[#E4E0F0] bg-white hover:shadow-[0_8px_24px_-18px_rgba(76,35,201,0.35)] ') +
         ROW_GRID
       }
     >
+      <SelectBox match={match} selection={selection} />
       <UBrandAvatar id={match.brandId} name={match.name} logoUrl={match.logoUrl} domain={match.domain} size={44} radius={11} />
       <div className="min-w-0">
         <h3 className="truncate text-[17px] font-bold text-[#1C1B22]">{match.name}</h3>
         {sub && <p className="mt-0.5 text-[13px] leading-snug text-[#8A8895]">{sub}</p>}
       </div>
-      <div className="col-span-3 grid grid-cols-2 gap-2.5 sm:grid-cols-5 lg:col-span-1 lg:row-start-1 lg:col-start-3">
+      <div className="col-span-3 col-start-2 grid grid-cols-2 gap-2.5 sm:grid-cols-5 lg:col-span-1 lg:row-start-1 lg:col-start-4">
         {signals.map((s) => (
           <div key={s.key} className="min-w-0">
             <span className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:hidden">
@@ -136,11 +195,11 @@ function CollapsedRow({
       >
         {turnover ?? '—'}
       </span>
-      <span className="col-start-3 row-start-1 whitespace-nowrap text-right lg:col-start-auto lg:row-start-auto">
+      <span className="col-start-4 row-start-1 whitespace-nowrap text-right lg:col-start-auto lg:row-start-auto">
         <span className="text-[24px] font-bold tabular-nums text-[#4B23C9]">{match.score}</span>
         <span className="text-[12px] font-semibold text-[#8A8895]">/100</span>
       </span>
-      <div className="col-span-3 text-right lg:col-span-1">
+      <div className="col-span-3 col-start-2 text-right lg:col-span-1 lg:col-start-auto">
         {total > 0 ? (
           <button
             type="button"
@@ -183,6 +242,7 @@ function ExpandedCard({
   query,
   site,
   signals,
+  selection,
   panel,
   onPanel,
   onCollapse,
@@ -191,6 +251,7 @@ function ExpandedCard({
   query: BrandMatcherQuery
   site: BrandMatcherSite
   signals: SignalSummary[]
+  selection: CardSelection
   panel: CardPanel
   onPanel: (p: CardPanel) => void
   onCollapse: () => void
@@ -211,8 +272,16 @@ function ExpandedCard({
   const turnover = facts ? turnoverValue(facts) : null
 
   return (
-    <article className="overflow-hidden rounded-[18px] border border-[#E4E0F0] bg-white shadow-[0_16px_40px_-24px_rgba(76,35,201,0.35)]">
+    <article
+      className={
+        'group overflow-hidden rounded-[18px] border bg-white ' +
+        (selection.selected
+          ? 'border-[#7033FF] shadow-[0_0_0_1px_#7033FF,0_16px_40px_-24px_rgba(76,35,201,0.35)]'
+          : 'border-[#E4E0F0] shadow-[0_16px_40px_-24px_rgba(76,35,201,0.35)]')
+      }
+    >
       <header className="flex flex-wrap items-center gap-4 border-b border-[#EEECF5] px-[26px] py-[22px]">
+        <SelectBox match={match} selection={selection} />
         <UBrandAvatar id={match.brandId} name={match.name} logoUrl={match.logoUrl} domain={match.domain} size={52} radius={13} />
         <div className="min-w-0 flex-1">
           <h3 className="text-[21px] font-bold text-[#1C1B22]">{match.name}</h3>
