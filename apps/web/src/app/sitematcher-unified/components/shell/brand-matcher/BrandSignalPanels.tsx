@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import {
+  affluenceComparison,
   BLOCKER_MILES,
   CAUTION_MILES,
   classLabel,
@@ -12,11 +13,13 @@ import {
   formatSqftShort,
   formLabel,
   LOCATION_TYPE_RADIUS_MILES,
+  type AffluenceComparison,
 } from '../../../lib/brand-matcher'
-import { comparedStores, formatPeople, measureWords, type DemographicMatch, type DemographicMeasure } from '../../../lib/brand-matcher-demographics'
+import { formatPeople } from '../../../lib/brand-matcher-demographics'
 import type {
   BrandMatch,
   BrandMatcherQuery,
+  CatchmentFigures,
   FiledFigure,
   RequirementItem,
   TradingFacts,
@@ -377,170 +380,124 @@ export function AcquisitivePanel({ match }: PanelProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Demographics
+// Demographics — shown for the reader to judge, not scored
 // ---------------------------------------------------------------------------
 
-const BAND_VERDICT = { good: 'strong', partial: 'partial', weak: 'weak', any: 'any area' } as const
-
-function measureVerdict(m: DemographicMeasure): { label: string; colour: string; inside: boolean } {
-  if (m.sitePosition === 'typical') return { label: 'Matches', colour: 'text-[#1E8A56]', inside: true }
-  if (m.sitePosition === 'low' || m.sitePosition === 'high') return { label: 'Close', colour: 'text-[#1E8A56]', inside: true }
-  return { label: "Doesn't match", colour: 'text-[#8A5F06]', inside: false }
+const AFFLUENCE_TITLE: Record<AffluenceComparison, string> = {
+  similar: 'similar affluence',
+  higher: 'more affluent',
+  lower: 'less affluent',
 }
 
+function affluenceWord(index: number): string {
+  if (index >= 120) return 'Well above average'
+  if (index >= 105) return 'Above average'
+  if (index > 95) return 'Average'
+  if (index > 80) return 'Below average'
+  return 'Well below average'
+}
+
+const radiusText = (c: CatchmentFigures) => `${c.radiusMeters / 1000}km`
+
 export function DemographicsPanel({ match }: PanelProps) {
-  const d = match.demographic
+  const c = match.catchments
   const name = match.name
-  if (!d) {
-    const gap = match.demographicGap
+  if (!c || (!c.site && c.stores.every((s) => !s.catchment))) {
     return (
-      <EmptyPanel
-        kicker={gap === 'unproven' ? 'Demographics · not reliable enough' : 'Demographics · not enough data'}
-        title={
-          gap === 'no_town'
-            ? 'No census data here'
-            : gap === 'unproven'
-              ? 'Profile not reliable enough yet'
-              : 'Too few stores to profile'
-        }
-      >
-        {gap === 'no_town'
-          ? `We only hold census data for England and Wales, so we can't compare the area around your site with ${name}'s. Not scored.`
-          : gap === 'unproven'
-            ? `We have a demographic profile of the areas around ${name}'s stores, but when we tested it, it didn't pick out the places ${name} trades reliably enough to show. Not scored.`
-            : `${name} has too few stores in areas like this for us to build a reliable demographic profile. Not scored.`}
+      <EmptyPanel kicker="Demographics · not enough data" title="No census data here">
+        {c
+          ? `We only hold census data for England and Wales, so we can't describe the area around your site or ${name}'s nearest stores.`
+          : `We couldn't load the census figures for this search.`}{' '}
+        Not scored.
       </EmptyPanel>
     )
   }
 
-  const stores = comparedStores(d, name)
-  const kindNote =
-    d.siteType === 'dense'
-      ? ` ${name} trades in both denser and less dense areas, so your site, in a denser area, is compared only with its stores in similar areas.`
-      : d.siteType === 'sparse'
-        ? ` ${name} trades in both denser and less dense areas, so your site, in a less dense area, is compared only with its stores in similar areas.`
-        : ''
-  const footnote = (
-    <Footnote>
-      Each {name} store is measured by the area around it (1km in towns and cities, wider in the countryside) and compared with
-      areas of a similar density, so this reflects the kind of place rather than how busy it is.
-      {kindNote}
-      {d.band !== 'any' && ` Only measures where ${name}'s areas differ from the norm are shown.`}
-      {d.basis === 'brand' && ` This uses all of ${name}'s stores, as the fascia nearest your size has too few to profile.`}
-    </Footnote>
-  )
-
-  if (d.band === 'any') {
-    return (
-      <div className="flex flex-col gap-4">
-        <PanelTitle title="Demographics: any area">
-          Compared with areas of a similar density, the areas around {stores} are typical on every measure, so your site
-          fits as well as most.
-        </PanelTitle>
-        <LocalPopulation size={d.size} brand={name} />
-        {footnote}
-      </div>
-    )
-  }
-
-  const measures = d.measures ?? []
-  const matched = measures.filter((m) => measureVerdict(m).inside).length
-  const opener =
-    d.band === 'good'
-      ? `The area around your site in ${d.townName} looks like the areas ${name} trades in.`
-      : d.band === 'partial'
-        ? `The area around your site in ${d.townName} is partly like the areas ${name} trades in.`
-        : `The area around your site in ${d.townName} doesn't look much like the areas ${name} trades in.`
+  const a = affluenceComparison(c)
+  const count = c.stores.length
+  const nearestPhrase = count === 1 ? `${name}'s nearest store` : `${name}'s ${count} nearest stores`
+  const summary = !a
+    ? `Who lives around your site and around ${nearestPhrase}.`
+    : a.comparison === 'similar'
+      ? `The area around your site is about as affluent as the areas around ${nearestPhrase}.`
+      : `The area around your site is ${a.comparison === 'higher' ? 'more' : 'less'} affluent than the areas around ${nearestPhrase}.`
 
   return (
     <div className="flex flex-col gap-4">
-      <PanelTitle title={`Demographics: ${BAND_VERDICT[d.band]}`}>
-        {opener}
-        {measures.length > 0 &&
-          ` Compared with areas of a similar density, the areas around ${stores} stand out on ${counted(measures.length, 'measure')}, and your site matches ${matched} of them.`}
+      <PanelTitle title={a ? `Demographics: ${AFFLUENCE_TITLE[a.comparison]}` : 'Demographics'}>
+        {summary} Shown for you to judge; not part of the score.
       </PanelTitle>
-      <LocalPopulation size={d.size} brand={name} />
-      <div className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[12.5px] text-[#4B4A55]">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#1C1B22]" />
-          Your site
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-3.5 rounded-sm bg-[#9C85FF]" />
-          Half of {name}&apos;s stores
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-3.5 rounded-sm bg-[#E4DEF8]" />8 in 10 of {name}&apos;s stores
-        </span>
-      </div>
       <div className="flex flex-col">
-        {measures.map((m, i) => (
-          <MeasureBlock key={m.signalName} measure={m} brand={name} last={i === measures.length - 1} />
+        <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3.5 pb-2 text-[11px] font-bold tracking-[0.04em] text-[#8A8895]">
+          <span>AREA AROUND</span>
+          <span className="text-right">PEOPLE</span>
+          <span className="text-right">AFFLUENCE</span>
+        </div>
+        <CatchmentRow label="Your site" detail={null} catchment={c.site} highlight />
+        {c.stores.map((s, i) => (
+          <CatchmentRow
+            key={`${s.name}-${i}`}
+            label={s.name ?? `${name} store`}
+            detail={[s.town, formatMiles(s.miles)].filter(Boolean).join(' · ')}
+            catchment={s.catchment}
+            last={i === c.stores.length - 1}
+          />
         ))}
       </div>
-      {footnote}
+      <Footnote>
+        Each area is the census neighbourhoods within 1km, widening to 3km or 5km where fewer than 5,000 people live within
+        1km, so people are counted over the radius shown. Affluence is an index from the 2021 Census (home ownership,
+        professional and managerial jobs, degree-level qualifications): 100 is the England and Wales average.
+      </Footnote>
     </div>
   )
 }
 
-// Local population sits outside the fit and the score (it would outweigh every other measure), so
-// it is shown on its own for the reader to judge.
-function LocalPopulation({ size, brand }: { size: DemographicMatch['size']; brand: string }) {
-  if (!size) return null
-  const verdict =
-    size.position === 'below'
-      ? `fewer than around most of ${brand}'s stores`
-      : size.position === 'above'
-        ? `more than around most of ${brand}'s stores`
-        : `typical for ${brand}`
+function CatchmentRow({
+  label,
+  detail,
+  catchment,
+  highlight = false,
+  last = false,
+}: {
+  label: string
+  detail: string | null
+  catchment: CatchmentFigures | null
+  highlight?: boolean
+  last?: boolean
+}) {
   return (
-    <div className="flex flex-col gap-1 rounded-[10px] bg-[#FBFAFE] px-3.5 py-3 shadow-[inset_0_0_0_1px_#F2F0F7]">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[13px] font-bold text-[#1C1B22]">Local population</span>
-        <span className="text-[12px] font-semibold text-[#8A8895]">Not scored</span>
-      </div>
-      <p className="text-[13.5px] leading-[1.45] text-[#4B4A55]">
-        {formatPeople(size.sitePopulation)} people live within 1km of your site, {verdict}. {brand}&apos;s stores usually have{' '}
-        {formatPeople(size.typicalMin)}–{formatPeople(size.typicalMax)}.
-      </p>
-    </div>
-  )
-}
-
-function MeasureBlock({ measure: m, brand, last }: { measure: DemographicMeasure; brand: string; last: boolean }) {
-  const w = measureWords(m.signalName)
-  const v = measureVerdict(m)
-  const phrase = m.direction === 'higher' ? w.higher : w.lower
-  const n = Math.round(m.direction === 'higher' ? m.siteRank : 100 - m.siteRank)
-  const brandLine = w.noun
-    ? `The areas around ${brand}'s stores usually have ${phrase} than others as dense.`
-    : `The areas around ${brand}'s stores are usually ${phrase} than others as dense.`
-  // Ranks are against areas of a similar density, so say so rather than "all areas".
-  const versus = `${n}% of areas as dense in England and Wales`
-  const siteLine = w.noun ? `The area around your site has ${phrase} than ${versus}.` : `The area around your site is ${phrase} than ${versus}.`
-  const span = (lo: number, hi: number) => ({ left: `${lo}%`, width: `${Math.max(0, hi - lo)}%` })
-  return (
-    <div className={`flex flex-col gap-2.5 border-t border-[#F2F0F7] py-4 ${last ? 'border-b' : ''}`}>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[14.5px] font-bold text-[#1C1B22]">{w.label}</span>
-        <span className={`text-[13px] font-bold ${v.colour}`}>{v.label}</span>
-      </div>
-      <div className="relative h-3" aria-hidden>
-        <div className="absolute inset-x-0 top-[3px] h-1.5 rounded-[3px] bg-[#F4F3F9]" />
-        <div className="absolute top-[3px] h-1.5 rounded-[3px] bg-[#E4DEF8]" style={span(m.p10, m.p90)} />
-        <div className="absolute top-[3px] h-1.5 rounded-[3px] bg-[#9C85FF]" style={span(m.p25, m.p75)} />
-        <div
-          className={`absolute top-0 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-white ${v.inside ? 'bg-[#1C1B22]' : 'bg-[#D49A12]'}`}
-          style={{ left: `${Math.min(100, Math.max(0, m.siteRank))}%` }}
-        />
-      </div>
-      <div className="flex justify-between text-[12px] text-[#8A8895]">
-        <span>{w.lowLabel}</span>
-        <span>{w.highLabel}</span>
-      </div>
-      <p className="text-[13.5px] leading-[1.45] text-[#4B4A55]">
-        {brandLine} {siteLine}
-      </p>
+    <div
+      className={
+        'grid grid-cols-[minmax(0,1fr)_92px_128px] items-baseline gap-3.5 border-t border-[#F2F0F7] py-3 text-[14px] ' +
+        (last ? 'border-b ' : '') +
+        (highlight ? 'bg-[#FBFAFE]' : '')
+      }
+    >
+      <span className="min-w-0">
+        <span className={highlight ? 'font-bold text-[#4B23C9]' : 'font-semibold text-[#1C1B22]'}>{label}</span>
+        {detail && <span className="text-[#8A8895]"> · {detail}</span>}
+      </span>
+      {catchment ? (
+        <>
+          <span className="text-right">
+            <span className="font-semibold text-[#1C1B22]">{formatPeople(catchment.population)}</span>
+            <span className="block text-[12px] text-[#8A8895]">within {radiusText(catchment)}</span>
+          </span>
+          <span className="text-right">
+            {catchment.affluence != null ? (
+              <>
+                <span className="font-semibold tabular-nums text-[#1C1B22]">{Math.round(catchment.affluence)}</span>
+                <span className="block text-[12px] text-[#8A8895]">{affluenceWord(catchment.affluence)}</span>
+              </>
+            ) : (
+              <span className="text-[#A9A6B5]">Not known</span>
+            )}
+          </span>
+        </>
+      ) : (
+        <span className="col-span-2 text-right text-[13px] text-[#A9A6B5]">No census data</span>
+      )}
     </div>
   )
 }

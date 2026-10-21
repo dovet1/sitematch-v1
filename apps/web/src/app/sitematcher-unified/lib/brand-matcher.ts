@@ -6,6 +6,7 @@
 
 import type {
   AcquisitiveSignal,
+  BrandCatchments,
   BrandMatch,
   BrandMatcherCentre,
   BrandMatcherContact,
@@ -13,21 +14,15 @@ import type {
   BrandMatcherQuery,
   BrandMatcherSite,
   BrandMatcherSort,
+  CatchmentFigures,
   NewsEvidence,
   RequirementEvidence,
   ScorePart,
   SizeFitSignal,
   SizeFitState,
+  StoreCatchment,
   TradingFacts,
 } from '../types/brand-matcher'
-import {
-  demographicMatch,
-  type BacktestScore,
-  type DemographicMatch,
-  type DemographicSignalProfile,
-  type SiteTown,
-  type SiteType,
-} from './brand-matcher-demographics'
 
 export const METERS_PER_MILE = 1609.344
 // Radius for "already trades in your type of location" (handoff: "within 30 miles").
@@ -330,9 +325,12 @@ export function acquisitiveSignal(
 // ---------------------------------------------------------------------------
 
 export type SignalKey = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest'
-export type SignalStatus = 'good' | 'caution' | 'poor' | 'none'
+// 'info': shown for the reader to judge, not scored (demographics).
+export type SignalStatus = 'good' | 'caution' | 'poor' | 'none' | 'info'
 
 export const SIGNAL_KEYS: SignalKey[] = ['size', 'useClass', 'acquisitive', 'demographics', 'nearest']
+// The signals that count towards the score. Demographics is shown but not scored.
+export const SCORED_SIGNAL_KEYS: SignalKey[] = ['size', 'useClass', 'acquisitive', 'nearest']
 
 export const SIGNAL_LABEL: Record<SignalKey, string> = {
   size: 'Size fit',
@@ -360,14 +358,36 @@ const SIZE_SUMMARY: Record<SizeFitState, { value: string; status: SignalStatus }
   smaller: { value: 'Below range', status: 'caution' },
 }
 
-const DEMOGRAPHIC_SUMMARY: Record<DemographicMatch['band'], { value: string; status: SignalStatus }> = {
-  good: { value: 'Strong', status: 'good' },
-  partial: { value: 'Partial', status: 'caution' },
-  weak: { value: 'Weak', status: 'poor' },
-  any: { value: 'Any area', status: 'good' },
+// Affluence index points either side of the stores' average that still read as similar.
+export const SIMILAR_AFFLUENCE = 10
+
+export type AffluenceComparison = 'similar' | 'higher' | 'lower'
+
+// The site's catchment against the average of the brand's nearest stores' catchments. null when
+// either side has no affluence figure (outside England and Wales).
+export function affluenceComparison(
+  c: BrandCatchments | null | undefined
+): { comparison: AffluenceComparison; storesAverage: number } | null {
+  const site = c?.site?.affluence
+  const stores = (c?.stores ?? [])
+    .map((s) => s.catchment?.affluence)
+    .filter((a): a is number => a != null && Number.isFinite(a))
+  if (site == null || stores.length === 0) return null
+  const storesAverage = stores.reduce((t, a) => t + a, 0) / stores.length
+  const diff = site - storesAverage
+  return {
+    comparison: Math.abs(diff) <= SIMILAR_AFFLUENCE ? 'similar' : diff > 0 ? 'higher' : 'lower',
+    storesAverage,
+  }
 }
 
-type Summarisable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'demographic' | 'nearest'>
+const AFFLUENCE_VALUE: Record<AffluenceComparison, string> = {
+  similar: 'Similar',
+  higher: 'More affluent',
+  lower: 'Less affluent',
+}
+
+type Summarisable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'catchments' | 'nearest'>
 
 export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<BrandMatcherQuery, 'useClass'>): SignalSummary {
   const none: SignalSummary = { key, status: 'none', value: 'No data' }
@@ -384,8 +404,10 @@ export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<Brand
       return m.acquisitive.level === 'high'
         ? { key, status: 'good', value: 'High' }
         : { key, status: 'caution', value: 'Medium' }
-    case 'demographics':
-      return m.demographic ? { key, ...DEMOGRAPHIC_SUMMARY[m.demographic.band] } : none
+    case 'demographics': {
+      const a = affluenceComparison(m.catchments)
+      return a ? { key, status: 'info', value: AFFLUENCE_VALUE[a.comparison] } : none
+    }
     case 'nearest': {
       if (!m.nearest) return none
       const mi = m.nearest.miles
@@ -409,7 +431,6 @@ export function signalSummaries(m: Summarisable, query: Pick<BrandMatcherQuery, 
 export const SCORE_MAX: Record<ScorePart['component'], number> = {
   size: 30,
   acquisitive: 30,
-  demographics: 15,
   nearest: 15,
   useClass: 10,
   turnover: 15,
@@ -427,13 +448,13 @@ export function turnoverPoints(facts: TradingFacts | null | undefined): number {
   return t.value >= TURNOVER_LARGE ? 15 : t.value >= TURNOVER_MEDIUM ? 10 : 5
 }
 
-type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'demographic' | 'nearest'> &
+type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'nearest'> &
   Partial<Pick<BrandMatch, 'tradingFacts'>>
 
 // A signal we hold no data for is left out of the score rather than counted against it: the
 // score is the points earned out of the points available from the signals we do hold, scaled to
-// 100 (handoff: "Based on n of 5 signals"). Turnover is the exception: it is always counted, so
-// a brand with no published turnover is pushed down.
+// 100 ("Based on n of 4 signals"). Turnover is the exception: it is always counted, so a brand
+// with no published turnover is pushed down. Demographics is shown on the card but not scored.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -442,10 +463,6 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   add('size', m.size.state === 'fits' ? 30 : m.size.state === 'lower_end' || m.size.state === 'upper_end' ? 20 : 10)
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
   if (m.acquisitive) add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
-  if (m.demographic) {
-    const band = m.demographic.band
-    add('demographics', band === 'good' || band === 'any' ? 15 : band === 'partial' ? 8 : 0)
-  }
   if (m.nearest) {
     const mi = m.nearest.miles
     // Distance is a gap: the further the nearest branch, the stronger the reason to take it.
@@ -550,7 +567,7 @@ function csvCell(v: string | number | null | undefined): string {
 export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): string {
   const header = [
     'Rank', 'Brand', 'Category', 'Match score', 'Size fit', 'Use class', 'Acquisitive',
-    'Open requirements', 'Demographic fit', 'Nearest store (mi)', 'Nearest store',
+    'Open requirements', 'Site affluence vs nearest stores', 'Nearest store (mi)', 'Nearest store',
     'Primary contact', 'Role', 'Email', 'Phone',
   ]
   const rows = matches.map((m, i) => {
@@ -625,43 +642,14 @@ export interface AssembleInput {
   planningCounts: Map<string, number>
   geo: Map<string, RawBrandGeo>
   tradingFacts?: Map<string, TradingFacts>
-  demographics?: DemographicsInput
+  catchments?: CatchmentsInput
 }
 
-// What the route loads for the demographic pill. Profiles and scores are keyed by
-// demographicKey(brandId, fasciaId, siteType) — fasciaId null for the brand as a whole, siteType
-// 'all' for every store or 'dense' / 'sparse' for one part of a split estate.
-export interface DemographicsInput {
-  site: (SiteTown & { townName: string }) | null
-  profiles: Map<string, DemographicSignalProfile[]>
-  scores: Map<string, BacktestScore>
-}
-
-export function demographicKey(
-  brandId: string,
-  fasciaId: string | null | undefined,
-  siteType: SiteType | 'all' = 'all'
-): string {
-  return `${brandId}|${fasciaId ?? ''}|${siteType}`
-}
-
-// A unit's profile for this site: the part of its estate matching the site's density when the
-// estate is split, otherwise all its stores. A split estate never falls back to all its stores —
-// it was split because one spread across both kinds of site described neither.
-function profileFor(
-  dem: DemographicsInput,
-  brandId: string,
-  fasciaId: string | null
-): { profile: DemographicSignalProfile[]; score: BacktestScore | null; split: boolean } | null {
-  const siteType = dem.site?.siteType
-  if (siteType) {
-    const key = demographicKey(brandId, fasciaId, siteType)
-    const profile = dem.profiles.get(key)
-    if (profile) return { profile, score: dem.scores.get(key) ?? null, split: true }
-  }
-  const key = demographicKey(brandId, fasciaId)
-  const profile = dem.profiles.get(key)
-  return profile ? { profile, score: dem.scores.get(key) ?? null, split: false } : null
+// What the route loads for the Demographics panel: the site's catchment and, per brand, its three
+// nearest stores' catchments.
+export interface CatchmentsInput {
+  site: CatchmentFigures | null
+  stores: Map<string, StoreCatchment[]>
 }
 
 // Most evidence lines (requirements, news) carried per brand.
@@ -802,27 +790,9 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
         )[0]
       : null
 
-    // The fascia nearest the site's size has its own profile when it trades in enough areas;
-    // otherwise the whole brand's stands in.
-    const fasciaId = typical?.fasciaId ?? null
-    const dem = input.demographics
-    const fasciaPick = dem && fasciaId ? profileFor(dem, b.id, fasciaId) : null
-    const brandPick = dem ? profileFor(dem, b.id, null) : null
-    const demographic = dem
-      ? demographicMatch({
-          site: dem.site,
-          fasciaProfile: fasciaPick?.profile ?? null,
-          fasciaScore: fasciaPick?.score ?? null,
-          fasciaSplit: fasciaPick?.split,
-          brandProfile: brandPick?.profile ?? null,
-          brandScore: brandPick?.score ?? null,
-          brandSplit: brandPick?.split,
-        })
+    const catchments = input.catchments
+      ? { site: input.catchments.site, stores: input.catchments.stores.get(b.id) ?? [] }
       : null
-    // A profile we hold but the backtest did not back is 'unproven', not missing.
-    const hasProfile = (fasciaPick?.profile.length ?? 0) > 0 || (brandPick?.profile.length ?? 0) > 0
-    const demographicGap =
-      dem && !demographic ? (!dem.site ? 'no_town' : hasProfile ? 'unproven' : 'no_profile') : null
     const contacts = rankContacts(
       [...(input.brandContacts.get(b.id) ?? []), ...reqs.flatMap((r) => r.contacts)],
       key
@@ -830,7 +800,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
 
     const partial = { size, useClass, acquisitive, locationType, nearest }
     const tradingFacts = input.tradingFacts?.get(b.id) ?? null
-    const { score, parts } = scoreMatch({ ...partial, demographic, tradingFacts })
+    const { score, parts } = scoreMatch({ ...partial, tradingFacts })
     matches.push({
       brandId: b.id,
       name: b.name,
@@ -842,8 +812,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
       tradingFacts,
       typicalRange: typical ? { min: typical.p25, max: typical.p75 } : null,
       contacts,
-      demographic,
-      demographicGap,
+      catchments,
       score,
       scoreParts: parts,
     })

@@ -6,19 +6,17 @@ import { factsRowToTradingFacts } from '@/lib/companies-house/facts'
 import type { CompanyFactsRow } from '@/lib/companies-house/types'
 import {
   assembleMatches,
-  demographicKey,
   LOCATION_TYPE_RADIUS_MILES,
   METERS_PER_MILE,
   normalisePostcode,
   shortCentreName,
-  type DemographicsInput,
+  type CatchmentsInput,
   type EstateRange,
   type RawBrand,
   type RawBrandGeo,
   type RawNewsItem,
   type RawRequirement,
 } from '@/app/sitematcher-unified/lib/brand-matcher'
-import type { BacktestScore, DemographicSignalProfile, SiteType } from '@/app/sitematcher-unified/lib/brand-matcher-demographics'
 import {
   BRAND_MATCHER_USE_CLASSES,
   type BrandMatcherCentre,
@@ -28,6 +26,8 @@ import {
   type BrandMatcherSite,
   type BrandMatcherStats,
   type BrandMatcherUseClass,
+  type CatchmentFigures,
+  type StoreCatchment,
   type TradingFacts,
 } from '@/app/sitematcher-unified/types/brand-matcher'
 
@@ -360,105 +360,38 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
   return map
 }
 
-interface DemographicProfileRow {
-  brand_id: string
-  fascia_id: string | null
-  site_type: 'all' | SiteType
-  signal_name: string
-  signal_category: string
-  site_count: number
-  p10: number
-  p25: number
-  median: number
-  p75: number
-  p90: number
-  rank_p10: number
-  rank_p25: number
-  median_rank: number
-  rank_p75: number
-  rank_p90: number
-  distinctiveness: number
-}
-
-// The site's local area, the brands' catchment profiles and their backtest scores, for the
-// demographic pill.
-async function loadDemographics(db: Db, site: BrandMatcherSite): Promise<DemographicsInput> {
-  const [area, profileRows, scoreRows] = await Promise.all([
-    db.rpc('brand_matcher_site_catchment', { p_lat: site.lat, p_lon: site.lon }),
-    selectAll<DemographicProfileRow>(() =>
-      db
-        .from('brand_catchment_profiles')
-        .select(
-          'brand_id, fascia_id, site_type, signal_name, signal_category, site_count, p10, p25, median, p75, p90, ' +
-            'rank_p10, rank_p25, median_rank, rank_p75, rank_p90, distinctiveness'
-        )
-        .order('brand_id')
-        .order('fascia_key')
-        .order('site_type')
-        .order('signal_name')
-    ),
-    selectAll<{
-      brand_id: string
-      fascia_id: string | null
-      site_type: 'all' | SiteType
-      held_out: number
-      broad: boolean
-      auc_demographics: number | null
-    }>(() =>
-      db
-        .from('brand_catchment_backtest_results')
-        .select('brand_id, fascia_id, site_type, held_out, broad, auc_demographics')
-        .order('brand_id')
-        .order('fascia_key')
-        .order('site_type')
-    ),
-  ])
-  if (area.error) throw area.error
-
-  const row = (area.data ?? [])[0] as
-    | {
-        place_name: string
-        site_type: SiteType | null
-        signals: Record<string, number> | null
-        ranks: Record<string, number> | null
-      }
-    | undefined
-  const profiles = new Map<string, DemographicSignalProfile[]>()
-  for (const r of profileRows) {
-    const key = demographicKey(r.brand_id, r.fascia_id, r.site_type)
-    const list = profiles.get(key) ?? []
-    list.push({
-      signalName: r.signal_name,
-      category: r.signal_category,
-      buaCount: r.site_count,
-      p10: r.p10,
-      p25: r.p25,
-      median: r.median,
-      p75: r.p75,
-      p90: r.p90,
-      rankP10: r.rank_p10,
-      rankP25: r.rank_p25,
-      medianRank: r.median_rank,
-      rankP75: r.rank_p75,
-      rankP90: r.rank_p90,
-      distinctiveness: r.distinctiveness,
-    })
-    profiles.set(key, list)
+// The site's catchment and each brand's three nearest stores' catchments, for the Demographics
+// panel (migration 20261028000000). Shown, not scored.
+async function loadCatchments(db: Db, site: BrandMatcherSite): Promise<CatchmentsInput> {
+  const { data, error } = await db.rpc('brand_matcher_store_catchments', { p_lat: site.lat, p_lon: site.lon })
+  if (error) throw error
+  const figures = (r: { radius_m: number | null; population: number | null; affluence: number | null }): CatchmentFigures | null =>
+    r.radius_m != null && r.population != null
+      ? { radiusMeters: r.radius_m, population: Number(r.population), affluence: r.affluence == null ? null : Number(r.affluence) }
+      : null
+  let siteFigures: CatchmentFigures | null = null
+  const stores = new Map<string, StoreCatchment[]>()
+  for (const r of (data ?? []) as {
+    brand_id: string | null
+    rank: number
+    store_name: string | null
+    store_town: string | null
+    distance_m: number
+    radius_m: number | null
+    population: number | null
+    affluence: number | null
+  }[]) {
+    if (r.brand_id == null) {
+      siteFigures = figures(r)
+      continue
+    }
+    const list = stores.get(r.brand_id) ?? []
+    list.push({ name: r.store_name, town: r.store_town, miles: r.distance_m / METERS_PER_MILE, catchment: figures(r) })
+    stores.set(r.brand_id, list)
   }
-  const scores = new Map<string, BacktestScore>(
-    scoreRows.map((r) => [
-      demographicKey(r.brand_id, r.fascia_id, r.site_type),
-      { broad: r.broad, aucDemographics: r.auc_demographics, heldOut: r.held_out },
-    ])
-  )
-  return {
-    site:
-      row?.signals && row.ranks
-        ? { townName: row.place_name, siteType: row.site_type ?? undefined, values: row.signals, ranks: row.ranks }
-        : null,
-    profiles,
-    scores,
-  }
+  // The RPC does not promise an order; nearest first.
+  stores.forEach((list) => list.sort((a, z) => a.miles - z.miles))
+  return { site: siteFigures, stores }
 }
 
 function parseQuery(body: unknown): BrandMatcherQuery | string {
@@ -508,7 +441,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, demographics] =
+    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, catchments] =
       await Promise.all([
         loadBrands(db),
         loadEstateRanges(db),
@@ -518,10 +451,10 @@ export async function POST(request: NextRequest) {
         loadPlanningCounts(db),
         loadGeo(db, site),
         loadTradingFacts(db),
-        // Never lets a demographic problem take the matcher down: no pill rather than no results.
+        // Never lets a demographic problem take the matcher down: no panel rather than no results.
         isBrandMatcherDemographicsEnabled().then((on) =>
           on
-            ? loadDemographics(db, site).catch((error) => {
+            ? loadCatchments(db, site).catch((error) => {
                 console.error('Brand matcher demographics failed:', error)
                 return undefined
               })
@@ -540,7 +473,7 @@ export async function POST(request: NextRequest) {
       planningCounts,
       geo,
       tradingFacts,
-      demographics,
+      catchments,
     })
 
     const payload: BrandMatcherResponse = { site, query, matches, considered }

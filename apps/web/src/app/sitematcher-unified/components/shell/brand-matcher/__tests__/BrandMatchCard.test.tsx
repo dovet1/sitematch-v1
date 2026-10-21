@@ -109,15 +109,13 @@ function renderCard(match: BrandMatch, expanded = true) {
   return onChange
 }
 
-const demographic = {
-  band: 'partial' as const,
-  basis: 'fascia' as const,
-  townName: 'Leeds',
-  reasons: [],
-  size: { position: 'typical' as const, sitePopulation: 16_800, typicalMin: 9_000, typicalMax: 24_000 },
-  measures: [
-    { signalName: 'affluence_low', direction: 'lower' as const, p10: 15, p25: 25, p75: 48, p90: 60, siteRank: 38, sitePosition: 'typical' as const },
-    { signalName: 'car_dependency', direction: 'lower' as const, p10: 40, p25: 58, p75: 82, p90: 92, siteRank: 30, sitePosition: 'below' as const },
+const area = (affluence: number | null, population: number, radiusMeters = 1000) => ({ radiusMeters, population, affluence })
+const catchments = {
+  site: area(124, 16_800),
+  stores: [
+    { name: 'Aldi Horsforth', town: 'Leeds', miles: 3.1, catchment: area(104, 11_200) },
+    { name: 'Aldi Otley', town: 'Otley', miles: 8.4, catchment: area(96, 7_400, 3000) },
+    { name: 'Aldi Cardiff', town: 'Cardiff', miles: 180, catchment: null },
   ],
 }
 
@@ -127,10 +125,16 @@ describe('BrandMatchCard — collapsed row', () => {
     expect(screen.getAllByRole('img', { name: 'Good' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('img', { name: 'Concern' })).toBeInTheDocument()
     expect(screen.getByText('0.6 mi')).toBeInTheDocument()
-    // No demographic read: a dash and "No data", never a guess.
+    // No census figures: a dash and "No data", never a guess.
     expect(screen.getByRole('img', { name: 'No data' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '3 contacts' })).toBeInTheDocument()
     expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  it('marks demographics as information, not a verdict', () => {
+    renderCard(withScore({ ...rich, catchments }), false)
+    expect(screen.getByRole('img', { name: 'Not scored' })).toBeInTheDocument()
+    expect(screen.getByText('More affluent')).toBeInTheDocument()
   })
 
   it('opens on the contacts list from the contacts button', async () => {
@@ -146,13 +150,13 @@ describe('BrandMatchCard — collapsed row', () => {
 })
 
 describe('BrandMatchCard — expanded card', () => {
-  it('shows the score over the signals held and opens on the first signal worth a look', () => {
+  it('shows the score over the four scored signals and opens on Acquisitive when all are good', () => {
     renderCard(rich)
-    // 80 of 100 points: demographics is missing, so it is left out; no turnover scores 0 of 15.
+    // 80 of 100 points: no turnover scores 0 of 15. Demographics is never scored.
     expect(screen.getByText('80')).toBeInTheDocument()
-    expect(screen.getByText('Based on 4 of 5 signals')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Demographics/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('Too few stores to profile')).toBeInTheDocument()
+    expect(screen.queryByText(/Based on/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Acquisitive/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Demographics/ })).toHaveTextContent('No census data · not scored')
   })
 
   it('swaps the panel when a breakdown row is picked', async () => {
@@ -173,14 +177,21 @@ describe('BrandMatchCard — expanded card', () => {
     expect(screen.getByText(/also trades in 10 other retail parks within 30 miles/)).toBeInTheDocument()
   })
 
-  it('shows only the demographic measures the brand stands out on', async () => {
-    renderCard({ ...rich, demographic })
-    expect(screen.getByText('Demographics: partial')).toBeInTheDocument()
-    expect(screen.getByText(/stand out on 2 measures, and your site matches 1 of them/)).toBeInTheDocument()
-    expect(screen.getByText('Affluence')).toBeInTheDocument()
-    expect(screen.getByText(/17k people live within 1km of your site, typical for Aldi\. Aldi's stores usually have 9\.0k–24k\./)).toBeInTheDocument()
-    expect(screen.getByText("Doesn't match")).toBeInTheDocument()
-    expect(screen.getByText(/The area around your site is less affluent than 62% of areas as dense in England and Wales\./)).toBeInTheDocument()
+  it("shows population and affluence around the site and the brand's nearest stores, unscored", async () => {
+    const match = withScore({ ...rich, catchments })
+    expect(match.score).toBe(rich.score)
+    renderCard(match)
+    await userEvent.click(screen.getByRole('button', { name: /Demographics/ }))
+    // 124 against (104 + 96) / 2 = 100.
+    expect(screen.getByText('Demographics: more affluent')).toBeInTheDocument()
+    expect(screen.getByText(/more affluent than the areas around Aldi's 3 nearest stores\. Shown for you to judge; not part of the score\./)).toBeInTheDocument()
+    expect(screen.getByText('Your site')).toBeInTheDocument()
+    expect(screen.getByText('17k')).toBeInTheDocument()
+    expect(screen.getByText('124')).toBeInTheDocument()
+    expect(screen.getByText('Well above average')).toBeInTheDocument()
+    expect(screen.getByText('Aldi Otley')).toBeInTheDocument()
+    expect(screen.getByText('within 3km')).toBeInTheDocument()
+    expect(screen.getByText('No census data')).toBeInTheDocument()
   })
 
   it('never renders financial figures without Companies House facts', async () => {
@@ -194,7 +205,7 @@ describe('BrandMatchCard — expanded card', () => {
 describe('BrandMatchCard — sparse brand', () => {
   it('leaves missing signals out of the score and says so', async () => {
     renderCard(sparse)
-    expect(screen.getByText('Based on 2 of 5 signals')).toBeInTheDocument()
+    expect(screen.getByText('Based on 2 of 4 signals')).toBeInTheDocument()
     // Opens on the first signal that isn't good: no use class stated.
     expect(screen.getByText('Use class not confirmed')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Acquisitive/ }))

@@ -1,5 +1,7 @@
 // Brand Matcher demographic fit: does the area around a site look like the areas around a brand's
-// stores? Pure — the route scores with it.
+// stores? Pure. No longer on the card or in the score (21 Oct 2026: the card now shows population
+// and affluence around the site and the brand's three nearest stores, migration 20261028000000);
+// kept for the backtest scripts and formatPeople.
 //
 // Each store, and the site, is measured by its local catchment: the census neighbourhoods (LSOAs)
 // within 1km, or 3km / 5km where fewer than 5,000 people live within 1km (migration

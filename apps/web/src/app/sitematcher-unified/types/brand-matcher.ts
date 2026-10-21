@@ -1,4 +1,3 @@
-import type { DemographicMatch } from '../lib/brand-matcher-demographics'
 
 // Brand Matcher (site -> brands) payload types. Shared by /api/public/brand-matcher and the
 // mode's UI. See docs/design_handoff_contact_brands/README.md.
@@ -150,12 +149,36 @@ export interface BrandMatcherContacts {
   total: number
 }
 
-export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest' | 'turnover'
+export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'nearest' | 'turnover'
 
 export interface ScorePart {
   component: ScoreComponent
   points: number
   max: number
+}
+
+// A catchment: the census neighbourhoods (LSOAs) within radiusMeters of a place (1km in towns,
+// 3km or 5km where fewer than 5,000 people live within 1km). England and Wales only.
+export interface CatchmentFigures {
+  radiusMeters: number
+  population: number
+  // Affluence index over the catchment: 100 is the England and Wales average.
+  affluence: number | null
+}
+
+export interface StoreCatchment {
+  name: string | null
+  town: string | null
+  miles: number
+  // null when the store is outside England and Wales.
+  catchment: CatchmentFigures | null
+}
+
+export interface BrandCatchments {
+  // null when the site is outside England and Wales.
+  site: CatchmentFigures | null
+  // The brand's three nearest stores to the site, nearest first.
+  stores: StoreCatchment[]
 }
 
 export interface BrandMatch {
@@ -175,13 +198,9 @@ export interface BrandMatch {
   // Typical unit for the band copy, from the estate profile (p25–p75), in sq ft.
   typicalRange: { min: number; max: number } | null
   contacts: BrandMatcherContacts
-  // Does the site's town look like the towns the brand trades in? Absent when there is nothing
-  // validated to say (brand-matcher-demographics.ts).
-  demographic?: DemographicMatch | null
-  // Why there is no demographic read: the site is outside England and Wales (no census data),
-  // the brand has too few stores in areas like it to profile, or it has a profile the backtest
-  // did not back. Absent when demographics were not loaded.
-  demographicGap?: 'no_town' | 'no_profile' | 'unproven' | null
+  // Who lives around the site and around the brand's three nearest stores to it. Shown, not
+  // scored. Absent when catchments were not loaded.
+  catchments?: BrandCatchments | null
   // Points out of 100 across the signals we hold data for; missing signals are left out, except
   // turnover, which is always counted.
   score: number

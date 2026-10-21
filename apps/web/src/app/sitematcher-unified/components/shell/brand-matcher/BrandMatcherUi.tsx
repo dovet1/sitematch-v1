@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Minus, X } from 'lucide-react'
+import { Check, Info, Minus, X } from 'lucide-react'
 import type { SignalStatus } from '../../../lib/brand-matcher'
 
 // Brand Matcher building blocks (docs/design_handoff_brand_matcher_signals). Status colours carry
@@ -11,9 +11,11 @@ const GLYPH: Record<SignalStatus, { bg: string; fg: string; label: string }> = {
   caution: { bg: 'bg-[#FDF3DC]', fg: 'text-[#8A5F06]', label: 'Check' },
   poor: { bg: 'bg-[#FBE7E6]', fg: 'text-[#A33A35]', label: 'Concern' },
   none: { bg: 'bg-[#F4F3F9]', fg: 'text-[#B7B5C2]', label: 'No data' },
+  info: { bg: 'bg-[#EFEBFD]', fg: 'text-[#6C47FF]', label: 'Not scored' },
 }
 
-// Status by shape as well as colour: tick, caution, cross, dash.
+// Status by shape as well as colour: tick, caution, cross, dash, and an "i" for a signal shown but
+// not scored.
 export function StatusGlyph({ status, size = 18 }: { status: SignalStatus; size?: number }) {
   const g = GLYPH[status]
   return (
@@ -27,6 +29,7 @@ export function StatusGlyph({ status, size = 18 }: { status: SignalStatus; size?
       {status === 'caution' && <span className="text-[11px] font-extrabold leading-none">!</span>}
       {status === 'poor' && <X size={10} strokeWidth={3.5} />}
       {status === 'none' && <Minus size={12} strokeWidth={3} />}
+      {status === 'info' && <Info size={12} strokeWidth={2.75} />}
     </span>
   )
 }

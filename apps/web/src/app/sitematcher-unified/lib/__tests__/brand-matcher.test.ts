@@ -2,7 +2,7 @@ import {
   acquisitiveSignal,
   areaCoversRegion,
   assembleMatches,
-  demographicKey,
+  affluenceComparison,
   filterBySector,
   NO_SECTOR,
   sectorOptions,
@@ -19,12 +19,14 @@ import {
   sizeFit,
   sortMatches,
   type AssembleInput,
+  type CatchmentsInput,
 } from '../brand-matcher'
 import type {
   BrandMatch,
   BrandMatcherContact,
   BrandMatcherSite,
   RequirementEvidence,
+  StoreCatchment,
   TradingFacts,
 } from '../../types/brand-matcher'
 
@@ -259,13 +261,15 @@ describe('scoreMatch', () => {
     // Size 30 of 30; no published turnover still counts, 0 of 15.
     expect(score).toBe(Math.round((100 * 30) / 45))
   })
-  it('scores demographics, not location type', () => {
-    const demographic = { band: 'partial' as const, basis: 'fascia' as const, townName: 'Leeds', reasons: [], size: null }
+  it('scores neither demographics nor location type', () => {
+    const catchments = {
+      site: { radiusMeters: 1000, population: 19000, affluence: 140 },
+      stores: [{ name: null, town: null, miles: 2, catchment: { radiusMeters: 1000, population: 12000, affluence: 140 } }],
+    }
     const { parts } = scoreMatch(
-      baseMatch({ demographic, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
+      baseMatch({ catchments, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
     )
-    expect(parts.map((p) => p.component)).toEqual(['size', 'demographics', 'turnover'])
-    expect(parts[1]).toMatchObject({ points: 8, max: 15 })
+    expect(parts.map((p) => p.component)).toEqual(['size', 'turnover'])
   })
   it('scores published turnover by size, and nothing when there is none', () => {
     const points = (tradingFacts: TradingFacts | null) =>
@@ -420,108 +424,51 @@ describe('assembleMatches', () => {
     expect(matches.every((m) => m.locationType === null)).toBe(true)
   })
 
-  describe('demographic fit', () => {
-    const prof = (medianRank: number, distinctiveness: number) => [
-      {
-        signalName: 'affluence_high', category: 'affluence', buaCount: 30,
-        p10: 90, p25: 100, median: 110, p75: 120, p90: 130,
-        rankP10: medianRank - 0.15, rankP25: medianRank - 0.05, medianRank, rankP75: medianRank + 0.05, rankP90: medianRank + 0.15,
-        distinctiveness,
-      },
-    ]
-    // Fettle trades as two fascias; the 12k-16k one is nearest a 14,000 sq ft site and has its own
-    // profile. Tiny has none, so its brand-level profile stands in, but that one never passed the backtest.
-    const demographics = {
-      site: { townName: 'Leeds', values: { affluence_high: 112 }, ranks: { affluence_high: 0.8 } },
-      profiles: new Map([
-        [demographicKey('fettle', 'fettle-large'), prof(0.8, 0.6)],
-        [demographicKey('fettle', 'fettle-small'), prof(0.2, 0.6)],
-        [demographicKey('tiny', null), prof(0.8, 0.6)],
-      ]),
-      scores: new Map([
-        [demographicKey('fettle', 'fettle-large'), { broad: false, aucDemographics: 0.8 }],
-        [demographicKey('tiny', null), { broad: false, aucDemographics: 0.55 }],
+  describe('demographics', () => {
+    const area = (affluence: number | null, population = 12000) => ({ radiusMeters: 1000, population, affluence })
+    const catchments: CatchmentsInput = {
+      site: area(118, 19000),
+      stores: new Map<string, StoreCatchment[]>([
+        ['fettle', [
+          { name: 'Fettle Leeds', town: 'Leeds', miles: 1.2, catchment: area(110) },
+          { name: 'Fettle Wakefield', town: 'Wakefield', miles: 9, catchment: area(120) },
+          { name: 'Fettle Cardiff', town: 'Cardiff', miles: 180, catchment: null },
+        ]],
+        ['aldi', [{ name: 'Aldi Leeds', town: 'Leeds', miles: 0.4, catchment: area(80) }]],
       ]),
     }
-    const withFascias = input({
-      demographics,
-      estateRanges: new Map([
-        ['fettle', [
-          { p25: 3000, p75: 5000, min: 2000, max: 20000, fasciaId: 'fettle-small' },
-          { p25: 12000, p75: 16000, min: 9000, max: 20000, fasciaId: 'fettle-large' },
-        ]],
-      ]),
+    const run = (c = catchments) => assembleMatches(input({ catchments: c })).matches
+    const find = (id: string, c = catchments) => run(c).find((m) => m.brandId === id)!
+
+    it("carries the site's and the brand's nearest stores' catchments", () => {
+      expect(find('fettle').catchments).toEqual({ site: area(118, 19000), stores: catchments.stores.get('fettle') })
+      const noAldiStores = { ...catchments, stores: new Map([['fettle', catchments.stores.get('fettle')!]]) }
+      expect(find('aldi', noAldiStores).catchments).toEqual({ site: area(118, 19000), stores: [] })
+      expect(assembleMatches(input()).matches.every((m) => m.catchments == null)).toBe(true)
     })
 
-    it('scores the fascia nearest the site size against its own towns', () => {
-      const fettle = assembleMatches(withFascias).matches.find((m) => m.brandId === 'fettle')!
-      expect(fettle.demographic).toMatchObject({ band: 'good', basis: 'fascia', townName: 'Leeds' })
-      expect(signalSummary(fettle, 'demographics', { useClass: 'E' })).toMatchObject({ status: 'good', value: 'Strong' })
-      expect(fettle.demographic?.measures).toEqual([
-        expect.objectContaining({ signalName: 'affluence_high', direction: 'higher', siteRank: 80, sitePosition: 'typical' }),
-      ])
+    it('compares the site with the average of the stores it has figures for', () => {
+      // 118 against (110 + 120) / 2 = 115: within ten points.
+      expect(affluenceComparison(find('fettle').catchments)).toEqual({ comparison: 'similar', storesAverage: 115 })
+      expect(affluenceComparison(find('aldi').catchments)?.comparison).toBe('higher')
+      expect(affluenceComparison(find('aldi', { ...catchments, stores: new Map() }).catchments)).toBeNull()
+      expect(affluenceComparison(find('fettle', { ...catchments, site: null }).catchments)).toBeNull()
     })
 
-    it('counts towards the score as one of the five signals', () => {
-      const fettle = assembleMatches(withFascias).matches.find((m) => m.brandId === 'fettle')!
-      expect(fettle.scoreParts.find((p) => p.component === 'demographics')).toMatchObject({ points: 15, max: 15 })
+    it('is shown as information and never scored', () => {
+      const fettle = find('fettle')
+      expect(signalSummary(fettle, 'demographics', { useClass: 'E' })).toEqual({ key: 'demographics', status: 'info', value: 'Similar' })
+      expect(signalSummary(find('aldi'), 'demographics', { useClass: 'E' }).value).toBe('More affluent')
+      expect(fettle.scoreParts.map((p) => p.component)).not.toContain('demographics')
+      expect(fettle.score).toBe(assembleMatches(input()).matches.find((m) => m.brandId === 'fettle')!.score)
     })
 
-    it('says why there is no demographic read', () => {
-      const tiny = assembleMatches(input({ demographics, query: { sqft: 1000, useClass: 'E', postcode: 'LS6 2AT' } }))
-        .matches.find((m) => m.brandId === 'tiny')!
-      // Tiny has a profile, but its backtest score is below the bar.
-      expect(tiny.demographicGap).toBe('unproven')
-      const noTown = assembleMatches(input({ demographics: { ...demographics, site: null } })).matches
-      expect(noTown.every((m) => m.demographicGap === 'no_town')).toBe(true)
-    })
-
-    it('shows nothing for a profile the backtest did not back, or with the flag off', () => {
-      const tiny = assembleMatches(input({ demographics, query: { sqft: 1000, useClass: 'E', postcode: 'LS6 2AT' } }))
-        .matches.find((m) => m.brandId === 'tiny')!
-      expect(tiny.demographic).toBeNull()
-      expect(assembleMatches(input()).matches.every((m) => m.demographic == null)).toBe(true)
-    })
-
-    describe('split estates', () => {
-      // Fettle trades in city centres and at motorway services, so its estate is profiled in two
-      // parts: affluent city areas, and roadside areas that are anything but.
-      const split = (siteType: 'dense' | 'sparse') => ({
-        site: { townName: 'Leeds', siteType, values: { affluence_high: 112 }, ranks: { affluence_high: 0.8 } },
-        profiles: new Map([
-          [demographicKey('fettle', null), prof(0.6, 0.2)],
-          [demographicKey('fettle', null, 'dense'), prof(0.8, 0.6)],
-          [demographicKey('fettle', null, 'sparse'), prof(0.2, 0.6)],
-        ]),
-        scores: new Map([
-          [demographicKey('fettle', null), { broad: false, aucDemographics: 0.55 }],
-          [demographicKey('fettle', null, 'dense'), { broad: false, aucDemographics: 0.8, heldOut: 47 }],
-          [demographicKey('fettle', null, 'sparse'), { broad: false, aucDemographics: 0.8, heldOut: 20 }],
-        ]),
-      })
-      const fettle = (siteType: 'dense' | 'sparse') =>
-        assembleMatches(input({ demographics: split(siteType) })).matches.find((m) => m.brandId === 'fettle')!
-
-      it('judges a site only against the stores in areas like its own', () => {
-        expect(fettle('dense').demographic).toMatchObject({ band: 'good', basis: 'brand', siteType: 'dense' })
-        expect(fettle('sparse').demographic).toMatchObject({ band: 'weak', basis: 'brand', siteType: 'sparse' })
-      })
-
-      it('never falls back to the whole estate once it is split', () => {
-        const dem = split('sparse')
-        dem.scores.set(demographicKey('fettle', null, 'sparse'), { broad: false, aucDemographics: 0.58, heldOut: 20 })
-        const m = assembleMatches(input({ demographics: dem })).matches.find((x) => x.brandId === 'fettle')!
-        expect(m.demographic).toBeNull()
-        expect(m.demographicGap).toBe('unproven')
-      })
-    })
-
-    it('exports the fit', () => {
-      const csv = matchesToCsv(assembleMatches(withFascias).matches, { sqft: 14000, useClass: 'E', postcode: 'LS6 2AT' })
+    it('exports the comparison', () => {
+      const csv = matchesToCsv(run(), { sqft: 14000, useClass: 'E', postcode: 'LS6 2AT' })
       const [header, ...rows] = csv.split('\n')
-      const col = header.split(',').indexOf('Demographic fit')
+      const col = header.split(',').indexOf('Site affluence vs nearest stores')
       expect(col).toBeGreaterThan(-1)
-      expect(rows.map((r) => r.split(',')[col])).toContain('Strong')
+      expect(rows.map((r) => r.split(',')[col])).toContain('Similar')
     })
   })
 })
