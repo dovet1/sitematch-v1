@@ -35,16 +35,12 @@ const EASE = 'ease-[cubic-bezier(.22,1,.36,1)]'
 // ---------------------------------------------------------------------------
 
 export function ExportMenu({
-  total,
   selected,
   disabled,
-  onCsv,
   onPdf,
 }: {
-  total: number
   selected: number
   disabled: boolean
-  onCsv: () => void
   onPdf: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -105,12 +101,6 @@ export function ExportMenu({
           aria-label="Export"
           className="absolute right-0 top-[calc(100%+6px)] z-30 w-[300px] rounded-[14px] border border-[#E3E0E8] bg-white p-1.5 shadow-[0_18px_40px_-16px_rgba(20,10,40,.25)]"
         >
-          {item(
-            onCsv,
-            <Download size={15} />,
-            'Spreadsheet (.csv)',
-            `All ${total.toLocaleString('en-GB')} ${total === 1 ? 'brand' : 'brands'} with contacts, for your own use.`
-          )}
           {item(
             onPdf,
             <FileText size={15} />,

@@ -7,13 +7,12 @@ import {
   filterBySector,
   formatSqft,
   isSparse,
-  matchesToCsv,
   sortMatches,
   classLabel,
   sectorOptions,
 } from '../../../lib/brand-matcher'
 import { byFit } from '../../../lib/brand-report'
-import { BRAND_REPORT_MAX, type BrandMatch, type BrandMatcherResponse, type BrandMatcherSort } from '../../../types/brand-matcher'
+import { BRAND_REPORT_MAX, type BrandMatcherSort } from '../../../types/brand-matcher'
 import { BrandMatchCard, ROW_GRID } from './BrandMatchCard'
 import { BrandSectorFilter } from './BrandSectorFilter'
 import {
@@ -32,16 +31,6 @@ const SORTS: { id: BrandMatcherSort; label: string }[] = [
   { id: 'gap', label: 'Furthest nearest store' },
   { id: 'name', label: 'Name A–Z' },
 ]
-
-function downloadCsv(result: BrandMatcherResponse, matches: BrandMatch[]) {
-  const csv = matchesToCsv(matches, result.query)
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `sitematcher-brands-${result.site.postcode.replace(/\s+/g, '')}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-}
 
 export function BrandMatcherResults() {
   const result = useBrandMatcherStore((s) => s.result)
@@ -160,10 +149,8 @@ export function BrandMatcherResults() {
               <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm-ink3" />
             </label>
             <ExportMenu
-              total={sorted.length}
               selected={selectedIds.length}
               disabled={sorted.length === 0}
-              onCsv={() => downloadCsv(result, sorted)}
               onPdf={openReport}
             />
           </div>
