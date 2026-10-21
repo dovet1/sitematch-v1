@@ -249,29 +249,45 @@ describe('scoreMatch', () => {
       nearest: { miles: 3.1, storeName: null, town: null },
     })
     const { score, parts } = scoreMatch(m)
-    expect(parts.map((p) => p.component).sort()).toEqual(['acquisitive', 'nearest', 'size', 'useClass'])
-    // 30 + 10 + 30 + 10 earned of 30 + 10 + 30 + 15 available.
-    expect(score).toBe(Math.round((100 * 80) / 85))
+    expect(parts.map((p) => p.component).sort()).toEqual(['acquisitive', 'nearest', 'size', 'turnover', 'useClass'])
+    // 30 + 10 + 30 + 10 + 0 earned of 30 + 10 + 30 + 15 + 15 available.
+    expect(score).toBe(Math.round((100 * 80) / 100))
   })
   it('leaves a missing signal out rather than counting it against the brand', () => {
-    expect(scoreMatch(baseMatch({})).score).toBe(100)
-    expect(scoreMatch(baseMatch({})).parts).toHaveLength(1)
+    const { score, parts } = scoreMatch(baseMatch({}))
+    expect(parts.map((p) => p.component)).toEqual(['size', 'turnover'])
+    // Size 30 of 30; no published turnover still counts, 0 of 15.
+    expect(score).toBe(Math.round((100 * 30) / 45))
   })
   it('scores demographics, not location type', () => {
     const demographic = { band: 'partial' as const, basis: 'fascia' as const, townName: 'Leeds', reasons: [], size: null }
     const { parts } = scoreMatch(
       baseMatch({ demographic, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
     )
-    expect(parts.map((p) => p.component)).toEqual(['size', 'demographics'])
+    expect(parts.map((p) => p.component)).toEqual(['size', 'demographics', 'turnover'])
     expect(parts[1]).toMatchObject({ points: 8, max: 15 })
   })
-  it('never scores trading facts', () => {
-    const facts = {
-      ...chFacts,
-      turnover: { status: 'filed' as const, value: 1e10 },
-      netAssets: { status: 'filed' as const, value: 1e9 },
-    }
-    expect(scoreMatch(baseMatch({ tradingFacts: facts })).score).toBe(scoreMatch(baseMatch({})).score)
+  it('scores published turnover by size, and nothing when there is none', () => {
+    const points = (tradingFacts: TradingFacts | null) =>
+      scoreMatch(baseMatch({ tradingFacts })).parts.find((p) => p.component === 'turnover')?.points
+    const withTurnover = (value: number) => ({ ...chFacts, turnover: { status: 'filed' as const, value } })
+    expect(points(withTurnover(1e10))).toBe(15)
+    expect(points(withTurnover(100e6))).toBe(15)
+    expect(points(withTurnover(25e6))).toBe(10)
+    expect(points(withTurnover(2e6))).toBe(5)
+    expect(points({ ...chFacts, turnover: { status: 'extracted', value: 8_986_000, page: 11 } })).toBe(5)
+    expect(points({ ...chFacts, turnover: { status: 'not_published' } })).toBe(0)
+    expect(points(chFacts)).toBe(0)
+    expect(points(null)).toBe(0)
+  })
+  it('ranks a brand with large published turnover above an otherwise equal one without', () => {
+    const big = scoreMatch(baseMatch({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } }))
+    expect(big.score).toBe(100)
+    expect(big.score).toBeGreaterThan(scoreMatch(baseMatch({})).score)
+  })
+  it('does not score net assets', () => {
+    const withAssets = { ...chFacts, netAssets: { status: 'filed' as const, value: 1e9 } }
+    expect(scoreMatch(baseMatch({ tradingFacts: withAssets })).score).toBe(scoreMatch(baseMatch({})).score)
   })
   it('scores a store under a mile away as a blocker (no points)', () => {
     const { parts } = scoreMatch(baseMatch({ nearest: { miles: 0.6, storeName: null, town: null } }))

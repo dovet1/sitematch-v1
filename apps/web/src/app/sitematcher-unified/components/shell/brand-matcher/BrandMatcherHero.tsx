@@ -189,8 +189,7 @@ export function BrandMatcherHero() {
               badge="Coming soon"
             >
               Turnover, net assets, filing history and company status, taken straight from
-              Companies House. We show the figures as filed — we don&apos;t rate, grade or score a
-              company.
+              Companies House, shown as filed. Published turnover counts towards the match score.
             </SignalCard>
             <SignalCard
               icon={<BarChart3 size={17} />}

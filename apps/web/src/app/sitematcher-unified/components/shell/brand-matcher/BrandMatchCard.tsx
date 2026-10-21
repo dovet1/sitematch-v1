@@ -206,7 +206,8 @@ function ExpandedCard({
     .filter(Boolean)
     .join(', ')
   const { primary, others } = match.contacts
-  const used = match.scoreParts.length
+  const used = match.scoreParts.filter((p) => p.component !== 'turnover').length
+  const turnoverPart = match.scoreParts.find((p) => p.component === 'turnover')
   const turnover = facts ? turnoverValue(facts) : null
 
   return (
@@ -292,8 +293,8 @@ function ExpandedCard({
           })}
           <BreakdownRow
             label="Financials"
-            value={facts ? `${turnover ?? 'Filed facts'} · not scored ›` : 'No record found'}
-            fill={facts ? undefined : null}
+            value={facts ? `${turnover ?? 'No turnover figure'} ›` : 'No record found'}
+            fill={turnoverPart ? turnoverPart.points / turnoverPart.max : undefined}
             selected={panel === 'financials'}
             onSelect={() => onPanel('financials')}
             spaced
@@ -322,7 +323,7 @@ function ExpandedCard({
 }
 
 // fill: 0..1 for a scored signal, null for a missing one (dashed track), undefined for a row
-// with no bar (Financials, never scored).
+// with no bar.
 function BreakdownRow({
   label,
   value,

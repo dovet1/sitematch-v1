@@ -603,7 +603,7 @@ export function NearestPanel({ match }: PanelProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Financials — Companies House facts as filed, never scored
+// Financials — Companies House facts as filed; turnover counts towards the score
 // ---------------------------------------------------------------------------
 
 function figureText(f: FiledFigure): string | null {
@@ -685,11 +685,11 @@ export function FinancialsPanel({ match }: { match: BrandMatch }) {
           ). Check against the filing.
         </Footnote>
       )}
-      {/* Legal-reviewed copy: do not paraphrase. */}
+      {/* Awaiting legal review (turnover scoring, Oct 2026). */}
       <p className="text-[12.5px] leading-[1.5] text-[#6B6B78]">
         {facts.turnover.status === 'not_published'
-          ? "Small companies aren't required to file turnover. A blank here means nothing is published — not that the figures are poor. SiteMatcher does not rate or score financial standing."
-          : 'Figures as filed at Companies House, unedited. SiteMatcher does not rate, score or comment on a company’s financial standing — including covenant strength. Any view on that is yours to form.'}
+          ? "Small companies aren't required to file turnover. With no published turnover, this brand scores nothing for turnover in the match score."
+          : 'Figures as filed at Companies House, unedited. Published turnover counts towards the match score: larger turnover scores higher. This is not a credit or covenant rating, and any view on covenant strength is yours to form.'}
       </p>
     </div>
   )

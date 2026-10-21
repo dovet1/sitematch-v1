@@ -1,9 +1,8 @@
 // Brand Matcher scoring and presentation rules. Pure — shared by the API route (which
 // assembles and ranks) and the UI (pills, sort, export), and unit-tested on its own.
 //
-// Ranking must stay explainable (handoff): every point of a score comes from a pill shown on
-// the card, and Companies House figures never contribute — SiteMatcher does not rate a
-// company's financial standing.
+// Ranking must stay explainable (handoff): every point of a score comes from a row shown on
+// the card. Published turnover counts towards the score, and a brand with none scores nothing for it.
 
 import type {
   AcquisitiveSignal,
@@ -413,13 +412,28 @@ export const SCORE_MAX: Record<ScorePart['component'], number> = {
   demographics: 15,
   nearest: 15,
   useClass: 10,
+  turnover: 15,
 }
 
-type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'demographic' | 'nearest'>
+// Turnover bands, in pounds.
+export const TURNOVER_LARGE = 100e6
+export const TURNOVER_MEDIUM = 10e6
+
+// Points for the latest published turnover. No Companies House record, a figure not published or
+// one not read yet all score nothing: the absence counts against the brand.
+export function turnoverPoints(facts: TradingFacts | null | undefined): number {
+  const t = facts?.turnover
+  if (!t || (t.status !== 'filed' && t.status !== 'extracted')) return 0
+  return t.value >= TURNOVER_LARGE ? 15 : t.value >= TURNOVER_MEDIUM ? 10 : 5
+}
+
+type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'demographic' | 'nearest'> &
+  Partial<Pick<BrandMatch, 'tradingFacts'>>
 
 // A signal we hold no data for is left out of the score rather than counted against it: the
 // score is the points earned out of the points available from the signals we do hold, scaled to
-// 100 (handoff: "Based on n of 5 signals").
+// 100 (handoff: "Based on n of 5 signals"). Turnover is the exception: it is always counted, so
+// a brand with no published turnover is pushed down.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -437,7 +451,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
     // Distance is a gap: the further the nearest branch, the stronger the reason to take it.
     add('nearest', mi >= 10 ? 15 : mi >= CAUTION_MILES ? 10 : mi >= BLOCKER_MILES ? 5 : 0)
   }
-  // Trading facts are deliberately absent. Never score a company's finances.
+  add('turnover', turnoverPoints(m.tradingFacts))
   const earned = parts.reduce((s, p) => s + p.points, 0)
   const available = parts.reduce((s, p) => s + p.max, 0)
   return { score: available > 0 ? Math.round((100 * earned) / available) : 0, parts }
@@ -815,7 +829,8 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
     )
 
     const partial = { size, useClass, acquisitive, locationType, nearest }
-    const { score, parts } = scoreMatch({ ...partial, demographic })
+    const tradingFacts = input.tradingFacts?.get(b.id) ?? null
+    const { score, parts } = scoreMatch({ ...partial, demographic, tradingFacts })
     matches.push({
       brandId: b.id,
       name: b.name,
@@ -824,7 +839,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
       category: b.category,
       storeCount: g?.storeCount ?? b.storeCount,
       ...partial,
-      tradingFacts: input.tradingFacts?.get(b.id) ?? null,
+      tradingFacts,
       typicalRange: typical ? { min: typical.p25, max: typical.p75 } : null,
       contacts,
       demographic,

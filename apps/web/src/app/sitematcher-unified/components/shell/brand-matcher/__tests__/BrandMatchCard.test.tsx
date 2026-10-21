@@ -148,8 +148,8 @@ describe('BrandMatchCard — collapsed row', () => {
 describe('BrandMatchCard — expanded card', () => {
   it('shows the score over the signals held and opens on the first signal worth a look', () => {
     renderCard(rich)
-    // 80 of 85 points: demographics is missing, so it is left out.
-    expect(screen.getByText('94')).toBeInTheDocument()
+    // 80 of 100 points: demographics is missing, so it is left out; no turnover scores 0 of 15.
+    expect(screen.getByText('80')).toBeInTheDocument()
     expect(screen.getByText('Based on 4 of 5 signals')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Demographics/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Too few stores to profile')).toBeInTheDocument()
@@ -240,14 +240,14 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     expect(screen.queryByText('Latest turnover')).not.toBeInTheDocument()
     expect(screen.queryByText('Not disclosed')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/SiteMatcher does not rate, score or comment on a company.s financial standing — including covenant strength/)
+      screen.getByText(/Published turnover counts towards the match score/)
     ).toBeInTheDocument()
   })
 
-  it('shows filed turnover on the row and in the panel, never scored', async () => {
+  it('shows filed turnover on the row and in the panel', async () => {
     const match = { ...rich, tradingFacts: { ...facts, turnover: { status: 'filed' as const, value: 17.9e9 }, netAssets: { status: 'filed' as const, value: 4.1e9 } } }
     await openFinancials(match)
-    expect(screen.getByText('£17.9bn · not scored ›')).toBeInTheDocument()
+    expect(screen.getByText('£17.9bn ›')).toBeInTheDocument()
     const panel = screen.getByText('Latest turnover').parentElement as HTMLElement
     expect(within(panel).getByText('£17.9bn')).toBeInTheDocument()
     expect(screen.queryByText(/scanned accounts/)).not.toBeInTheDocument()

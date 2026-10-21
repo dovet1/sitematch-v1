@@ -117,8 +117,8 @@ export type FiledFigure =
   | { status: 'not_published' }
   | { status: 'unread' }
 
-// Companies House facts for the brand's admin-confirmed UK trading company. Register facts
-// shown as filed — NEVER scored, rated or coloured.
+// Companies House facts for the brand's admin-confirmed UK trading company. Shown as filed;
+// only the latest turnover counts towards the score (turnoverPoints in brand-matcher.ts).
 export interface TradingFacts {
   companyNumber: string
   companyName: string
@@ -150,7 +150,7 @@ export interface BrandMatcherContacts {
   total: number
 }
 
-export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest'
+export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest' | 'turnover'
 
 export interface ScorePart {
   component: ScoreComponent
@@ -182,7 +182,8 @@ export interface BrandMatch {
   // the brand has too few stores in areas like it to profile, or it has a profile the backtest
   // did not back. Absent when demographics were not loaded.
   demographicGap?: 'no_town' | 'no_profile' | 'unproven' | null
-  // Points out of 100 across the signals we hold data for; missing signals are left out.
+  // Points out of 100 across the signals we hold data for; missing signals are left out, except
+  // turnover, which is always counted.
   score: number
   scoreParts: ScorePart[]
 }
