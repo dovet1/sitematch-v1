@@ -21,6 +21,17 @@ export interface ModeNavEntry {
 
 export const MODE_NAV: ModeNavEntry[] = [
   {
+    id: 'brand-matcher',
+    railLabel: 'Match',
+    name: 'Brand matcher',
+    description:
+      'See which brands might be a good fit for a site, and who to call at each brand.',
+    chooserTitle: 'Match brands to a site',
+    chooserBody: 'See which brands might fit a given site, and who to call at each.',
+    chooserCta: 'Brand matcher',
+    Icon: Store,
+  },
+  {
     id: 'assess',
     railLabel: 'Assess',
     name: 'Assess area',
@@ -61,17 +72,6 @@ export const MODE_NAV: ModeNavEntry[] = [
     chooserBody: 'See planning alerts across the whole UK and in your patch.',
     chooserCta: 'Planning monitor',
     Icon: ClipboardList,
-  },
-  {
-    id: 'brand-matcher',
-    railLabel: 'Match',
-    name: 'Brand matcher',
-    description:
-      'See which brands might be a good fit for a site, and who to call at each brand.',
-    chooserTitle: 'Match brands to a site',
-    chooserBody: 'See which brands might fit a given site, and who to call at each.',
-    chooserCta: 'Brand matcher',
-    Icon: Store,
   },
   {
     id: 'directory',

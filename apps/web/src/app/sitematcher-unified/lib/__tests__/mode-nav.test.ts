@@ -3,11 +3,11 @@ import { availableModes, initialMode, shouldOpenChooserOnLoad, MODE_NAV } from '
 describe('availableModes', () => {
   it('keeps rail order and offers all six modes when both flags are on', () => {
     expect(availableModes({ planning: true, brandMatcher: true }).map((m) => m.railLabel)).toEqual([
+      'Match',
       'Assess',
       'Gaps',
       'Sketch',
       'Planning',
-      'Match',
       'Directory',
     ])
   })
