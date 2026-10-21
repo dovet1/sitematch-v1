@@ -379,6 +379,9 @@ export function sortStoreTowns<T extends { gap: number | null; miles: number }>(
   })
 }
 
+// How many of a brand's stores the Demographics panel lists.
+export const TOP_STORE_TOWNS = 10
+
 const TOWN_SUMMARY: Record<TownMatchBand, { value: string; status: SignalStatus }> = {
   close: { value: 'Close match', status: 'good' },
   partial: { value: 'Partial', status: 'caution' },

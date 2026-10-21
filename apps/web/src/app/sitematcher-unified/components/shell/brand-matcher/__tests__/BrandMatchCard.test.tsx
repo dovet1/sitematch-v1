@@ -174,8 +174,8 @@ describe('BrandMatchCard — expanded card', () => {
     expect(screen.getByText(/also trades in 10 other retail parks within 30 miles/)).toBeInTheDocument()
   })
 
-  it("lists every store's town, best match first, and scores the close match", async () => {
-    mockStoreTowns.mockResolvedValue({ stores: storeTowns })
+  it("lists the best-matching stores' towns, best first, and scores the close match", async () => {
+    mockStoreTowns.mockResolvedValue({ stores: storeTowns.slice(0, 2), total: 960 })
     const match = withScore({ ...rich, townMatch })
     expect(match.scoreParts.find((p) => p.component === 'demographics')).toMatchObject({ points: 15 })
     renderCard(match)
@@ -184,10 +184,9 @@ describe('BrandMatchCard — expanded card', () => {
     expect(screen.getByText(/41 stores of Aldi's 960 are in 6 towns like Leeds, the closest being Bradford\./)).toBeInTheDocument()
     expect(mockStoreTowns).toHaveBeenCalledWith('aldi', site, expect.anything())
     expect(await screen.findByText('Aldi Bradford')).toBeInTheDocument()
-    expect(screen.getByText('STORE (3)')).toBeInTheDocument()
+    expect(screen.getByText('BEST 2 OF 960 STORES')).toBeInTheDocument()
     expect(screen.getByText('Close')).toBeInTheDocument()
     expect(screen.getByText('Not close')).toBeInTheDocument()
-    expect(screen.getByText('Not in a town we hold')).toBeInTheDocument()
     expect(screen.getByText('470k')).toBeInTheDocument()
   })
 

@@ -21,7 +21,7 @@ import type {
   BrandMatch,
   BrandMatcherQuery,
   BrandMatcherSite,
-  BrandStoreTown,
+  BrandStoreTownsResponse,
   FiledFigure,
   TownFigures,
   TownMatchBand,
@@ -487,20 +487,17 @@ const MATCH_LABEL: Record<TownMatchBand, { label: string; colour: string }> = {
   none: { label: 'Not close', colour: 'text-[#8A8895]' },
 }
 
-export const STORE_TOWN_PAGE = 25
-
-// Every store of the brand, best town match first. Loaded when the panel opens.
+// The brand's best-matching stores, best first. Loaded when the panel opens.
 function StoreTownList({ brandId, brandName, site }: { brandId: string; brandName: string; site: BrandMatcherSite }) {
-  const [stores, setStores] = useState<BrandStoreTown[] | null>(null)
+  const [result, setResult] = useState<BrandStoreTownsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [shown, setShown] = useState(STORE_TOWN_PAGE)
 
   useEffect(() => {
     const ctrl = new AbortController()
-    setStores(null)
+    setResult(null)
     setError(null)
     fetchBrandStoreTowns(brandId, site, ctrl.signal)
-      .then((r) => setStores(r.stores))
+      .then(setResult)
       .catch((e: unknown) => {
         if (!ctrl.signal.aborted) setError(e instanceof Error ? e.message : 'Could not load stores')
       })
@@ -508,24 +505,26 @@ function StoreTownList({ brandId, brandName, site }: { brandId: string; brandNam
   }, [brandId, site])
 
   if (error) return <p className="text-[13.5px] text-[#A33A35]">{error}</p>
-  if (!stores) return <p className="text-[13.5px] text-[#8A8895]">Loading {brandName}&apos;s stores…</p>
+  if (!result) return <p className="text-[13.5px] text-[#8A8895]">Loading {brandName}&apos;s stores…</p>
+  const stores = result.stores
   if (stores.length === 0) return null
 
-  const visible = stores.slice(0, shown)
   return (
     <div className="flex flex-col">
       <div className="grid grid-cols-[minmax(0,1fr)_64px_80px_76px] gap-3 pb-2 text-[11px] font-bold tracking-[0.04em] text-[#8A8895]">
-        <span>STORE ({stores.length.toLocaleString('en-GB')})</span>
+        <span>
+          BEST {stores.length} OF {result.total.toLocaleString('en-GB')} {result.total === 1 ? 'STORE' : 'STORES'}
+        </span>
         <span className="text-right">PEOPLE</span>
         <span className="text-right">AFFLUENCE</span>
         <span className="text-right">MATCH</span>
       </div>
-      {visible.map((s, i) => (
+      {stores.map((s, i) => (
         <div
           key={`${s.name}-${i}`}
           className={
             'grid grid-cols-[minmax(0,1fr)_64px_80px_76px] items-baseline gap-3 border-t border-[#F2F0F7] py-2.5 text-[13.5px] ' +
-            (i === visible.length - 1 ? 'border-b' : '')
+            (i === stores.length - 1 ? 'border-b' : '')
           }
         >
           <span className="min-w-0">
@@ -547,11 +546,6 @@ function StoreTownList({ brandId, brandName, site }: { brandId: string; brandNam
           )}
         </div>
       ))}
-      {stores.length > shown && (
-        <button type="button" onClick={() => setShown((n) => n + STORE_TOWN_PAGE * 4)} className={`mt-2 self-start ${PANEL_LINK}`}>
-          Show {Math.min(STORE_TOWN_PAGE * 4, stores.length - shown).toLocaleString('en-GB')} more
-        </button>
-      )}
     </div>
   )
 }

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePlusAccess, directoryAdminClient } from '@/lib/directory'
 import { isBrandMatcherDemographicsEnabled, isBrandMatcherEnabled } from '@/lib/feature-flags'
-import { METERS_PER_MILE, sortStoreTowns, townBand } from '@/app/sitematcher-unified/lib/brand-matcher'
+import { METERS_PER_MILE, sortStoreTowns, TOP_STORE_TOWNS, townBand } from '@/app/sitematcher-unified/lib/brand-matcher'
 import type { BrandStoreTown, BrandStoreTownsResponse } from '@/app/sitematcher-unified/types/brand-matcher'
 
 export const dynamic = 'force-dynamic'
 
-// Every store of one brand with its town's population and affluence and how close that town is to
-// the site's town, best match first, for the Brand Matcher Demographics panel. Loaded when the
-// panel opens: a large chain has thousands of stores (migration 20261029000000).
+// One brand's best-matching stores (top TOP_STORE_TOWNS) with their towns' population and
+// affluence and how close each town is to the site's town, for the Brand Matcher Demographics
+// panel. Loaded when the panel opens (migration 20261029000000).
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -58,7 +58,10 @@ export async function GET(request: NextRequest) {
       gap: r.gap,
     }))
 
-    const payload: BrandStoreTownsResponse = { stores: sortStoreTowns(stores) }
+    const payload: BrandStoreTownsResponse = {
+      stores: sortStoreTowns(stores.filter((s) => s.bua)).slice(0, TOP_STORE_TOWNS),
+      total: stores.length,
+    }
     return NextResponse.json(payload)
   } catch (error) {
     console.error('Brand matcher towns failed:', error)

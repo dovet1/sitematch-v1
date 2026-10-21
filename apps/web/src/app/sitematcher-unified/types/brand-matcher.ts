@@ -78,7 +78,11 @@ export interface BrandStoreTown {
 }
 
 export interface BrandStoreTownsResponse {
+  // The brand's best-matching stores (at most TOP_STORE_TOWNS), best first. Stores in no town we
+  // hold figures for are left out.
   stores: BrandStoreTown[]
+  // All the brand's located stores.
+  total: number
 }
 
 // Pill tone. Semantics are fixed by the handoff: green = criterion met / positive count,
