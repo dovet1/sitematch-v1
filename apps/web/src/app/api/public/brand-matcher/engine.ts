@@ -357,7 +357,8 @@ async function loadTownMatches(
   site: BrandMatcherSite
 ): Promise<{ town: TownFigures | null; matches: Map<string, TownMatch> }> {
   const [siteTown, rows] = await Promise.all([
-    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon }),
+    // A site just outside a town takes the nearest town within 1km (migration 20261030000000).
+    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon, p_max_distance_m: 1000 }),
     db.rpc('brand_matcher_town_matches', { p_lat: site.lat, p_lon: site.lon }),
   ])
   if (siteTown.error) throw siteTown.error
