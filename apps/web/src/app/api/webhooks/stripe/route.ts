@@ -6,7 +6,9 @@ import {
   startUserTrial,
   invalidateSubscriptionCache
 } from '@/lib/subscription'
-import { createClient } from '@/lib/supabase'
+import { createAdminClient, createClient } from '@/lib/supabase'
+import { sendEmail } from '@/lib/resend'
+import { trialEndingEmail } from '@/lib/emails/trial-ending'
 import type Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic';
@@ -298,16 +300,30 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   if (!userId || !subscription.trial_end) {
     return
   }
+  // Nothing will be charged, so there is nothing to remind them about.
+  if (subscription.status !== 'trialing' || subscription.cancel_at_period_end) {
+    return
+  }
 
   const trialEndDate = new Date(subscription.trial_end * 1000)
   const daysUntilEnd = Math.ceil((trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-
   console.log(`Trial will end in ${daysUntilEnd} days for user ${userId}`)
 
-  // TODO: Send trial ending email based on days remaining
-  // if (daysUntilEnd === 7) {
-  //   await sendTrialEndingEmail(userId, trialEndDate, '7_days')
-  // } else if (daysUntilEnd === 1) {
-  //   await sendTrialEndingEmail(userId, trialEndDate, '1_day')
-  // }
+  const { data } = await createAdminClient().from('users').select('email').eq('id', userId).maybeSingle()
+  const email = (data as { email: string | null } | null)?.email
+  if (!email) {
+    console.error(`[WEBHOOK] No email for user ${userId}; trial reminder not sent`)
+    return
+  }
+
+  const price = subscription.items.data[0]?.price
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://www.sitematcher.co.uk'
+  const message = trialEndingEmail({
+    trialEnd: trialEndDate,
+    amount: price?.unit_amount ?? null,
+    interval: price?.recurring?.interval === 'year' ? 'year' : price?.recurring?.interval === 'month' ? 'month' : null,
+    manageUrl: `${baseUrl}/account/billing`,
+  })
+  const result = await sendEmail({ to: [email], ...message })
+  if (!result.success) console.error(`[WEBHOOK] Trial reminder failed for user ${userId}:`, result.error)
 }

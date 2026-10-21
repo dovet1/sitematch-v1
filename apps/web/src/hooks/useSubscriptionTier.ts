@@ -23,6 +23,7 @@ export interface UseSubscriptionTierReturn {
   isTrialing: boolean;     // Any trial
   hasStripeSubscription: boolean;  // Has real Stripe subscription (for upgrade detection)
   billingInterval: 'month' | 'year';  // User's current billing interval (for Pro → Plus upgrades)
+  trialEndDate: string | null;  // ISO date the trial ends, while trialing
   loading: boolean;
 }
 
@@ -41,6 +42,7 @@ export function useSubscriptionTier(): UseSubscriptionTierReturn {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('free');
   const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('year');
+  const [trialEndDate, setTrialEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // State for derived access booleans
@@ -79,6 +81,7 @@ export function useSubscriptionTier(): UseSubscriptionTierReturn {
           setSubscriptionTier(tier || 'free');
           setHasStripeSubscription(hasStripe);
           setBillingInterval(data.billing_interval || 'year');  // Get from API
+          setTrialEndDate(data.trial_end_date || null);
         } else {
           // If API fails, fall back to free tier
           setSubscriptionStatus(null);
@@ -131,6 +134,7 @@ export function useSubscriptionTier(): UseSubscriptionTierReturn {
     isTrialing,     // Any trialing user (Pro or Plus)
     hasStripeSubscription,  // Has real Stripe subscription (for upgrade detection)
     billingInterval,  // User's current billing interval (for Pro → Plus upgrades)
+    trialEndDate,
     loading: loading || authLoading
   };
 }

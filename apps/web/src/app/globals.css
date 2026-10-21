@@ -1131,3 +1131,6 @@
     border-top-color: #FFFFFF;
   }
 }
+/* Trial modal and Brand Matcher preview (docs/design_handoff_homepage_trial) */
+@keyframes sm-fade { from { opacity: 0 } }
+@keyframes sm-pop { from { opacity: 0; transform: translateY(10px) scale(.98) } }

@@ -13,7 +13,11 @@ import {
 } from 'lucide-react'
 import { useBrandMatcherStore } from '../../../lib/stores/brand-matcher-store'
 import { formatSqft, classLabel } from '../../../lib/brand-matcher'
-import { BRAND_MATCHER_USE_CLASSES, type BrandMatcherUseClass } from '../../../types/brand-matcher'
+import {
+  BRAND_MATCHER_ALL_USE_CLASSES,
+  BRAND_MATCHER_USE_CLASSES,
+  type BrandMatcherQueryUseClass,
+} from '../../../types/brand-matcher'
 import { Kicker } from './BrandMatcherUi'
 
 // Dot field behind the hero headline, faded out towards the edges.
@@ -92,11 +96,11 @@ export function BrandMatcherHero() {
                 </span>
                 <select
                   value={form.useClass}
-                  onChange={(e) => setForm({ useClass: e.target.value as BrandMatcherUseClass })}
+                  onChange={(e) => setForm({ useClass: e.target.value as BrandMatcherQueryUseClass })}
                   className="mt-0.5 w-full appearance-none bg-transparent pr-6 text-[17px] font-semibold text-sm-ink outline-none"
                   aria-label="Use class"
                 >
-                  {BRAND_MATCHER_USE_CLASSES.map((c) => (
+                  {[...BRAND_MATCHER_USE_CLASSES, BRAND_MATCHER_ALL_USE_CLASSES].map((c) => (
                     <option key={c} value={c}>
                       {classLabel(c)}
                     </option>

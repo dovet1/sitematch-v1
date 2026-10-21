@@ -54,6 +54,8 @@ import {
 import { usePlanningMonitorEnabled } from '../lib/planning-monitor-flag-context'
 import { useBrandMatcherEnabled } from '../lib/brand-matcher-flag-context'
 import { BrandMatcherMode } from './shell/brand-matcher/BrandMatcherMode'
+import { TrialWelcomeTip } from './shell/brand-matcher/TrialWelcome'
+import { useBrandMatcherDeepLink } from '../lib/hooks/useBrandMatcherDeepLink'
 
 // Radius used when reading the landscape around a selected built-up area
 // (the Assess dropped-point radius comes from the store instead).
@@ -102,6 +104,7 @@ export function UnifiedWorkspace() {
   const brandMatcherEnabled = useBrandMatcherEnabled()
   const isBrandMatcher = view === 'brand-matcher' && brandMatcherEnabled
   usePlanningDeepLink()
+  useBrandMatcherDeepLink(brandMatcherEnabled)
   useModeNavStartup()
 
   // Keep the sketch store's tier access in sync so CAD interaction is unlocked.
@@ -513,6 +516,7 @@ export function UnifiedWorkspace() {
       />
       <div className="flex flex-1 overflow-hidden">
         <URail />
+        <TrialWelcomeTip />
         {/*
           Directory is a full-pane, map-less mode: it replaces the left panel, map and
           inspector entirely rather than sitting alongside them. setMode's existing reset

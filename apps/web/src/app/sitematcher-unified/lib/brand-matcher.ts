@@ -103,6 +103,7 @@ export function formatMoney(n: number): string {
 }
 
 export function classLabel(code: string): string {
+  if (code === 'All') return 'All use classes'
   return code === 'Sui Generis' ? 'Sui Generis' : `Class ${code}`
 }
 
@@ -394,7 +395,7 @@ export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<Brand
     case 'useClass':
       if (!m.useClass) return none
       return m.useClass.matches
-        ? { key, status: 'good', value: classLabel(query.useClass) }
+        ? { key, status: 'good', value: query.useClass === 'All' ? m.useClass.codes.map(classLabel).join(', ') : classLabel(query.useClass) }
         : { key, status: 'poor', value: m.useClass.codes.map(classLabel).join(', ') }
     case 'acquisitive':
       if (!m.acquisitive) return none
@@ -741,7 +742,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
     if (!size) continue
 
     const codes = Array.from(new Set(reqs.flatMap((r) => r.useClasses)))
-    const useClass = codes.length > 0 ? { codes, matches: codes.includes(query.useClass) } : null
+    const useClass = codes.length > 0 ? { codes, matches: query.useClass === 'All' || codes.includes(query.useClass) } : null
     if (useClass && !useClass.matches && !query.widen) continue
 
     const newsItems = (newsByBrand.get(b.id) ?? []).sort((a, z) => z.date.localeCompare(a.date))

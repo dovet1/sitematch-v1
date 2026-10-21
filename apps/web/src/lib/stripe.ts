@@ -38,7 +38,18 @@ export type SubscriptionTier = 'pro' | 'plus'
 
 // Subscription configuration
 export const SUBSCRIPTION_CONFIG = {
-  // ===== NEW 3-TIER PRICING =====
+  // ===== SITEMATCHER PRO (October 2026, docs/design_handoff_homepage_trial) =====
+  // £199 per person per month, or £1,990 per person per year. 14-day trial, card required.
+  // Sold as "Pro" but carries the 'plus' tier: it unlocks every tool, and every access gate
+  // keys on 'plus'. No coupons.
+  SITEMATCHER_PRO: {
+    MONTHLY_PRICE_ID: process.env.STRIPE_SITEMATCHER_PRO_MONTHLY_PRICE_ID || '',
+    ANNUAL_PRICE_ID: process.env.STRIPE_SITEMATCHER_PRO_ANNUAL_PRICE_ID || '',
+    TRIAL_DAYS: 14,
+    TIER: 'plus' as const,
+  },
+
+  // ===== PREVIOUS 3-TIER PRICING (existing subscribers) =====
 
   // Pro Plan - £39.50/month or £395/year (50% off: was £79/mo or £790/yr)
   PRO: {
@@ -128,7 +139,9 @@ export const WEBHOOK_CONFIG = {
 export function getTierFromPriceId(priceId: string): 'pro' | 'plus' | null {
   const plusPriceIds = [
     process.env.STRIPE_PLUS_MONTHLY_PRICE_ID,
-    process.env.STRIPE_PLUS_ANNUAL_PRICE_ID
+    process.env.STRIPE_PLUS_ANNUAL_PRICE_ID,
+    process.env.STRIPE_SITEMATCHER_PRO_MONTHLY_PRICE_ID,
+    process.env.STRIPE_SITEMATCHER_PRO_ANNUAL_PRICE_ID,
   ].filter(Boolean)
 
   const proPriceIds = [
@@ -139,4 +152,10 @@ export function getTierFromPriceId(priceId: string): 'pro' | 'plus' | null {
   if (plusPriceIds.includes(priceId)) return 'plus'
   if (proPriceIds.includes(priceId)) return 'pro'
   return null
+}
+/** The SiteMatcher Pro price for a billing choice, or '' when the env var is not set. */
+export function getSitematcherProPriceId(plan: 'monthly' | 'annual'): string {
+  return plan === 'annual'
+    ? SUBSCRIPTION_CONFIG.SITEMATCHER_PRO.ANNUAL_PRICE_ID
+    : SUBSCRIPTION_CONFIG.SITEMATCHER_PRO.MONTHLY_PRICE_ID
 }

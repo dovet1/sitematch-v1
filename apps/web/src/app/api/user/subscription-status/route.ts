@@ -43,6 +43,8 @@ export async function GET() {
           process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
           process.env.STRIPE_PLUS_MONTHLY_PRICE_ID,
           process.env.STRIPE_PLUS_ANNUAL_PRICE_ID,
+          process.env.STRIPE_SITEMATCHER_PRO_MONTHLY_PRICE_ID,
+          process.env.STRIPE_SITEMATCHER_PRO_ANNUAL_PRICE_ID,
         ].filter(Boolean)
 
         const currentItem = stripeSubscription.items.data.find(item =>
@@ -63,7 +65,8 @@ export async function GET() {
       subscriptionStatus: subscription?.subscription_status || null,
       subscription_tier: subscription?.subscription_tier || 'free',  // Default to free if not set
       hasStripeSubscription: !!subscription?.stripe_subscription_id,
-      billing_interval: billingInterval  // NEW
+      billing_interval: billingInterval,  // NEW
+      trial_end_date: subscription?.trial_end_date || null,
     })
 
   } catch (error) {

@@ -3,7 +3,7 @@ import { fetchBrandMatches, fetchBrandMatcherStats } from '../services/brand-mat
 import type {
   BrandMatcherResponse,
   BrandMatcherSort,
-  BrandMatcherUseClass,
+  BrandMatcherQueryUseClass,
 } from '../../types/brand-matcher'
 
 // Brand Matcher mode state. Deliberately NOT reset by the workspace's setMode: a surveyor who
@@ -13,7 +13,7 @@ export type BrandMatcherPhase = 'hero' | 'scanning' | 'results'
 
 export interface BrandMatcherForm {
   sqft: string
-  useClass: BrandMatcherUseClass
+  useClass: BrandMatcherQueryUseClass
   postcode: string
 }
 
