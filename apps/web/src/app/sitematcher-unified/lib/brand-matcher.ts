@@ -6,7 +6,6 @@
 
 import type {
   AcquisitiveSignal,
-  BrandCatchments,
   BrandMatch,
   BrandMatcherCentre,
   BrandMatcherContact,
@@ -14,13 +13,13 @@ import type {
   BrandMatcherQuery,
   BrandMatcherSite,
   BrandMatcherSort,
-  CatchmentFigures,
   NewsEvidence,
   RequirementEvidence,
   ScorePart,
   SizeFitSignal,
   SizeFitState,
-  StoreCatchment,
+  TownMatch,
+  TownMatchBand,
   TradingFacts,
 } from '../types/brand-matcher'
 
@@ -325,12 +324,9 @@ export function acquisitiveSignal(
 // ---------------------------------------------------------------------------
 
 export type SignalKey = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest'
-// 'info': shown for the reader to judge, not scored (demographics).
-export type SignalStatus = 'good' | 'caution' | 'poor' | 'none' | 'info'
+export type SignalStatus = 'good' | 'caution' | 'poor' | 'none'
 
 export const SIGNAL_KEYS: SignalKey[] = ['size', 'useClass', 'acquisitive', 'demographics', 'nearest']
-// The signals that count towards the score. Demographics is shown but not scored.
-export const SCORED_SIGNAL_KEYS: SignalKey[] = ['size', 'useClass', 'acquisitive', 'nearest']
 
 export const SIGNAL_LABEL: Record<SignalKey, string> = {
   size: 'Size fit',
@@ -358,36 +354,37 @@ const SIZE_SUMMARY: Record<SizeFitState, { value: string; status: SignalStatus }
   smaller: { value: 'Below range', status: 'caution' },
 }
 
-// Affluence index points either side of the stores' average that still read as similar.
-export const SIMILAR_AFFLUENCE = 10
+// A store's town is a close match for the site's town when its population is within this ratio
+// of the site town's and its affluence within this many index points. Kept in step with
+// brand_matcher_town_gap() (migration 20261029000000).
+export const TOWN_MATCH_POPULATION_RATIO = 1.5
+export const TOWN_MATCH_AFFLUENCE_POINTS = 10
 
-export type AffluenceComparison = 'similar' | 'higher' | 'lower'
-
-// The site's catchment against the average of the brand's nearest stores' catchments. null when
-// either side has no affluence figure (outside England and Wales).
-export function affluenceComparison(
-  c: BrandCatchments | null | undefined
-): { comparison: AffluenceComparison; storesAverage: number } | null {
-  const site = c?.site?.affluence
-  const stores = (c?.stores ?? [])
-    .map((s) => s.catchment?.affluence)
-    .filter((a): a is number => a != null && Number.isFinite(a))
-  if (site == null || stores.length === 0) return null
-  const storesAverage = stores.reduce((t, a) => t + a, 0) / stores.length
-  const diff = site - storesAverage
-  return {
-    comparison: Math.abs(diff) <= SIMILAR_AFFLUENCE ? 'similar' : diff > 0 ? 'higher' : 'lower',
-    storesAverage,
-  }
+// Gap in close-match units (brand_matcher_town_gap): up to 1 is close, up to 2 partial.
+export function townBand(gap: number | null | undefined): TownMatchBand | null {
+  if (gap == null || !Number.isFinite(gap)) return null
+  return gap <= 1 ? 'close' : gap <= 2 ? 'partial' : 'none'
 }
 
-const AFFLUENCE_VALUE: Record<AffluenceComparison, string> = {
-  similar: 'Similar',
-  higher: 'More affluent',
-  lower: 'Less affluent',
+// Best match first; stores in no town we hold figures for last. Ties go to the store nearest the
+// site.
+export function sortStoreTowns<T extends { gap: number | null; miles: number }>(stores: T[]): T[] {
+  return [...stores].sort((a, z) => {
+    if (a.gap == null || z.gap == null) {
+      if (a.gap != null) return -1
+      if (z.gap != null) return 1
+    } else if (a.gap !== z.gap) return a.gap - z.gap
+    return a.miles - z.miles
+  })
 }
 
-type Summarisable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'catchments' | 'nearest'>
+const TOWN_SUMMARY: Record<TownMatchBand, { value: string; status: SignalStatus }> = {
+  close: { value: 'Close match', status: 'good' },
+  partial: { value: 'Partial', status: 'caution' },
+  none: { value: 'No close match', status: 'poor' },
+}
+
+type Summarisable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'townMatch' | 'nearest'>
 
 export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<BrandMatcherQuery, 'useClass'>): SignalSummary {
   const none: SignalSummary = { key, status: 'none', value: 'No data' }
@@ -404,10 +401,8 @@ export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<Brand
       return m.acquisitive.level === 'high'
         ? { key, status: 'good', value: 'High' }
         : { key, status: 'caution', value: 'Medium' }
-    case 'demographics': {
-      const a = affluenceComparison(m.catchments)
-      return a ? { key, status: 'info', value: AFFLUENCE_VALUE[a.comparison] } : none
-    }
+    case 'demographics':
+      return m.townMatch ? { key, ...TOWN_SUMMARY[m.townMatch.band] } : none
     case 'nearest': {
       if (!m.nearest) return none
       const mi = m.nearest.miles
@@ -431,6 +426,7 @@ export function signalSummaries(m: Summarisable, query: Pick<BrandMatcherQuery, 
 export const SCORE_MAX: Record<ScorePart['component'], number> = {
   size: 30,
   acquisitive: 30,
+  demographics: 15,
   nearest: 15,
   useClass: 10,
   turnover: 15,
@@ -448,13 +444,14 @@ export function turnoverPoints(facts: TradingFacts | null | undefined): number {
   return t.value >= TURNOVER_LARGE ? 15 : t.value >= TURNOVER_MEDIUM ? 10 : 5
 }
 
-type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'nearest'> &
+type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'townMatch' | 'nearest'> &
   Partial<Pick<BrandMatch, 'tradingFacts'>>
 
 // A signal we hold no data for is left out of the score rather than counted against it: the
 // score is the points earned out of the points available from the signals we do hold, scaled to
-// 100 ("Based on n of 4 signals"). Turnover is the exception: it is always counted, so a brand
-// with no published turnover is pushed down. Demographics is shown on the card but not scored.
+// 100 (handoff: "Based on n of 5 signals"). Turnover is the exception: it is always counted, so
+// a brand with no published turnover is pushed down. Demographics scores whether the brand trades
+// in a town like the site's: a close match anywhere in its estate earns the full 15.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -463,6 +460,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   add('size', m.size.state === 'fits' ? 30 : m.size.state === 'lower_end' || m.size.state === 'upper_end' ? 20 : 10)
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
   if (m.acquisitive) add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
+  if (m.townMatch) add('demographics', m.townMatch.band === 'close' ? 15 : m.townMatch.band === 'partial' ? 8 : 0)
   if (m.nearest) {
     const mi = m.nearest.miles
     // Distance is a gap: the further the nearest branch, the stronger the reason to take it.
@@ -567,7 +565,7 @@ function csvCell(v: string | number | null | undefined): string {
 export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): string {
   const header = [
     'Rank', 'Brand', 'Category', 'Match score', 'Size fit', 'Use class', 'Acquisitive',
-    'Open requirements', 'Site affluence vs nearest stores', 'Nearest store (mi)', 'Nearest store',
+    'Open requirements', 'Town match', 'Nearest store (mi)', 'Nearest store',
     'Primary contact', 'Role', 'Email', 'Phone',
   ]
   const rows = matches.map((m, i) => {
@@ -642,14 +640,9 @@ export interface AssembleInput {
   planningCounts: Map<string, number>
   geo: Map<string, RawBrandGeo>
   tradingFacts?: Map<string, TradingFacts>
-  catchments?: CatchmentsInput
-}
-
-// What the route loads for the Demographics panel: the site's catchment and, per brand, its three
-// nearest stores' catchments.
-export interface CatchmentsInput {
-  site: CatchmentFigures | null
-  stores: Map<string, StoreCatchment[]>
+  // Per brand, how its stores' towns compare with the site's town. Absent when demographics were
+  // not loaded; a brand missing from the map has no stores in towns we hold figures for.
+  townMatches?: Map<string, TownMatch>
 }
 
 // Most evidence lines (requirements, news) carried per brand.
@@ -790,9 +783,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
         )[0]
       : null
 
-    const catchments = input.catchments
-      ? { site: input.catchments.site, stores: input.catchments.stores.get(b.id) ?? [] }
-      : null
+    const townMatch = input.townMatches ? input.townMatches.get(b.id) ?? null : undefined
     const contacts = rankContacts(
       [...(input.brandContacts.get(b.id) ?? []), ...reqs.flatMap((r) => r.contacts)],
       key
@@ -800,7 +791,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
 
     const partial = { size, useClass, acquisitive, locationType, nearest }
     const tradingFacts = input.tradingFacts?.get(b.id) ?? null
-    const { score, parts } = scoreMatch({ ...partial, tradingFacts })
+    const { score, parts } = scoreMatch({ ...partial, townMatch, tradingFacts })
     matches.push({
       brandId: b.id,
       name: b.name,
@@ -812,7 +803,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
       tradingFacts,
       typicalRange: typical ? { min: typical.p25, max: typical.p75 } : null,
       contacts,
-      catchments,
+      ...(townMatch !== undefined ? { townMatch } : {}),
       score,
       scoreParts: parts,
     })

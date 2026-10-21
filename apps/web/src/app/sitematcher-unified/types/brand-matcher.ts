@@ -31,6 +31,50 @@ export interface BrandMatcherSite {
   centre: BrandMatcherCentre | null
   region: string | null
   country: string | null
+  // The built-up area (town) the site is in, with its figures. null outside every England and
+  // Wales town; absent when demographics were not loaded.
+  town?: TownFigures | null
+}
+
+// A built-up area ("town") and the two figures towns are matched on.
+export interface TownFigures {
+  code: string
+  name: string
+  population: number
+  // Affluence index: 100 is the England and Wales average.
+  affluence: number
+}
+
+// How close a store's town is to the site's town. 'close': population within 1.5 times and
+// affluence within 10 points; 'partial': within twice that on both.
+export type TownMatchBand = 'close' | 'partial' | 'none'
+
+// Per brand, for the card and the score: how its stores' towns compare with the site's town.
+export interface TownMatch {
+  band: TownMatchBand
+  // The best-matching town.
+  bestTown: string | null
+  // Stores in a town we hold figures for, and how many of them are in a close-match town.
+  townStores: number
+  closeStores: number
+  towns: number
+  closeTowns: number
+}
+
+// One store in the Demographics panel, best match first.
+export interface BrandStoreTown {
+  name: string | null
+  town: string | null
+  miles: number
+  // null when the store is in no town we hold figures for.
+  bua: TownFigures | null
+  band: TownMatchBand | null
+  // How far the store's town is from the site's town, in close-match units (up to 1 is close).
+  gap: number | null
+}
+
+export interface BrandStoreTownsResponse {
+  stores: BrandStoreTown[]
 }
 
 // Pill tone. Semantics are fixed by the handoff: green = criterion met / positive count,
@@ -149,36 +193,12 @@ export interface BrandMatcherContacts {
   total: number
 }
 
-export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'nearest' | 'turnover'
+export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest' | 'turnover'
 
 export interface ScorePart {
   component: ScoreComponent
   points: number
   max: number
-}
-
-// A catchment: the census neighbourhoods (LSOAs) within radiusMeters of a place (1km in towns,
-// 3km or 5km where fewer than 5,000 people live within 1km). England and Wales only.
-export interface CatchmentFigures {
-  radiusMeters: number
-  population: number
-  // Affluence index over the catchment: 100 is the England and Wales average.
-  affluence: number | null
-}
-
-export interface StoreCatchment {
-  name: string | null
-  town: string | null
-  miles: number
-  // null when the store is outside England and Wales.
-  catchment: CatchmentFigures | null
-}
-
-export interface BrandCatchments {
-  // null when the site is outside England and Wales.
-  site: CatchmentFigures | null
-  // The brand's three nearest stores to the site, nearest first.
-  stores: StoreCatchment[]
 }
 
 export interface BrandMatch {
@@ -198,9 +218,9 @@ export interface BrandMatch {
   // Typical unit for the band copy, from the estate profile (p25–p75), in sq ft.
   typicalRange: { min: number; max: number } | null
   contacts: BrandMatcherContacts
-  // Who lives around the site and around the brand's three nearest stores to it. Shown, not
-  // scored. Absent when catchments were not loaded.
-  catchments?: BrandCatchments | null
+  // Whether the brand trades in a town like the site's. null when the site is in no town or the
+  // brand has no stores in towns we hold figures for; absent when demographics were not loaded.
+  townMatch?: TownMatch | null
   // Points out of 100 across the signals we hold data for; missing signals are left out, except
   // turnover, which is always counted.
   score: number

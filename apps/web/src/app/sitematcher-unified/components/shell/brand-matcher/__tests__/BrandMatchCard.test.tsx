@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrandMatchCard } from '../BrandMatchCard'
 import { scoreMatch } from '../../../../lib/brand-matcher'
+import { fetchBrandStoreTowns } from '../../../../lib/services/brand-matcher-service'
 import type {
   BrandMatch,
   BrandMatcherQuery,
@@ -17,7 +18,11 @@ const site: BrandMatcherSite = {
   centre: { id: 'rc', name: 'Kirkstall Retail Park', classification: 'Large Retail Park', form: 'retail_park' },
   region: 'Yorkshire and The Humber',
   country: 'England',
+  town: { code: 'E63000001', name: 'Leeds', population: 536_280, affluence: 104 },
 }
+
+jest.mock('../../../../lib/services/brand-matcher-service', () => ({ fetchBrandStoreTowns: jest.fn() }))
+const mockStoreTowns = fetchBrandStoreTowns as jest.MockedFunction<typeof fetchBrandStoreTowns>
 
 function withScore(m: Omit<BrandMatch, 'score' | 'scoreParts'>): BrandMatch {
   const { score, parts } = scoreMatch(m)
@@ -109,15 +114,13 @@ function renderCard(match: BrandMatch, expanded = true) {
   return onChange
 }
 
-const area = (affluence: number | null, population: number, radiusMeters = 1000) => ({ radiusMeters, population, affluence })
-const catchments = {
-  site: area(124, 16_800),
-  stores: [
-    { name: 'Aldi Horsforth', town: 'Leeds', miles: 3.1, catchment: area(104, 11_200) },
-    { name: 'Aldi Otley', town: 'Otley', miles: 8.4, catchment: area(96, 7_400, 3000) },
-    { name: 'Aldi Cardiff', town: 'Cardiff', miles: 180, catchment: null },
-  ],
-}
+const townMatch = { band: 'close' as const, bestTown: 'Bradford', townStores: 960, closeStores: 41, towns: 700, closeTowns: 6 }
+const bua = (name: string, population: number, affluence: number) => ({ code: name, name, population, affluence })
+const storeTowns = [
+  { name: 'Aldi Bradford', town: 'Bradford', miles: 9, bua: bua('Bradford', 470_000, 98), band: 'close' as const, gap: 0.6 },
+  { name: 'Aldi Harrogate', town: 'Harrogate', miles: 14, bua: bua('Harrogate', 75_000, 131), band: 'none' as const, gap: 5.4 },
+  { name: 'Aldi A1 services', town: null, miles: 20, bua: null, band: null, gap: null },
+]
 
 describe('BrandMatchCard — collapsed row', () => {
   it('shows a status glyph and value per signal, the fit score and the contact count', () => {
@@ -125,16 +128,10 @@ describe('BrandMatchCard — collapsed row', () => {
     expect(screen.getAllByRole('img', { name: 'Good' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('img', { name: 'Concern' })).toBeInTheDocument()
     expect(screen.getByText('0.6 mi')).toBeInTheDocument()
-    // No census figures: a dash and "No data", never a guess.
+    // No demographic read: a dash and "No data", never a guess.
     expect(screen.getByRole('img', { name: 'No data' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '3 contacts' })).toBeInTheDocument()
     expect(screen.getByText('—')).toBeInTheDocument()
-  })
-
-  it('marks demographics as information, not a verdict', () => {
-    renderCard(withScore({ ...rich, catchments }), false)
-    expect(screen.getByRole('img', { name: 'Not scored' })).toBeInTheDocument()
-    expect(screen.getByText('More affluent')).toBeInTheDocument()
   })
 
   it('opens on the contacts list from the contacts button', async () => {
@@ -150,13 +147,13 @@ describe('BrandMatchCard — collapsed row', () => {
 })
 
 describe('BrandMatchCard — expanded card', () => {
-  it('shows the score over the four scored signals and opens on Acquisitive when all are good', () => {
+  it('shows the score over the signals held and opens on the first signal worth a look', () => {
     renderCard(rich)
-    // 80 of 100 points: no turnover scores 0 of 15. Demographics is never scored.
+    // 80 of 100 points: demographics is missing, so it is left out; no turnover scores 0 of 15.
     expect(screen.getByText('80')).toBeInTheDocument()
-    expect(screen.queryByText(/Based on/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Acquisitive/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: /Demographics/ })).toHaveTextContent('No census data · not scored')
+    expect(screen.getByText('Based on 4 of 5 signals')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Demographics/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('No stores in towns we hold')).toBeInTheDocument()
   })
 
   it('swaps the panel when a breakdown row is picked', async () => {
@@ -177,21 +174,21 @@ describe('BrandMatchCard — expanded card', () => {
     expect(screen.getByText(/also trades in 10 other retail parks within 30 miles/)).toBeInTheDocument()
   })
 
-  it("shows population and affluence around the site and the brand's nearest stores, unscored", async () => {
-    const match = withScore({ ...rich, catchments })
-    expect(match.score).toBe(rich.score)
+  it("lists every store's town, best match first, and scores the close match", async () => {
+    mockStoreTowns.mockResolvedValue({ stores: storeTowns })
+    const match = withScore({ ...rich, townMatch })
+    expect(match.scoreParts.find((p) => p.component === 'demographics')).toMatchObject({ points: 15 })
     renderCard(match)
     await userEvent.click(screen.getByRole('button', { name: /Demographics/ }))
-    // 124 against (104 + 96) / 2 = 100.
-    expect(screen.getByText('Demographics: more affluent')).toBeInTheDocument()
-    expect(screen.getByText(/more affluent than the areas around Aldi's 3 nearest stores\. Shown for you to judge; not part of the score\./)).toBeInTheDocument()
-    expect(screen.getByText('Your site')).toBeInTheDocument()
-    expect(screen.getByText('17k')).toBeInTheDocument()
-    expect(screen.getByText('124')).toBeInTheDocument()
-    expect(screen.getByText('Well above average')).toBeInTheDocument()
-    expect(screen.getByText('Aldi Otley')).toBeInTheDocument()
-    expect(screen.getByText('within 3km')).toBeInTheDocument()
-    expect(screen.getByText('No census data')).toBeInTheDocument()
+    expect(screen.getByText('Demographics: close match')).toBeInTheDocument()
+    expect(screen.getByText(/41 stores of Aldi's 960 are in 6 towns like Leeds, the closest being Bradford\./)).toBeInTheDocument()
+    expect(mockStoreTowns).toHaveBeenCalledWith('aldi', site, expect.anything())
+    expect(await screen.findByText('Aldi Bradford')).toBeInTheDocument()
+    expect(screen.getByText('STORE (3)')).toBeInTheDocument()
+    expect(screen.getByText('Close')).toBeInTheDocument()
+    expect(screen.getByText('Not close')).toBeInTheDocument()
+    expect(screen.getByText('Not in a town we hold')).toBeInTheDocument()
+    expect(screen.getByText('470k')).toBeInTheDocument()
   })
 
   it('never renders financial figures without Companies House facts', async () => {
@@ -205,7 +202,7 @@ describe('BrandMatchCard — expanded card', () => {
 describe('BrandMatchCard — sparse brand', () => {
   it('leaves missing signals out of the score and says so', async () => {
     renderCard(sparse)
-    expect(screen.getByText('Based on 2 of 4 signals')).toBeInTheDocument()
+    expect(screen.getByText('Based on 2 of 5 signals')).toBeInTheDocument()
     // Opens on the first signal that isn't good: no use class stated.
     expect(screen.getByText('Use class not confirmed')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Acquisitive/ }))

@@ -2,7 +2,6 @@ import {
   acquisitiveSignal,
   areaCoversRegion,
   assembleMatches,
-  affluenceComparison,
   filterBySector,
   NO_SECTOR,
   sectorOptions,
@@ -18,15 +17,16 @@ import {
   signalSummary,
   sizeFit,
   sortMatches,
+  sortStoreTowns,
+  townBand,
   type AssembleInput,
-  type CatchmentsInput,
 } from '../brand-matcher'
 import type {
   BrandMatch,
   BrandMatcherContact,
   BrandMatcherSite,
   RequirementEvidence,
-  StoreCatchment,
+  TownMatch,
   TradingFacts,
 } from '../../types/brand-matcher'
 
@@ -261,15 +261,15 @@ describe('scoreMatch', () => {
     // Size 30 of 30; no published turnover still counts, 0 of 15.
     expect(score).toBe(Math.round((100 * 30) / 45))
   })
-  it('scores neither demographics nor location type', () => {
-    const catchments = {
-      site: { radiusMeters: 1000, population: 19000, affluence: 140 },
-      stores: [{ name: null, town: null, miles: 2, catchment: { radiusMeters: 1000, population: 12000, affluence: 140 } }],
-    }
+  it('scores demographics on the town match, not location type', () => {
+    const townMatch = { band: 'partial' as const, bestTown: 'Ashford', townStores: 40, closeStores: 0, towns: 30, closeTowns: 0 }
     const { parts } = scoreMatch(
-      baseMatch({ catchments, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
+      baseMatch({ townMatch, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
     )
-    expect(parts.map((p) => p.component)).toEqual(['size', 'turnover'])
+    expect(parts.map((p) => p.component)).toEqual(['size', 'demographics', 'turnover'])
+    expect(parts[1]).toMatchObject({ points: 8, max: 15 })
+    expect(scoreMatch(baseMatch({ townMatch: { ...townMatch, band: 'close' } })).parts[1].points).toBe(15)
+    expect(scoreMatch(baseMatch({ townMatch: { ...townMatch, band: 'none' } })).parts[1].points).toBe(0)
   })
   it('scores published turnover by size, and nothing when there is none', () => {
     const points = (tradingFacts: TradingFacts | null) =>
@@ -425,50 +425,39 @@ describe('assembleMatches', () => {
   })
 
   describe('demographics', () => {
-    const area = (affluence: number | null, population = 12000) => ({ radiusMeters: 1000, population, affluence })
-    const catchments: CatchmentsInput = {
-      site: area(118, 19000),
-      stores: new Map<string, StoreCatchment[]>([
-        ['fettle', [
-          { name: 'Fettle Leeds', town: 'Leeds', miles: 1.2, catchment: area(110) },
-          { name: 'Fettle Wakefield', town: 'Wakefield', miles: 9, catchment: area(120) },
-          { name: 'Fettle Cardiff', town: 'Cardiff', miles: 180, catchment: null },
-        ]],
-        ['aldi', [{ name: 'Aldi Leeds', town: 'Leeds', miles: 0.4, catchment: area(80) }]],
-      ]),
-    }
-    const run = (c = catchments) => assembleMatches(input({ catchments: c })).matches
-    const find = (id: string, c = catchments) => run(c).find((m) => m.brandId === id)!
+    const close: TownMatch = { band: 'close', bestTown: 'Harrogate', townStores: 22, closeStores: 3, towns: 18, closeTowns: 2 }
+    const townMatches = new Map<string, TownMatch>([['fettle', close]])
 
-    it("carries the site's and the brand's nearest stores' catchments", () => {
-      expect(find('fettle').catchments).toEqual({ site: area(118, 19000), stores: catchments.stores.get('fettle') })
-      const noAldiStores = { ...catchments, stores: new Map([['fettle', catchments.stores.get('fettle')!]]) }
-      expect(find('aldi', noAldiStores).catchments).toEqual({ site: area(118, 19000), stores: [] })
-      expect(assembleMatches(input()).matches.every((m) => m.catchments == null)).toBe(true)
+    it("carries the brand's town match, and none for a brand with no stores in towns", () => {
+      const { matches } = assembleMatches(input({ townMatches }))
+      expect(matches.find((m) => m.brandId === 'fettle')!.townMatch).toEqual(close)
+      expect(matches.find((m) => m.brandId === 'aldi')!.townMatch).toBeNull()
+      expect(assembleMatches(input()).matches.every((m) => m.townMatch === undefined)).toBe(true)
     })
 
-    it('compares the site with the average of the stores it has figures for', () => {
-      // 118 against (110 + 120) / 2 = 115: within ten points.
-      expect(affluenceComparison(find('fettle').catchments)).toEqual({ comparison: 'similar', storesAverage: 115 })
-      expect(affluenceComparison(find('aldi').catchments)?.comparison).toBe('higher')
-      expect(affluenceComparison(find('aldi', { ...catchments, stores: new Map() }).catchments)).toBeNull()
-      expect(affluenceComparison(find('fettle', { ...catchments, site: null }).catchments)).toBeNull()
+    it('counts towards the score as one of the five signals', () => {
+      const fettle = assembleMatches(input({ townMatches })).matches.find((m) => m.brandId === 'fettle')!
+      expect(fettle.scoreParts.find((p) => p.component === 'demographics')).toMatchObject({ points: 15, max: 15 })
+      expect(signalSummary(fettle, 'demographics', { useClass: 'E' })).toEqual({ key: 'demographics', status: 'good', value: 'Close match' })
     })
 
-    it('is shown as information and never scored', () => {
-      const fettle = find('fettle')
-      expect(signalSummary(fettle, 'demographics', { useClass: 'E' })).toEqual({ key: 'demographics', status: 'info', value: 'Similar' })
-      expect(signalSummary(find('aldi'), 'demographics', { useClass: 'E' }).value).toBe('More affluent')
-      expect(fettle.scoreParts.map((p) => p.component)).not.toContain('demographics')
-      expect(fettle.score).toBe(assembleMatches(input()).matches.find((m) => m.brandId === 'fettle')!.score)
+    it('reads a gap of up to 1 as close and up to 2 as partial', () => {
+      expect([0, 1, 1.01, 2, 2.5, null].map(townBand)).toEqual(['close', 'close', 'partial', 'partial', 'none', null])
     })
 
-    it('exports the comparison', () => {
-      const csv = matchesToCsv(run(), { sqft: 14000, useClass: 'E', postcode: 'LS6 2AT' })
+    it('lists stores best match first, nearest first on a tie, stores in no town last', () => {
+      const s = (name: string, gap: number | null, miles: number) => ({ name, gap, miles })
+      expect(sortStoreTowns([s('a', null, 1), s('b', 2, 9), s('c', 0.5, 40), s('d', 0.5, 3)]).map((x) => x.name)).toEqual([
+        'd', 'c', 'b', 'a',
+      ])
+    })
+
+    it('exports the town match', () => {
+      const csv = matchesToCsv(assembleMatches(input({ townMatches })).matches, { sqft: 14000, useClass: 'E', postcode: 'LS6 2AT' })
       const [header, ...rows] = csv.split('\n')
-      const col = header.split(',').indexOf('Site affluence vs nearest stores')
+      const col = header.split(',').indexOf('Town match')
       expect(col).toBeGreaterThan(-1)
-      expect(rows.map((r) => r.split(',')[col])).toContain('Similar')
+      expect(rows.map((r) => r.split(',')[col])).toContain('Close match')
     })
   })
 })

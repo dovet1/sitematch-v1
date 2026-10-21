@@ -6,7 +6,7 @@ import { UBrandAvatar } from '../directory/UDirectoryPrimitives'
 import {
   classLabel,
   formatSqft,
-  SCORED_SIGNAL_KEYS,
+  SIGNAL_KEYS,
   SIGNAL_LABEL,
   signalSummaries,
   turnoverValue,
@@ -33,9 +33,9 @@ export type CardPanel = SignalKey | 'financials' | 'contacts'
 // Shared by the column header in BrandMatcherResults.
 export const ROW_GRID = 'lg:grid-cols-[44px_160px_minmax(0,1fr)_70px_64px_110px]'
 
-// The first scored signal worth a look, falling back to Acquisitive.
+// The first signal worth a look, falling back to Acquisitive.
 export function defaultPanel(signals: SignalSummary[]): SignalKey {
-  return signals.find((s) => SCORED_SIGNAL_KEYS.includes(s.key) && s.status !== 'good')?.key ?? 'acquisitive'
+  return signals.find((s) => s.status !== 'good')?.key ?? 'acquisitive'
 }
 
 function subline(match: BrandMatch): string {
@@ -174,7 +174,7 @@ const NONE_VALUE: Record<SignalKey, string> = {
   size: 'Not enough data',
   useClass: 'Not confirmed',
   acquisitive: 'No evidence',
-  demographics: 'No census data',
+  demographics: 'No town data',
   nearest: 'No UK stores',
 }
 
@@ -272,9 +272,9 @@ function ExpandedCard({
               <span className="text-[44px] font-bold leading-none tabular-nums text-[#4B23C9]">{match.score}</span>
               <span className="text-[14px] font-semibold text-[#8A8895]">/ 100 overall fit</span>
             </div>
-            {used < SCORED_SIGNAL_KEYS.length && (
+            {used < SIGNAL_KEYS.length && (
               <span className="text-[13px] text-[#8A8895]">
-                Based on {used} of {SCORED_SIGNAL_KEYS.length} signals
+                Based on {used} of {SIGNAL_KEYS.length} signals
               </span>
             )}
           </div>
@@ -284,11 +284,8 @@ function ExpandedCard({
               <BreakdownRow
                 key={s.key}
                 label={SIGNAL_LABEL[s.key]}
-                value={
-                  (s.status === 'none' ? NONE_VALUE[s.key] : s.value) +
-                  (SCORED_SIGNAL_KEYS.includes(s.key) ? '' : ' · not scored')
-                }
-                fill={part ? part.points / part.max : SCORED_SIGNAL_KEYS.includes(s.key) ? null : undefined}
+                value={s.status === 'none' ? NONE_VALUE[s.key] : s.value}
+                fill={part ? part.points / part.max : null}
                 selected={panel === s.key}
                 onSelect={() => onPanel(s.key)}
               />
@@ -308,7 +305,7 @@ function ExpandedCard({
           {panel === 'size' && <SizePanel match={match} query={query} />}
           {panel === 'useClass' && <UseClassPanel match={match} query={query} />}
           {panel === 'acquisitive' && <AcquisitivePanel match={match} query={query} />}
-          {panel === 'demographics' && <DemographicsPanel match={match} query={query} />}
+          {panel === 'demographics' && <DemographicsPanel match={match} query={query} site={site} />}
           {panel === 'nearest' && <NearestPanel match={match} query={query} />}
           {panel === 'financials' && <FinancialsPanel match={match} />}
           {panel === 'contacts' && (

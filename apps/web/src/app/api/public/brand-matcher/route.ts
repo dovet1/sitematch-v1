@@ -6,11 +6,11 @@ import { factsRowToTradingFacts } from '@/lib/companies-house/facts'
 import type { CompanyFactsRow } from '@/lib/companies-house/types'
 import {
   assembleMatches,
+  townBand,
   LOCATION_TYPE_RADIUS_MILES,
   METERS_PER_MILE,
   normalisePostcode,
   shortCentreName,
-  type CatchmentsInput,
   type EstateRange,
   type RawBrand,
   type RawBrandGeo,
@@ -26,8 +26,8 @@ import {
   type BrandMatcherSite,
   type BrandMatcherStats,
   type BrandMatcherUseClass,
-  type CatchmentFigures,
-  type StoreCatchment,
+  type TownFigures,
+  type TownMatch,
   type TradingFacts,
 } from '@/app/sitematcher-unified/types/brand-matcher'
 
@@ -360,38 +360,50 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
   return map
 }
 
-// The site's catchment and each brand's three nearest stores' catchments, for the Demographics
-// panel (migration 20261028000000). Shown, not scored.
-async function loadCatchments(db: Db, site: BrandMatcherSite): Promise<CatchmentsInput> {
-  const { data, error } = await db.rpc('brand_matcher_store_catchments', { p_lat: site.lat, p_lon: site.lon })
-  if (error) throw error
-  const figures = (r: { radius_m: number | null; population: number | null; affluence: number | null }): CatchmentFigures | null =>
-    r.radius_m != null && r.population != null
-      ? { radiusMeters: r.radius_m, population: Number(r.population), affluence: r.affluence == null ? null : Number(r.affluence) }
+// The site's town and, per brand, how its stores' towns compare with it (migration
+// 20261029000000). No town (outside England and Wales, or in open country) means no read.
+async function loadTownMatches(
+  db: Db,
+  site: BrandMatcherSite
+): Promise<{ town: TownFigures | null; matches: Map<string, TownMatch> }> {
+  const [siteTown, rows] = await Promise.all([
+    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon }),
+    db.rpc('brand_matcher_town_matches', { p_lat: site.lat, p_lon: site.lon }),
+  ])
+  if (siteTown.error) throw siteTown.error
+  if (rows.error) throw rows.error
+  const t = (siteTown.data ?? [])[0] as
+    | { bua_gsscode: string; bua_name: string; signals: Record<string, number> | null }
+    | undefined
+  const population = t?.signals?.population
+  const affluence = t?.signals?.affluence_high
+  const town =
+    t && population != null && affluence != null
+      ? { code: t.bua_gsscode, name: t.bua_name, population: Number(population), affluence: Number(affluence) }
       : null
-  let siteFigures: CatchmentFigures | null = null
-  const stores = new Map<string, StoreCatchment[]>()
-  for (const r of (data ?? []) as {
-    brand_id: string | null
-    rank: number
-    store_name: string | null
-    store_town: string | null
-    distance_m: number
-    radius_m: number | null
-    population: number | null
-    affluence: number | null
+  const matches = new Map<string, TownMatch>()
+  if (!town) return { town, matches }
+  for (const r of (rows.data ?? []) as {
+    brand_id: string
+    town_stores: number
+    close_stores: number | null
+    towns: number
+    close_towns: number | null
+    best_bua_name: string | null
+    best_gap: number | null
   }[]) {
-    if (r.brand_id == null) {
-      siteFigures = figures(r)
-      continue
-    }
-    const list = stores.get(r.brand_id) ?? []
-    list.push({ name: r.store_name, town: r.store_town, miles: r.distance_m / METERS_PER_MILE, catchment: figures(r) })
-    stores.set(r.brand_id, list)
+    const band = townBand(r.best_gap)
+    if (!band) continue
+    matches.set(r.brand_id, {
+      band,
+      bestTown: r.best_bua_name,
+      townStores: Number(r.town_stores),
+      closeStores: Number(r.close_stores ?? 0),
+      towns: Number(r.towns),
+      closeTowns: Number(r.close_towns ?? 0),
+    })
   }
-  // The RPC does not promise an order; nearest first.
-  stores.forEach((list) => list.sort((a, z) => a.miles - z.miles))
-  return { site: siteFigures, stores }
+  return { town, matches }
 }
 
 function parseQuery(body: unknown): BrandMatcherQuery | string {
@@ -441,7 +453,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, catchments] =
+    const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, towns] =
       await Promise.all([
         loadBrands(db),
         loadEstateRanges(db),
@@ -451,10 +463,10 @@ export async function POST(request: NextRequest) {
         loadPlanningCounts(db),
         loadGeo(db, site),
         loadTradingFacts(db),
-        // Never lets a demographic problem take the matcher down: no panel rather than no results.
+        // Never lets a demographic problem take the matcher down: no read rather than no results.
         isBrandMatcherDemographicsEnabled().then((on) =>
           on
-            ? loadCatchments(db, site).catch((error) => {
+            ? loadTownMatches(db, site).catch((error) => {
                 console.error('Brand matcher demographics failed:', error)
                 return undefined
               })
@@ -473,10 +485,15 @@ export async function POST(request: NextRequest) {
       planningCounts,
       geo,
       tradingFacts,
-      catchments,
+      townMatches: towns?.matches,
     })
 
-    const payload: BrandMatcherResponse = { site, query, matches, considered }
+    const payload: BrandMatcherResponse = {
+      site: towns ? { ...site, town: towns.town } : site,
+      query,
+      matches,
+      considered,
+    }
     return NextResponse.json(payload)
   } catch (error) {
     console.error('Brand matcher failed:', error)

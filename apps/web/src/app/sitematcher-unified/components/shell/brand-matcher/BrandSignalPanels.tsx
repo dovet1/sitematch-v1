@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  affluenceComparison,
   BLOCKER_MILES,
   CAUTION_MILES,
   classLabel,
@@ -13,14 +12,19 @@ import {
   formatSqftShort,
   formLabel,
   LOCATION_TYPE_RADIUS_MILES,
-  type AffluenceComparison,
+  TOWN_MATCH_AFFLUENCE_POINTS,
+  TOWN_MATCH_POPULATION_RATIO,
 } from '../../../lib/brand-matcher'
+import { fetchBrandStoreTowns } from '../../../lib/services/brand-matcher-service'
 import { formatPeople } from '../../../lib/brand-matcher-demographics'
 import type {
   BrandMatch,
   BrandMatcherQuery,
-  CatchmentFigures,
+  BrandMatcherSite,
+  BrandStoreTown,
   FiledFigure,
+  TownFigures,
+  TownMatchBand,
   RequirementItem,
   TradingFacts,
 } from '../../../types/brand-matcher'
@@ -380,13 +384,13 @@ export function AcquisitivePanel({ match }: PanelProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Demographics — shown for the reader to judge, not scored
+// Demographics — does the brand trade in a town like the site's?
 // ---------------------------------------------------------------------------
 
-const AFFLUENCE_TITLE: Record<AffluenceComparison, string> = {
-  similar: 'similar affluence',
-  higher: 'more affluent',
-  lower: 'less affluent',
+const TOWN_TITLE: Record<TownMatchBand, string> = {
+  close: 'close match',
+  partial: 'partial match',
+  none: 'no close match',
 }
 
 function affluenceWord(index: number): string {
@@ -397,106 +401,141 @@ function affluenceWord(index: number): string {
   return 'Well below average'
 }
 
-const radiusText = (c: CatchmentFigures) => `${c.radiusMeters / 1000}km`
-
-export function DemographicsPanel({ match }: PanelProps) {
-  const c = match.catchments
+export function DemographicsPanel({ match, site }: PanelProps & { site: BrandMatcherSite }) {
+  const t = match.townMatch
+  const town = site.town
   const name = match.name
-  if (!c || (!c.site && c.stores.every((s) => !s.catchment))) {
+  if (town === undefined) {
     return (
-      <EmptyPanel kicker="Demographics · not enough data" title="No census data here">
-        {c
-          ? `We only hold census data for England and Wales, so we can't describe the area around your site or ${name}'s nearest stores.`
-          : `We couldn't load the census figures for this search.`}{' '}
-        Not scored.
+      <EmptyPanel kicker="Demographics · not available" title="Census figures not loaded">
+        We couldn&apos;t load the census figures for this search. Not scored.
+      </EmptyPanel>
+    )
+  }
+  if (!town) {
+    return (
+      <EmptyPanel kicker="Demographics · not enough data" title="Your site isn't in a town we hold">
+        We compare towns using census figures for England and Wales&apos;s built-up areas, and your site isn&apos;t in one. Not
+        scored.
+      </EmptyPanel>
+    )
+  }
+  if (!t) {
+    return (
+      <EmptyPanel kicker="Demographics · not enough data" title="No stores in towns we hold">
+        We can&apos;t place any of {name}&apos;s stores in an England or Wales town we hold census figures for. Not scored.
       </EmptyPanel>
     )
   }
 
-  const a = affluenceComparison(c)
-  const count = c.stores.length
-  const nearestPhrase = count === 1 ? `${name}'s nearest store` : `${name}'s ${count} nearest stores`
-  const summary = !a
-    ? `Who lives around your site and around ${nearestPhrase}.`
-    : a.comparison === 'similar'
-      ? `The area around your site is about as affluent as the areas around ${nearestPhrase}.`
-      : `The area around your site is ${a.comparison === 'higher' ? 'more' : 'less'} affluent than the areas around ${nearestPhrase}.`
+  const summary =
+    t.band === 'close'
+      ? `${counted(t.closeStores, 'store')} of ${name}'s ${t.townStores.toLocaleString('en-GB')} ${t.closeStores === 1 ? 'is' : 'are'} in ${t.closeTowns === 1 ? 'a town' : `${t.closeTowns.toLocaleString('en-GB')} towns`} like ${town.name}${t.bestTown && t.bestTown !== town.name ? `, the closest being ${t.bestTown}` : ''}.`
+      : t.band === 'partial'
+        ? `None of ${name}'s stores is in a town quite like ${town.name}, but ${t.bestTown ?? 'one'} comes near.`
+        : `None of ${name}'s stores is in a town like ${town.name}. The nearest match is ${t.bestTown ?? 'not close'}.`
 
   return (
     <div className="flex flex-col gap-4">
-      <PanelTitle title={a ? `Demographics: ${AFFLUENCE_TITLE[a.comparison]}` : 'Demographics'}>
-        {summary} Shown for you to judge; not part of the score.
-      </PanelTitle>
-      <div className="flex flex-col">
-        <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3.5 pb-2 text-[11px] font-bold tracking-[0.04em] text-[#8A8895]">
-          <span>AREA AROUND</span>
-          <span className="text-right">PEOPLE</span>
-          <span className="text-right">AFFLUENCE</span>
-        </div>
-        <CatchmentRow label="Your site" detail={null} catchment={c.site} highlight />
-        {c.stores.map((s, i) => (
-          <CatchmentRow
-            key={`${s.name}-${i}`}
-            label={s.name ?? `${name} store`}
-            detail={[s.town, formatMiles(s.miles)].filter(Boolean).join(' · ')}
-            catchment={s.catchment}
-            last={i === c.stores.length - 1}
-          />
-        ))}
+      <PanelTitle title={`Demographics: ${TOWN_TITLE[t.band]}`}>{summary}</PanelTitle>
+      <div className="flex items-baseline justify-between gap-3 rounded-[10px] bg-[#FBFAFE] px-3.5 py-3 shadow-[inset_0_0_0_1px_#F2F0F7]">
+        <span className="min-w-0 text-[14px]">
+          <span className="font-bold text-[#4B23C9]">Your site</span>
+          <span className="text-[#8A8895]"> · {town.name}</span>
+        </span>
+        <TownFiguresText bua={town} />
       </div>
+      <StoreTownList brandId={match.brandId} brandName={name} site={site} />
       <Footnote>
-        Each area is the census neighbourhoods within 1km, widening to 3km or 5km where fewer than 5,000 people live within
-        1km, so people are counted over the radius shown. Affluence is an index from the 2021 Census (home ownership,
-        professional and managerial jobs, degree-level qualifications): 100 is the England and Wales average.
+        Towns are built-up areas from the 2021 Census. A close match has a population within {TOWN_MATCH_POPULATION_RATIO} times{' '}
+        {town.name}&apos;s and an affluence index within {TOWN_MATCH_AFFLUENCE_POINTS} points (100 is the England and Wales
+        average; it combines home ownership, professional and managerial jobs and degree-level qualifications). A partial match
+        is within {TOWN_MATCH_POPULATION_RATIO ** 2} times and {TOWN_MATCH_AFFLUENCE_POINTS * 2} points.
       </Footnote>
     </div>
   )
 }
 
-function CatchmentRow({
-  label,
-  detail,
-  catchment,
-  highlight = false,
-  last = false,
-}: {
-  label: string
-  detail: string | null
-  catchment: CatchmentFigures | null
-  highlight?: boolean
-  last?: boolean
-}) {
+function TownFiguresText({ bua }: { bua: TownFigures }) {
   return (
-    <div
-      className={
-        'grid grid-cols-[minmax(0,1fr)_92px_128px] items-baseline gap-3.5 border-t border-[#F2F0F7] py-3 text-[14px] ' +
-        (last ? 'border-b ' : '') +
-        (highlight ? 'bg-[#FBFAFE]' : '')
-      }
-    >
-      <span className="min-w-0">
-        <span className={highlight ? 'font-bold text-[#4B23C9]' : 'font-semibold text-[#1C1B22]'}>{label}</span>
-        {detail && <span className="text-[#8A8895]"> · {detail}</span>}
-      </span>
-      {catchment ? (
-        <>
-          <span className="text-right">
-            <span className="font-semibold text-[#1C1B22]">{formatPeople(catchment.population)}</span>
-            <span className="block text-[12px] text-[#8A8895]">within {radiusText(catchment)}</span>
+    <span className="flex-shrink-0 text-right text-[13px] text-[#4B4A55]">
+      <span className="font-semibold text-[#1C1B22]">{formatPeople(bua.population)}</span> people ·{' '}
+      <span className="font-semibold tabular-nums text-[#1C1B22]">{Math.round(bua.affluence)}</span> affluence
+      <span className="block text-[12px] text-[#8A8895]">{affluenceWord(bua.affluence)}</span>
+    </span>
+  )
+}
+
+const MATCH_LABEL: Record<TownMatchBand, { label: string; colour: string }> = {
+  close: { label: 'Close', colour: 'text-[#1E8A56]' },
+  partial: { label: 'Partial', colour: 'text-[#8A5F06]' },
+  none: { label: 'Not close', colour: 'text-[#8A8895]' },
+}
+
+export const STORE_TOWN_PAGE = 25
+
+// Every store of the brand, best town match first. Loaded when the panel opens.
+function StoreTownList({ brandId, brandName, site }: { brandId: string; brandName: string; site: BrandMatcherSite }) {
+  const [stores, setStores] = useState<BrandStoreTown[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [shown, setShown] = useState(STORE_TOWN_PAGE)
+
+  useEffect(() => {
+    const ctrl = new AbortController()
+    setStores(null)
+    setError(null)
+    fetchBrandStoreTowns(brandId, site, ctrl.signal)
+      .then((r) => setStores(r.stores))
+      .catch((e: unknown) => {
+        if (!ctrl.signal.aborted) setError(e instanceof Error ? e.message : 'Could not load stores')
+      })
+    return () => ctrl.abort()
+  }, [brandId, site])
+
+  if (error) return <p className="text-[13.5px] text-[#A33A35]">{error}</p>
+  if (!stores) return <p className="text-[13.5px] text-[#8A8895]">Loading {brandName}&apos;s stores…</p>
+  if (stores.length === 0) return null
+
+  const visible = stores.slice(0, shown)
+  return (
+    <div className="flex flex-col">
+      <div className="grid grid-cols-[minmax(0,1fr)_64px_80px_76px] gap-3 pb-2 text-[11px] font-bold tracking-[0.04em] text-[#8A8895]">
+        <span>STORE ({stores.length.toLocaleString('en-GB')})</span>
+        <span className="text-right">PEOPLE</span>
+        <span className="text-right">AFFLUENCE</span>
+        <span className="text-right">MATCH</span>
+      </div>
+      {visible.map((s, i) => (
+        <div
+          key={`${s.name}-${i}`}
+          className={
+            'grid grid-cols-[minmax(0,1fr)_64px_80px_76px] items-baseline gap-3 border-t border-[#F2F0F7] py-2.5 text-[13.5px] ' +
+            (i === visible.length - 1 ? 'border-b' : '')
+          }
+        >
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-[#1C1B22]">{s.name ?? `${brandName} store`}</span>
+            <span className="block truncate text-[12px] text-[#8A8895]">
+              {[s.bua?.name ?? s.town, formatMiles(s.miles)].filter(Boolean).join(' · ')}
+            </span>
           </span>
-          <span className="text-right">
-            {catchment.affluence != null ? (
-              <>
-                <span className="font-semibold tabular-nums text-[#1C1B22]">{Math.round(catchment.affluence)}</span>
-                <span className="block text-[12px] text-[#8A8895]">{affluenceWord(catchment.affluence)}</span>
-              </>
-            ) : (
-              <span className="text-[#A9A6B5]">Not known</span>
-            )}
-          </span>
-        </>
-      ) : (
-        <span className="col-span-2 text-right text-[13px] text-[#A9A6B5]">No census data</span>
+          {s.bua ? (
+            <>
+              <span className="text-right font-semibold text-[#1C1B22]">{formatPeople(s.bua.population)}</span>
+              <span className="text-right font-semibold tabular-nums text-[#1C1B22]">{Math.round(s.bua.affluence)}</span>
+              <span className={`text-right font-semibold ${s.band ? MATCH_LABEL[s.band].colour : 'text-[#8A8895]'}`}>
+                {s.band ? MATCH_LABEL[s.band].label : ''}
+              </span>
+            </>
+          ) : (
+            <span className="col-span-3 text-right text-[12.5px] text-[#A9A6B5]">Not in a town we hold</span>
+          )}
+        </div>
+      ))}
+      {stores.length > shown && (
+        <button type="button" onClick={() => setShown((n) => n + STORE_TOWN_PAGE * 4)} className={`mt-2 self-start ${PANEL_LINK}`}>
+          Show {Math.min(STORE_TOWN_PAGE * 4, stores.length - shown).toLocaleString('en-GB')} more
+        </button>
       )}
     </div>
   )

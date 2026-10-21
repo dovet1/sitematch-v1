@@ -9,8 +9,8 @@ export const maxDuration = 60
 /**
  * "Refresh Brand Matcher demographics" — the button on /admin/stores/import.
  *
- * After stores are imported, each brand's catchment profiles and their backtest scores need rebuilding
- * before the Brand Matcher's demographic pill reflects them. That is a few minutes of work, so it
+ * After stores are imported, each store's town needs placing before the Brand Matcher's town match
+ * reflects them. That is a few minutes of work, so it
  * runs as a series of short steps: the button posts the cursor this route last returned until the
  * route says it is done. See lib/brand-matcher-demographics-refresh.ts.
  */
@@ -33,20 +33,16 @@ export async function POST(request: NextRequest) {
           if (!data || data.length < 1000) return ids
         }
       },
+      // The Brand Matcher now matches towns (migration 20261029000000): the only thing a store
+      // import changes is which town each store is in.
       rebuildProfiles: async (brandIds) => {
-        const { data, error } = await db.rpc('rebuild_brand_catchment_profiles', { p_brand_ids: brandIds })
+        const { data, error } = await db.rpc('rebuild_store_buas', { p_brand_ids: brandIds })
         if (error) throw error
         return Number(data ?? 0)
       },
-      recordBacktest: async (level, from, to) => {
-        const { data, error } = await db.rpc('record_brand_catchment_backtest', {
-          p_level: level,
-          p_unit_from: from,
-          p_unit_to: to,
-        })
-        if (error) throw error
-        return Number(data ?? 0)
-      },
+      // Catchment profiles and their backtest are no longer read, so nothing is recorded and the
+      // backtest stages end at once.
+      recordBacktest: async () => 0,
       now: () => Date.now(),
     })
     return NextResponse.json({ success: true, ...result })
