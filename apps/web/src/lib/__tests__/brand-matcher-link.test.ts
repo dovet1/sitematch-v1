@@ -38,6 +38,8 @@ describe('brand-matcher-link', () => {
     expect(toQueryUseClass('all')).toBe('All')
     expect(toQueryUseClass('E')).toBe('E')
     expect(toQueryUseClass('SG')).toBe('Sui Generis')
+    expect(toQueryUseClass('B')).toBe('B')
+    expect(toQueryUseClass('F')).toBe('F')
   })
 
   it('opens Brand Matcher in the workspace', () => {

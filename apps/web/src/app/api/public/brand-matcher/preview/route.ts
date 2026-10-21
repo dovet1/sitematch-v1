@@ -9,6 +9,7 @@ import type {
   BrandMatcherQuery,
   BrandMatcherUseClass,
 } from '@/app/sitematcher-unified/types/brand-matcher'
+import { HOME_CLASS_CODES } from '@/lib/brand-matcher-link'
 import { matchSite, parseQuery } from '../engine'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,7 @@ export const dynamic = 'force-dynamic'
 // here, before the response leaves the server: no id, name, logo, domain or contact details, and
 // only the top VISIBLE rows carry their signals. The rest of the list is a count.
 //
-// The match runs once with every use class; the Class E and Sui generis lists are cut from it,
+// The match runs once with every use class; each use class's list is cut from it,
 // so the preview's use-class dropdown never refetches.
 
 const VISIBLE = 3
@@ -44,11 +45,6 @@ function limited(ip: string): boolean {
   hits.set(ip, recent)
   if (hits.size > 5000) hits.clear()
   return recent.length > MAX_PER_WINDOW
-}
-
-const LIST_CLASS: Record<Exclude<BrandMatcherPreviewUseClass, 'all'>, BrandMatcherUseClass> = {
-  E: 'E',
-  SG: 'Sui Generis',
 }
 
 // A brand with no stated use class is never excluded on use class, as in the member list.
@@ -101,8 +97,12 @@ export async function POST(request: NextRequest) {
       sqft: query.sqft,
       lists: {
         all: toList(matches, { useClass: 'All' }),
-        E: toList(matches.filter((m) => inClass(m, LIST_CLASS.E)), { useClass: LIST_CLASS.E }),
-        SG: toList(matches.filter((m) => inClass(m, LIST_CLASS.SG)), { useClass: LIST_CLASS.SG }),
+        ...(Object.fromEntries(
+          Object.entries(HOME_CLASS_CODES).map(([id, code]) => [
+            id,
+            toList(matches.filter((m) => inClass(m, code)), { useClass: code }),
+          ])
+        ) as Record<Exclude<BrandMatcherPreviewUseClass, 'all'>, BrandMatcherPreviewList>),
       },
     }
 

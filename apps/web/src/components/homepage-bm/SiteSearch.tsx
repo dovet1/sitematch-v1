@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { searchLocations, type LocationResult } from '@/lib/mapbox'
 import { extractPostcode, HOME_USE_CLASSES, previewHref, type HomeUseClass } from '@/lib/brand-matcher-link'
@@ -57,6 +57,9 @@ export function SiteSearch({ dark = false }: { dark?: boolean }) {
   const [picked, setPicked] = useState<Suggestion | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Index of the suggestion the arrow keys have highlighted, or -1 for none.
+  const [active, setActive] = useState(-1)
+  const listId = useId()
   const sizeRef = useRef<HTMLInputElement>(null)
   const addressRef = useRef<HTMLInputElement>(null)
 
@@ -69,7 +72,11 @@ export function SiteSearch({ dark = false }: { dark?: boolean }) {
     let cancelled = false
     const t = setTimeout(() => {
       searchLocations(q, { country: ['GB'], types: ['address', 'postcode', 'poi'], limit: 5 })
-        .then((r) => !cancelled && setSuggestions(r.map(toSuggestion)))
+        .then((r) => {
+          if (cancelled) return
+          setSuggestions(r.map(toSuggestion))
+          setActive(-1)
+        })
         .catch(() => !cancelled && setSuggestions([]))
     }, 200)
     return () => {
@@ -103,6 +110,41 @@ export function SiteSearch({ dark = false }: { dark?: boolean }) {
   }
 
   const open = focus && address.trim().length > 0 && picked?.label !== address
+  // With no suggestions the list holds one "Search “…”" row, which stands for the typed text.
+  const options: (Suggestion | null)[] = suggestions.length ? suggestions.slice(0, 4) : [null]
+
+  const choose = (s: Suggestion | null) => {
+    setFocus(false)
+    setActive(-1)
+    if (s) {
+      setAddress(s.label)
+      setPicked(s)
+    }
+    void go(s)
+  }
+
+  const onAddressKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape' && open) {
+      e.preventDefault()
+      setFocus(false)
+      setActive(-1)
+      return
+    }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') {
+      if (e.key === 'Enter' && open && active >= 0 && active < options.length) {
+        e.preventDefault()
+        choose(options[active])
+      }
+      return
+    }
+    e.preventDefault()
+    if (!open) {
+      if (address.trim()) setFocus(true)
+      return
+    }
+    const n = options.length
+    setActive((i) => (e.key === 'ArrowDown' ? (i + 1) % n : i <= 0 ? n - 1 : i - 1))
+  }
   const divider = dark ? 'border-white/[0.14]' : 'border-sm-border'
 
   return (
@@ -128,12 +170,20 @@ export function SiteSearch({ dark = false }: { dark?: boolean }) {
           onChange={(e) => {
             setAddress(e.target.value)
             setPicked(null)
+            setFocus(true)
+            setActive(-1)
           }}
+          onKeyDown={onAddressKey}
           onFocus={() => setFocus(true)}
           onBlur={() => setTimeout(() => setFocus(false), 120)}
           placeholder="Site address or postcode"
           aria-label="Site address or postcode"
           autoComplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
           className={
             'min-w-0 flex-1 bg-transparent px-3.5 text-[16px] outline-none max-md:px-2.5 max-md:py-3 ' +
             (dark ? 'text-white placeholder:text-white/55' : 'text-sm-ink placeholder:text-sm-ink3')
@@ -188,38 +238,39 @@ export function SiteSearch({ dark = false }: { dark?: boolean }) {
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 rounded-xl border border-sm-border bg-sm-surface p-1.5 shadow-[0_18px_40px_-16px_rgba(20,10,40,0.22)]">
-          {suggestions.slice(0, 4).map((s) => (
+        <div
+          id={listId}
+          role="listbox"
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 rounded-xl border border-sm-border bg-sm-surface p-1.5 shadow-[0_18px_40px_-16px_rgba(20,10,40,0.22)]"
+        >
+          {options.map((s, i) => (
             <button
               type="button"
-              key={s.id}
+              key={s?.id ?? 'typed'}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={i === active}
+              tabIndex={-1}
+              onMouseEnter={() => setActive(i)}
               onMouseDown={(e) => {
                 e.preventDefault()
-                setFocus(false)
-                setAddress(s.label)
-                setPicked(s)
-                void go(s)
+                choose(s)
               }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[14px] text-sm-ink hover:bg-sm-violet-tint-soft"
+              className={
+                'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[14px] text-sm-ink ' +
+                (i === active ? 'bg-sm-violet-tint-soft' : '')
+              }
             >
               <PinIcon />
-              {s.label}
+              {s ? (
+                s.label
+              ) : (
+                <>
+                  Search <span className="text-sm-ink3">“{address}”</span>
+                </>
+              )}
             </button>
           ))}
-          {suggestions.length === 0 && (
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                setFocus(false)
-                void go(null)
-              }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[14px] text-sm-ink hover:bg-sm-violet-tint-soft"
-            >
-              <PinIcon />
-              Search <span className="text-sm-ink3">“{address}”</span>
-            </button>
-          )}
         </div>
       )}
       {error && (

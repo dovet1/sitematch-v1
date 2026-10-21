@@ -1,15 +1,29 @@
 // The homepage search hands a site to Brand Matcher through the URL:
-//   /brand-matcher?site=<address>&pc=<postcode>&sqft=<n>&uc=<E|SG>
+//   /brand-matcher?site=<address>&pc=<postcode>&sqft=<n>&uc=<E|B|F|SG>
 // `uc` is left out for "All use classes". Logged-out visitors get the gated preview at that URL;
 // members are sent on to the workspace with the same params plus mode=brand-matcher.
 
-import type { BrandMatcherQueryUseClass } from '@/app/sitematcher-unified/types/brand-matcher'
+import type {
+  BrandMatcherPreviewUseClass,
+  BrandMatcherQueryUseClass,
+  BrandMatcherUseClass,
+} from '@/app/sitematcher-unified/types/brand-matcher'
 
-export type HomeUseClass = 'all' | 'E' | 'SG'
+export type HomeUseClass = BrandMatcherPreviewUseClass
+
+// Every use class Brand Matcher matches on, keyed by its short URL code.
+export const HOME_CLASS_CODES: Record<Exclude<HomeUseClass, 'all'>, BrandMatcherUseClass> = {
+  E: 'E',
+  B: 'B',
+  F: 'F',
+  SG: 'Sui Generis',
+}
 
 export const HOME_USE_CLASSES: { id: HomeUseClass; label: string }[] = [
   { id: 'all', label: 'All use classes' },
   { id: 'E', label: 'Class E' },
+  { id: 'B', label: 'Class B' },
+  { id: 'F', label: 'Class F' },
   { id: 'SG', label: 'Sui generis' },
 ]
 
@@ -34,19 +48,16 @@ export function parseSqft(raw: string | null | undefined): number | null {
 }
 
 export function parseHomeUseClass(raw: string | null | undefined): HomeUseClass {
-  return raw === 'E' || raw === 'SG' ? raw : 'all'
+  return raw && raw in HOME_CLASS_CODES ? (raw as HomeUseClass) : 'all'
 }
 
 export function toQueryUseClass(uc: HomeUseClass): BrandMatcherQueryUseClass {
-  if (uc === 'E') return 'E'
-  if (uc === 'SG') return 'Sui Generis'
-  return 'All'
+  return uc === 'all' ? 'All' : HOME_CLASS_CODES[uc]
 }
 
 export function fromQueryUseClass(uc: string): HomeUseClass {
-  if (uc === 'E') return 'E'
-  if (uc === 'Sui Generis') return 'SG'
-  return 'all'
+  const hit = (Object.keys(HOME_CLASS_CODES) as Exclude<HomeUseClass, 'all'>[]).find((k) => HOME_CLASS_CODES[k] === uc)
+  return hit ?? 'all'
 }
 
 export function siteSearchParams(p: BrandMatcherSiteParams): URLSearchParams {
