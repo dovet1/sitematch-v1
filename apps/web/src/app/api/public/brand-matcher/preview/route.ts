@@ -90,11 +90,12 @@ export async function POST(request: NextRequest) {
 
     const result = await matchSite(query)
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-    const { site, matches } = result.payload
+    const { site, matches, considered } = result.payload
 
     const payload: BrandMatcherPreviewResponse = {
       site: { postcode: site.postcode, centre: site.centre?.name ?? null },
       sqft: query.sqft,
+      considered,
       lists: {
         all: toList(matches, { useClass: 'All' }),
         ...(Object.fromEntries(

@@ -270,6 +270,8 @@ export interface BrandMatcherPreviewList {
 export interface BrandMatcherPreviewResponse {
   site: { postcode: string; centre: string | null }
   sqft: number
+  // Brands considered before filtering, for the "Scanning N brands" screen.
+  considered: number
   // One list per use-class choice, so the header dropdown switches without a refetch.
   lists: Record<BrandMatcherPreviewUseClass, BrandMatcherPreviewList>
 }

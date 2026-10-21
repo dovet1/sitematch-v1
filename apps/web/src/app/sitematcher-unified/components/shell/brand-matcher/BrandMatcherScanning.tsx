@@ -25,13 +25,47 @@ export function BrandMatcherScanning() {
   const considered = useBrandMatcherStore((s) => s.result?.considered ?? null)
   const showResults = useBrandMatcherStore((s) => s.showResults)
   const editSite = useBrandMatcherStore((s) => s.editSite)
+  const sqft = Number(form.sqft.replace(/[,\s]/g, ''))
+
+  return (
+    <BrandMatcherScanningView
+      ready={ready}
+      count={considered ?? brandsTracked}
+      sqft={sqft}
+      useClass={form.useClass}
+      postcode={form.postcode}
+      onDone={showResults}
+      onCancel={editSite}
+    />
+  )
+}
+
+// The scan itself, without the store, so the logged-out preview (/brand-matcher) shows the same
+// screen. onDone fires once every step has ticked and `ready` is true.
+export function BrandMatcherScanningView({
+  ready,
+  count,
+  sqft,
+  useClass,
+  postcode,
+  onDone,
+  onCancel,
+}: {
+  ready: boolean
+  count: number | null
+  sqft: number
+  useClass: string
+  postcode: string
+  onDone: () => void
+  onCancel: () => void
+}) {
   // Index of the active step; STEPS.length = all complete.
   const [active, setActive] = useState(0)
 
   useEffect(() => {
     if (active >= STEPS.length) {
       if (ready) {
-        const t = setTimeout(showResults, 180)
+        const t = setTimeout(onDone, 180)
         return () => clearTimeout(t)
       }
       return
@@ -40,10 +74,7 @@ export function BrandMatcherScanning() {
     if (active === STEPS.length - 1 && !ready) return
     const t = setTimeout(() => setActive((a) => a + 1), ready ? FAST_STEP_MS : STEP_MS)
     return () => clearTimeout(t)
-  }, [active, ready, showResults])
-
-  const count = considered ?? brandsTracked
-  const sqft = Number(form.sqft.replace(/[,\s]/g, ''))
+  }, [active, ready, onDone])
 
   return (
     <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden bg-[#0E0C14] px-6 py-24 text-center">
@@ -87,7 +118,7 @@ export function BrandMatcherScanning() {
         </h1>
         <p className="mt-2 text-[16px] text-white/70">
           {Number.isFinite(sqft) && sqft > 0 ? `${formatSqft(sqft)} sq ft` : ''} ·{' '}
-          {classLabel(form.useClass)} · {form.postcode.toUpperCase()}
+          {classLabel(useClass)} · {postcode.toUpperCase()}
         </p>
 
         <ol className="mt-8 flex flex-wrap justify-center gap-2.5">
@@ -116,7 +147,7 @@ export function BrandMatcherScanning() {
 
         <button
           type="button"
-          onClick={editSite}
+          onClick={onCancel}
           className="mt-10 text-[13px] font-medium text-white/50 underline-offset-4 hover:text-white/80 hover:underline"
         >
           Cancel

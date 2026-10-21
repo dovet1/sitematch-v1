@@ -77,6 +77,7 @@ describe('POST /api/public/brand-matcher/preview', () => {
     const res = await post({ postcode: 'LS1 1AA', sqft: 1500 }, '2.2.2.2')
     const body = await res.json()
     expect((matchSite as jest.Mock).mock.calls.at(-1)[0].useClass).toBe('All')
+    expect(body.considered).toBe(5)
     expect(body.lists.all.total).toBe(5)
     // A brand with no stated use class stays in every list.
     expect(body.lists.E.total).toBe(3)
