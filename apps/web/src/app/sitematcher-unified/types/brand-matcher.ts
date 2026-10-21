@@ -250,7 +250,7 @@ export type BrandMatcherSort = 'best' | 'acquisitive' | 'gap' | 'name'
 // Redacted server-side: no brand id, name, logo, domain or contact ever leaves the server, and
 // only the top rows carry their signals. The page blurs placeholders, it hides nothing real.
 
-export type BrandMatcherPreviewUseClass = 'all' | 'E' | 'SG'
+export type BrandMatcherPreviewUseClass = 'all' | 'E' | 'B' | 'F' | 'SG'
 
 export interface BrandMatcherPreviewRow {
   score: number

@@ -73,7 +73,7 @@ describe('POST /api/public/brand-matcher/preview', () => {
     expect(text).not.toMatch(/Secret|logos\.example|\.example|Pat Person|0113/)
   })
 
-  it('runs once across every use class and cuts the E and Sui generis lists from it', async () => {
+  it('runs once across every use class and cuts a list for each use class from it', async () => {
     const res = await post({ postcode: 'LS1 1AA', sqft: 1500 }, '2.2.2.2')
     const body = await res.json()
     expect((matchSite as jest.Mock).mock.calls.at(-1)[0].useClass).toBe('All')
@@ -81,6 +81,8 @@ describe('POST /api/public/brand-matcher/preview', () => {
     // A brand with no stated use class stays in every list.
     expect(body.lists.E.total).toBe(3)
     expect(body.lists.SG.total).toBe(2)
+    expect(body.lists.B.total).toBe(1)
+    expect(body.lists.F.total).toBe(2)
     expect(body.lists.all.rows).toHaveLength(3)
     expect(body.lists.all.rows.map((r: { score: number }) => r.score)).toEqual([90, 80, 70])
     expect(body.lists.all.rows[0].contactCount).toBe(1)
