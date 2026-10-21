@@ -7,6 +7,7 @@ import {
   formatSqft,
   formatSqftShort,
   SIGNAL_LABEL,
+  TOP_STORE_TOWNS,
   signalSummaries,
   turnoverValue,
   type SignalSummary,
@@ -506,8 +507,9 @@ const MATCH: Record<TownMatchBand, { label: string; cls: string }> = {
   none: { label: 'Not close', cls: 'mN' },
 }
 
-// Rows shown per section, so the tallest brand page still fits US Letter.
-const DEMOGRAPHIC_ROWS = 5
+// Rows shown per section, so the tallest brand page still fits US Letter. Demographics shows every
+// store the API returns (its top TOP_STORE_TOWNS).
+const DEMOGRAPHIC_ROWS = TOP_STORE_TOWNS
 const NEAREST_ROWS = 3
 
 function BrandPage({
@@ -748,7 +750,7 @@ function BrandPage({
                       <th className="r" style={{ width: 58 }}>
                         Affluence
                       </th>
-                      <th className="r" style={{ width: 54 }}>
+                      <th className="r" style={{ width: 66 }}>
                         Match
                       </th>
                     </tr>
