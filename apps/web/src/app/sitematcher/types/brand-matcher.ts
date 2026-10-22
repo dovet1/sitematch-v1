@@ -205,10 +205,15 @@ export interface TradingFacts {
   fetchedAt: string
 }
 
-// The brand's UK sites are run by franchisee companies, so no one Companies House record
-// represents it. Only set when we are highly confident (brand_franchise.confidence = 'high');
-// it then stands in for the financials, and turnover is left out of the score.
+// No one UK Companies House record represents the brand, either because its UK sites are run by
+// franchisee companies ('franchise') or because it is run from abroad with no UK company that
+// files accounts ('overseas'). Only set when we are highly confident (brand_franchise.confidence
+// = 'high'); it then stands in for the financials, and turnover is left out of the score.
+export type NoUkRecordKind = 'franchise' | 'overseas'
+
 export interface FranchiseSignal {
+  // Absent on reports shared before overseas brands were recorded: those are franchises.
+  kind?: NoUkRecordKind
   sourceUrl: string | null
   checkedAt: string
 }
@@ -262,7 +267,8 @@ export interface BrandMatch {
   // brand has no stores in towns we hold figures for; absent when demographics were not loaded.
   townMatch?: TownMatch | null
   // Points out of 100 across the signals we hold data for; missing signals are left out, except
-  // turnover and acquisitive, which are always counted (turnover is left out for a franchise).
+  // turnover and acquisitive, which are always counted (turnover is left out for a franchise or an
+  // overseas brand).
   score: number
   scoreParts: ScorePart[]
 }

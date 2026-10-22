@@ -33,6 +33,7 @@ import {
   type BrandStoreTown,
   type BrandStoreTownsResponse,
   type FranchiseSignal,
+  type NoUkRecordKind,
   type TownFigures,
   type TownMatch,
   type TradingFacts,
@@ -267,13 +268,13 @@ async function loadTradingFacts(db: Db): Promise<Map<string, TradingFacts>> {
   return map
 }
 
-// Brands we are highly confident are franchised (brand_franchise). Medium and low confidence
-// rows are for admin review only and never reach Brand Matcher.
+// Brands we are highly confident are franchised or run from overseas (brand_franchise). Medium
+// and low confidence rows are for admin review only and never reach Brand Matcher.
 async function loadFranchises(db: Db): Promise<Map<string, FranchiseSignal>> {
-  const rows = await selectAll<{ brand_id: string; source_url: string | null; checked_at: string }>(() =>
-    db.from('brand_franchise').select('brand_id, source_url, checked_at').eq('confidence', 'high').order('brand_id')
+  const rows = await selectAll<{ brand_id: string; kind: NoUkRecordKind; source_url: string | null; checked_at: string }>(() =>
+    db.from('brand_franchise').select('brand_id, kind, source_url, checked_at').eq('confidence', 'high').order('brand_id')
   )
-  return new Map(rows.map((r) => [r.brand_id, { sourceUrl: r.source_url, checkedAt: r.checked_at }]))
+  return new Map(rows.map((r) => [r.brand_id, { kind: r.kind, sourceUrl: r.source_url, checkedAt: r.checked_at }]))
 }
 
 async function loadBrands(db: Db): Promise<RawBrand[]> {

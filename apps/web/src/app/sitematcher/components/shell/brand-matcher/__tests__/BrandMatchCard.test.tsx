@@ -338,6 +338,14 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     expect(screen.queryByText('ALDI STORES LIMITED, active', { exact: false })).not.toBeInTheDocument()
   })
 
+  it('shows the overseas flag in place of the financials', async () => {
+    const franchise = { kind: 'overseas' as const, sourceUrl: null, checkedAt: '2026-10-22' }
+    await openFinancials({ ...rich, franchise, tradingFacts: facts })
+    expect(screen.getByText('Overseas ›')).toBeInTheDocument()
+    expect(screen.getByText(/run from outside the UK/)).toBeInTheDocument()
+    expect(screen.queryByText('ALDI STORES LIMITED, active', { exact: false })).not.toBeInTheDocument()
+  })
+
   it('offers the registered office when there is no named contact', async () => {
     renderCard({ ...sparse, tradingFacts: facts })
     await userEvent.click(screen.getByRole('button', { name: /No named contact/ }))

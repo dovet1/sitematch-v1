@@ -13,6 +13,7 @@ import {
   formatSqft,
   formatSqftShort,
   formLabel,
+  isOverseas,
   LOCATION_TYPE_RADIUS_MILES,
   NEWS_HALF_LIFE_DAYS,
   TOWN_MATCH_AFFLUENCE_POINTS,
@@ -659,6 +660,26 @@ function formatDate(iso: string): string {
 }
 
 export function FinancialsPanel({ match }: { match: BrandMatch }) {
+  if (match.franchise && isOverseas(match.franchise)) {
+    const source = match.franchise.sourceUrl
+    return (
+      <div className="flex flex-col gap-4">
+        <PanelTitle title="Overseas">Shown in place of Companies House financials</PanelTitle>
+        <p className="text-[13.5px] leading-[1.5] text-[#4B4A55] [text-wrap:pretty]">
+          {match.name} is run from outside the UK, with no UK company that files accounts at Companies House.
+          Its accounts are held by the registry in its home country.
+        </p>
+        {source && (
+          <a href={source} target="_blank" rel="noopener noreferrer" className={PANEL_LINK}>
+            Source ↗
+          </a>
+        )}
+        <p className="text-[12.5px] leading-[1.5] text-[#6B6B78]">
+          Turnover is left out of this brand&apos;s match score, so it is neither helped nor held back by it.
+        </p>
+      </div>
+    )
+  }
   if (match.franchise) {
     const source = match.franchise.sourceUrl
     return (

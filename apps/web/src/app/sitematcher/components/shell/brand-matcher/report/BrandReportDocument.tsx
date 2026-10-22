@@ -9,6 +9,8 @@ import {
   formatSqftShort,
   SIGNAL_LABEL,
   TOP_STORE_TOWNS,
+  isOverseas,
+  noUkRecordLabel,
   signalSummaries,
   turnoverCell,
   type SignalSummary,
@@ -537,7 +539,7 @@ function BrandPage({
   const signals = signalSummaries(b, query)
   const sig = (k: SignalSummary['key']) => signals.find((s) => s.key === k) as SignalSummary
   const tone = (k: SignalSummary['key']) => REPORT_TONE[sig(k).status]
-  // A franchise's financials are replaced by the franchise flag, company and all.
+  // A franchise's or overseas brand's financials are replaced by its flag, company and all.
   const facts = b.franchise ? null : b.tradingFacts
   const turnover = turnoverCell(b)
   const meta = [
@@ -788,9 +790,14 @@ function BrandPage({
           <div className="sec">
             <div className="sh">
               <h3>Financials</h3>
-              <span className="src">{b.franchise ? 'Franchise' : 'Companies House, as filed'}</span>
+              <span className="src">{b.franchise ? noUkRecordLabel(b.franchise) : 'Companies House, as filed'}</span>
             </div>
-            {b.franchise ? (
+            {b.franchise && isOverseas(b.franchise) ? (
+              <div className="empty" style={{ marginTop: 8 }}>
+                {b.name} is run from outside the UK, with no UK company that files accounts at Companies House.
+                Turnover is left out of its fit score.
+              </div>
+            ) : b.franchise ? (
               <div className="empty" style={{ marginTop: 8 }}>
                 {b.name}&apos;s UK sites are run by franchisees, each through its own company, so no single Companies
                 House record represents the brand. Turnover is left out of its fit score.

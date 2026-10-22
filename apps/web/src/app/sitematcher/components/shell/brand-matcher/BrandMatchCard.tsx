@@ -8,6 +8,7 @@ import {
   formatSqft,
   SIGNAL_KEYS,
   SIGNAL_LABEL,
+  isOverseas,
   signalSummaries,
   turnoverCell,
   type SignalKey,
@@ -193,7 +194,9 @@ function CollapsedRow({
         className={`hidden text-[13.5px] lg:block ${turnover ? 'font-semibold text-[#2A2833]' : 'text-[#8A8895]'}`}
         title={
           match.franchise
-            ? 'Sites are run by franchisees, so no one company’s accounts represent the brand'
+            ? isOverseas(match.franchise)
+              ? 'Run from overseas, with no UK company filing accounts'
+              : 'Sites are run by franchisees, so no one company’s accounts represent the brand'
             : turnover
               ? 'Latest turnover, as filed at Companies House'
               : undefined
@@ -262,7 +265,7 @@ function ExpandedCard({
   onPanel: (p: CardPanel) => void
   onCollapse: () => void
 }) {
-  // A franchise's financials are replaced by the franchise flag, company and all.
+  // A franchise's or overseas brand's financials are replaced by its flag, company and all.
   const facts = match.franchise ? null : match.tradingFacts
   const sub = [subline(match), facts ? `${facts.companyName}${facts.status ? `, ${facts.status.toLowerCase()}` : ''}` : null]
     .filter(Boolean)
