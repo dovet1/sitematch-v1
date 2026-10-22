@@ -496,7 +496,7 @@ export interface DirectoryRequirement {
 
 export interface DirectoryActivityEvent {
   id: string
-  kind: 'opening' | 'closure'
+  kind: 'opening' | 'closure' | 'news'
   eventDate: string
   isUpcoming: boolean
   headline: string

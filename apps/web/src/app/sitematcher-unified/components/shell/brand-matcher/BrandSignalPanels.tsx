@@ -8,10 +8,12 @@ import {
   CONTACT_CORRECTIONS_EMAIL,
   formatMiles,
   formatMoney,
+  formatNewsScore,
   formatSqft,
   formatSqftShort,
   formLabel,
   LOCATION_TYPE_RADIUS_MILES,
+  NEWS_HALF_LIFE_DAYS,
   TOWN_MATCH_AFFLUENCE_POINTS,
   TOWN_MATCH_POPULATION_RATIO,
   TOWN_REACH_M,
@@ -287,15 +289,14 @@ export function AcquisitivePanel({ match }: PanelProps) {
     return (
       <div className="flex flex-col gap-3.5">
         <PanelTitle title="Acquisitive: no evidence">
-          We haven&apos;t found any requirements listed with SiteMatcher, news about {name} opening stores in the last 90
-          days, or planning applications naming it. This signal is left out of the score rather than counted against
-          it.
+          We haven&apos;t found any requirements listed with SiteMatcher, news about {name}&apos;s stores, or planning
+          applications naming it, so it scores 0 for this signal.
         </PanelTitle>
         <KvRows
           labelWidth={130}
           rows={[
             { label: 'Requirements', value: 'None listed with us', muted: true },
-            { label: 'News', value: 'No articles in the last 90 days', muted: true },
+            { label: 'News', value: 'No articles in the last two years', muted: true },
             { label: 'Planning', value: 'None naming the brand', muted: true },
           ]}
         />
@@ -316,13 +317,18 @@ export function AcquisitivePanel({ match }: PanelProps) {
   const reqs = a.requirements
   const sources = [
     reqs ? `${counted(reqs.count, 'requirement')} listed with SiteMatcher` : null,
-    a.news ? `${counted(a.news.count, 'news article')} in the last 90 days` : null,
+    a.news ? `${counted(a.news.count, 'news article')} (news score ${formatNewsScore(a.news.score)})` : null,
     a.planning ? `${counted(a.planning.count, 'planning application')} naming ${name}` : null,
   ].filter((x): x is string => !!x)
   const total = (reqs?.count ?? 0) + (a.news?.count ?? 0) + (a.planning?.count ?? 0)
-  const lead = `${listPhrase(sources)} ${total === 1 ? 'points' : 'point'} to an active opening programme.`
+  const lead =
+    a.level === 'low' && a.news
+      ? `${counted(a.news.count, 'news article')} about ${name} ${a.news.count === 1 ? 'suggests' : 'suggest'} it is not acquiring at the moment (news score ${formatNewsScore(a.news.score)}).`
+      : `${listPhrase(sources)} ${total === 1 ? 'points' : 'point'} to an active opening programme.`
   const coverage =
-    a.level === 'high'
+    a.level === 'low'
+      ? ''
+      : a.level === 'high'
       ? reqs?.nationwide && reqs.nearbyPlaces.length === 0
         ? " Its requirements don't list target locations, so your area isn't ruled out."
         : reqs && reqs.nearbyPlaces.length > 0
@@ -332,7 +338,7 @@ export function AcquisitivePanel({ match }: PanelProps) {
         ? " Its requirements don't name your area, so it may not be looking here yet."
         : ' None of it is a requirement covering your area.'
 
-  type Row = { key: string; type: string; body: React.ReactNode; date: string | null }
+  type Row = { key: string; type: string; body: React.ReactNode; date: string | null; rating?: number }
   const rows: Row[] = [
     ...(reqs?.items ?? []).map((r, i) => ({
       key: `r${i}`,
@@ -351,6 +357,7 @@ export function AcquisitivePanel({ match }: PanelProps) {
         n.headline
       ),
       date: n.upcoming ? null : n.date,
+      rating: n.rating,
     })),
     ...(a.planning
       ? [
@@ -385,7 +392,10 @@ export function AcquisitivePanel({ match }: PanelProps) {
             }
           >
             <span className="text-[#8A8895]">{r.type}</span>
-            <span className="text-[#1C1B22]">{r.body}</span>
+            <span className="text-[#1C1B22]">
+              {r.body}
+              {r.rating != null && <RatingBadge rating={r.rating} />}
+            </span>
             <span className="text-right text-[#8A8895]">{r.date ? shortDate(r.date) : r.type === 'News' ? 'Upcoming' : ''}</span>
           </div>
         ))}
@@ -395,7 +405,27 @@ export function AcquisitivePanel({ match }: PanelProps) {
           {showAll ? 'Show fewer' : `Show all ${rows.length} sources`}
         </button>
       )}
+      {a.news && (
+        <Footnote>
+          Each article is rated from −5 (closing stores) to +5 (opening at pace). The news score adds them up, an
+          article counting half as much every {Math.round(NEWS_HALF_LIFE_DAYS / 30)} months, capped at ±5, and moves
+          this signal up or down. A live requirement counts for most.
+        </Footnote>
+      )}
     </div>
+  )
+}
+
+function RatingBadge({ rating }: { rating: number }) {
+  const tone =
+    rating > 0 ? 'bg-[#E7F6EC] text-[#15803D]' : rating < 0 ? 'bg-[#FDECEC] text-[#DC2626]' : 'bg-[#F1EEFA] text-[#8A8895]'
+  return (
+    <span
+      className={`ml-2 inline-block rounded px-1.5 py-px align-middle text-[11.5px] font-bold tabular-nums ${tone}`}
+      title="Acquisition signal, −5 to +5"
+    >
+      {formatNewsScore(rating)}
+    </span>
   )
 }
 

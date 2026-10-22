@@ -49,7 +49,8 @@ const rich = withScore({
     },
     news: {
       count: 1,
-      items: [{ headline: 'Aldi confirms 40 new UK stores this year', url: 'https://example.com/aldi', date: '2026-09-22', upcoming: false }],
+      score: 4,
+      items: [{ kind: 'news', headline: 'Aldi confirms 40 new UK stores this year', url: 'https://example.com/aldi', date: '2026-09-22', upcoming: false, rating: 4 }],
     },
     planning: { count: 5 },
   },
@@ -195,8 +196,9 @@ describe('BrandMatchCard — collapsed row', () => {
 describe('BrandMatchCard — expanded card', () => {
   it('shows the score over the signals held and opens on the first signal worth a look', () => {
     renderCard(rich)
-    // 80 of 100 points: demographics is missing, so it is left out; no turnover scores 0 of 15.
-    expect(screen.getByText('80')).toBeInTheDocument()
+    // 79 of 100 points: demographics is missing, so it is left out; no turnover scores 0 of 15;
+    // acquisitive is 20 for the requirement, 3 for planning and 6 for a news score of +4.
+    expect(screen.getByText('79')).toBeInTheDocument()
     expect(screen.getByText('Based on 4 of 5 signals')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Demographics/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('No stores in towns we hold')).toBeInTheDocument()
@@ -247,7 +249,8 @@ describe('BrandMatchCard — expanded card', () => {
 describe('BrandMatchCard — sparse brand', () => {
   it('leaves missing signals out of the score and says so', async () => {
     renderCard(sparse)
-    expect(screen.getByText('Based on 2 of 5 signals')).toBeInTheDocument()
+    // Acquisitive is always counted: no evidence scores 0 of 30.
+    expect(screen.getByText('Based on 3 of 5 signals')).toBeInTheDocument()
     // Opens on the first signal that isn't good: no use class stated.
     expect(screen.getByText('Use class not confirmed')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Acquisitive/ }))

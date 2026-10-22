@@ -12,6 +12,7 @@ import {
   LOCATION_TYPE_RADIUS_MILES,
   METERS_PER_MILE,
   normalisePostcode,
+  NEWS_WINDOW_DAYS,
   shortCentreName,
   type EstateRange,
   type RawBrand,
@@ -45,7 +46,6 @@ import {
 
 const MIN_SQFT = 100
 const MAX_SQFT = 500_000
-const NEWS_WINDOW_DAYS = 90
 const PAGE = 1000
 
 type Db = ReturnType<typeof directoryAdminClient>
@@ -193,28 +193,33 @@ async function loadBrandContacts(db: Db): Promise<Map<string, BrandMatcherContac
   return map
 }
 
+// Every rated article in the news window, of any kind: a closure counts against a brand as an
+// opening counts for it (newsScore in brand-matcher.ts).
 async function loadNews(db: Db): Promise<RawNewsItem[]> {
   const since = new Date(Date.now() - NEWS_WINDOW_DAYS * 86_400_000).toISOString().slice(0, 10)
   const rows = await selectAll<{
     brand_id: string
+    kind: RawNewsItem['kind']
     headline: string
     url: string | null
     event_date: string
     is_upcoming: boolean
+    signal_rating: number
   }>(() =>
     db
       .from('brand_activity')
-      .select('brand_id, headline, url, event_date, is_upcoming')
-      .eq('kind', 'opening')
+      .select('brand_id, kind, headline, url, event_date, is_upcoming, signal_rating')
       .or(`event_date.gte.${since},is_upcoming.eq.true`)
       .order('id')
   )
   return rows.map((r) => ({
     brandId: r.brand_id,
+    kind: r.kind,
     headline: r.headline,
     url: r.url,
     date: r.event_date,
     upcoming: r.is_upcoming,
+    rating: r.signal_rating,
   }))
 }
 

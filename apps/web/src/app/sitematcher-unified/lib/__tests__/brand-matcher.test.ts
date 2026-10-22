@@ -8,6 +8,9 @@ import {
   formatSqftRange,
   isNationalArea,
   matchesToCsv,
+  NEWS_HALF_LIFE_DAYS,
+  acquisitivePoints,
+  newsScore,
   normalisePostcode,
   rankContacts,
   regionKey,
@@ -247,29 +250,35 @@ describe('scoreMatch', () => {
   it('scales the points earned to 100 across the signals we hold', () => {
     const m = baseMatch({
       useClass: { codes: ['E'], matches: true },
-      acquisitive: { level: 'high', requirements: null, news: null, planning: null },
+      acquisitive: acquisitiveSignal(
+        { count: 1, sizeMin: null, sizeMax: null, useClasses: ['E'], nationwide: true, nearbyPlaces: [], otherPlaces: [], otherPlaceCount: 0 },
+        null,
+        0
+      ),
       nearest: { miles: 3.1, storeName: null, town: null },
     })
     const { score, parts } = scoreMatch(m)
     expect(parts.map((p) => p.component).sort()).toEqual(['acquisitive', 'nearest', 'size', 'turnover', 'useClass'])
-    // 30 + 10 + 30 + 10 + 0 earned of 30 + 10 + 30 + 15 + 15 available.
-    expect(score).toBe(Math.round((100 * 80) / 100))
+    // 30 + 10 + 20 + 10 + 0 earned of 30 + 10 + 30 + 15 + 15 available; a requirement covering
+    // the site with no planning or news is 20 of 30.
+    expect(score).toBe(Math.round((100 * 70) / 100))
   })
   it('leaves a missing signal out rather than counting it against the brand', () => {
     const { score, parts } = scoreMatch(baseMatch({}))
-    expect(parts.map((p) => p.component)).toEqual(['size', 'turnover'])
-    // Size 30 of 30; no published turnover still counts, 0 of 15.
-    expect(score).toBe(Math.round((100 * 30) / 45))
+    expect(parts.map((p) => p.component)).toEqual(['size', 'acquisitive', 'turnover'])
+    // Size 30 of 30; no acquisitive evidence and no published turnover still count, 0 of 30 and
+    // 0 of 15.
+    expect(score).toBe(Math.round((100 * 30) / 75))
   })
   it('scores demographics on the town match, not location type', () => {
     const townMatch = { band: 'partial' as const, bestTown: 'Ashford', townStores: 40, closeStores: 0, towns: 30, closeTowns: 0 }
     const { parts } = scoreMatch(
       baseMatch({ townMatch, locationType: { form: 'retail_park', count: 10, names: [], nearestMiles: 3 } })
     )
-    expect(parts.map((p) => p.component)).toEqual(['size', 'demographics', 'turnover'])
-    expect(parts[1]).toMatchObject({ points: 8, max: 15 })
-    expect(scoreMatch(baseMatch({ townMatch: { ...townMatch, band: 'close' } })).parts[1].points).toBe(15)
-    expect(scoreMatch(baseMatch({ townMatch: { ...townMatch, band: 'none' } })).parts[1].points).toBe(0)
+    expect(parts.map((p) => p.component)).toEqual(['size', 'acquisitive', 'demographics', 'turnover'])
+    expect(parts[2]).toMatchObject({ points: 8, max: 15 })
+    expect(scoreMatch(baseMatch({ townMatch: { ...townMatch, band: 'close' } })).parts[2].points).toBe(15)
+    expect(scoreMatch(baseMatch({ townMatch: { ...townMatch, band: 'none' } })).parts[2].points).toBe(0)
   })
   it('scores published turnover by size, and nothing when there is none', () => {
     const points = (tradingFacts: TradingFacts | null) =>
@@ -286,7 +295,7 @@ describe('scoreMatch', () => {
   })
   it('ranks a brand with large published turnover above an otherwise equal one without', () => {
     const big = scoreMatch(baseMatch({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } }))
-    expect(big.score).toBe(100)
+    expect(big.score).toBe(Math.round((100 * 45) / 75))
     expect(big.score).toBeGreaterThan(scoreMatch(baseMatch({})).score)
   })
   it('does not score net assets', () => {
@@ -343,6 +352,65 @@ describe('sortMatches', () => {
     expect(sortMatches([f, g, a], 'acquisitive').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'gap').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'name').map((m) => m.brandId)).toEqual(['a', 'f', 'g'])
+  })
+})
+
+describe('news score', () => {
+  const today = new Date('2026-10-22T00:00:00Z')
+  const daysAgo = (n: number) => new Date(today.getTime() - n * 86_400_000).toISOString().slice(0, 10)
+  const item = (rating: number, age: number, upcoming = false) => ({ rating, date: daysAgo(age), upcoming })
+  const news = (score: number) => ({ count: 1, score, items: [] })
+
+  it('is 0 with no articles, and adds ratings weighted by age, capped at ±5', () => {
+    expect(newsScore([], today)).toBe(0)
+    expect(newsScore([item(2, 0)], today)).toBe(2)
+    // One half-life halves an article's weight.
+    expect(newsScore([item(4, NEWS_HALF_LIFE_DAYS)], today)).toBe(2)
+    expect(newsScore([item(5, 0), item(3, 10)], today)).toBe(5)
+    expect(newsScore([item(-5, 0), item(-5, 0)], today)).toBe(-5)
+    // A closure today outweighs an opening a year ago.
+    expect(newsScore([item(2, 365), item(-2, 0)], today)).toBe(-2)
+    // Upcoming articles count in full whatever their date.
+    expect(newsScore([item(3, 700, true)], today)).toBe(3)
+    // Rounded half away from zero, so a balance never reads as -0.
+    expect(newsScore([item(1, 0), item(-1, 0)], today)).toBe(0)
+    expect(Object.is(newsScore([item(-1, 400)], today), 0)).toBe(true)
+  })
+  it('makes a live requirement the biggest part of the acquisitive score, moved by news', () => {
+    const req = (nearby: string[]) =>
+      ({ count: 1, sizeMin: null, sizeMax: null, useClasses: [], nationwide: false, nearbyPlaces: nearby, otherPlaces: [], otherPlaceCount: 0 })
+    const points = (r: RequirementEvidence | null, score: number | null, planning = 0) =>
+      acquisitivePoints(acquisitiveSignal(r, score == null ? null : news(score), planning))
+    expect(acquisitivePoints(null)).toBe(0)
+    expect(points(req(['Leeds']), null)).toBe(20)
+    expect(points(req([]), null)).toBe(12)
+    expect(points(req(['Leeds']), null, 2)).toBe(23)
+    expect(points(req(['Leeds']), 5, 2)).toBe(30)
+    expect(points(req(['Leeds']), -5)).toBe(13)
+    expect(points(null, 5)).toBe(7)
+    expect(points(null, 2)).toBe(3)
+    // Never below zero.
+    expect(points(null, -5)).toBe(0)
+    expect(points(null, null, 1)).toBe(3)
+  })
+  it('makes news-only evidence medium when positive and low otherwise', () => {
+    expect(acquisitiveSignal(null, news(2), 0)?.level).toBe('medium')
+    expect(acquisitiveSignal(null, news(0), 0)?.level).toBe('low')
+    expect(acquisitiveSignal(null, news(-4), 0)?.level).toBe('low')
+    expect(signalSummary(baseMatch({ acquisitive: acquisitiveSignal(null, news(-4), 0) }), 'acquisitive', { useClass: 'E' }))
+      .toEqual({ key: 'acquisitive', status: 'poor', value: 'Low' })
+  })
+  it('scores news-only evidence within Acquisitive', () => {
+    const { parts } = scoreMatch(baseMatch({ acquisitive: acquisitiveSignal(null, news(4), 0) }))
+    expect(parts.find((p) => p.component === 'acquisitive')).toEqual({ component: 'acquisitive', points: 6, max: 30 })
+  })
+  it('lets strong news lift a brand into the acquiring group, and sorts closures below no evidence', () => {
+    const strong = baseMatch({ brandId: 's', name: 'Strong', score: 40, acquisitive: acquisitiveSignal(null, news(3), 0) })
+    const mild = baseMatch({ brandId: 'm', name: 'Mild', score: 80, acquisitive: acquisitiveSignal(null, news(1), 0) })
+    const none = baseMatch({ brandId: 'n', name: 'None', score: 60 })
+    const closing = baseMatch({ brandId: 'c', name: 'Closing', score: 90, acquisitive: acquisitiveSignal(null, news(-3), 0) })
+    expect(sortMatches([none, mild, closing, strong], 'best').map((m) => m.brandId)).toEqual(['s', 'c', 'm', 'n'])
+    expect(sortMatches([none, mild, closing, strong], 'acquisitive').map((m) => m.brandId)).toEqual(['s', 'm', 'n', 'c'])
   })
 })
 
@@ -424,6 +492,20 @@ describe('assembleMatches', () => {
     const gym = matches.find((m) => m.brandId === 'gym')
     expect(gym?.useClass).toEqual({ codes: ['F'], matches: true })
     expect(signalSummary(gym!, 'useClass', { useClass: 'All' })).toEqual({ key: 'useClass', status: 'good', value: 'Class F' })
+  })
+  it('rates each brand on its news, newest first', () => {
+    const today = new Date('2026-10-22T00:00:00Z')
+    const n = (kind: 'opening' | 'closure' | 'news', date: string, rating: number) => ({
+      brandId: 'fettle', kind, headline: `${kind} ${date}`, url: null, date, upcoming: false, rating,
+    })
+    const { matches } = assembleMatches(
+      input({ today, news: [n('opening', '2026-10-01', 2), n('news', '2026-10-20', 4)] })
+    )
+    const fettle = matches.find((m) => m.brandId === 'fettle')!
+    expect(fettle.acquisitive?.news?.score).toBe(5)
+    expect(fettle.acquisitive?.news?.items.map((i) => i.rating)).toEqual([4, 2])
+    expect(fettle.acquisitive?.level).toBe('medium')
+    expect(matches.find((m) => m.brandId === 'aldi')!.acquisitive?.news).toBeNull()
   })
   it('leaves the location-type signal out when the site is in no centre', () => {
     const { matches } = assembleMatches(input({ site: { ...site, centre: null } }))

@@ -4,6 +4,7 @@ import { Fragment, useLayoutEffect, useRef } from 'react'
 import {
   classLabel,
   formatMiles,
+  formatNewsScore,
   formatSqft,
   formatSqftShort,
   SIGNAL_LABEL,
@@ -252,7 +253,9 @@ export function BrandReportDocument({ site, query, brands, meta, date }: BrandRe
               </div>
               <p className="disc">
                 Financials are as filed at Companies House, unedited. Published turnover counts towards the match score:
-                larger turnover scores higher. This is not a credit or covenant rating.
+                larger turnover scores higher. This is not a credit or covenant rating. Each news article is rated from −5
+                (closing stores) to +5 (opening at pace); a brand&apos;s news score adds them up, recent articles counting
+                most, and moves its Acquisitive score up or down. Live requirements count for most of that score.
               </p>
             </>
           )}
@@ -485,7 +488,7 @@ function acquisitiveEvidence(b: BrandReportBrand): EvidenceRow[] {
   if (news)
     rows.push({
       label: 'News',
-      value: news.headline,
+      value: `${formatNewsScore(news.rating)} · ${news.headline}`,
       date: news.upcoming ? 'Upcoming' : shortDate(news.date),
       lines: 1,
     })

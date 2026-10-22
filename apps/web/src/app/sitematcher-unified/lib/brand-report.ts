@@ -8,6 +8,7 @@ import {
   classLabel,
   formatMiles,
   formatMoney,
+  formatNewsScore,
   formatSqft,
   formatSqftShort,
   type SignalStatus,
@@ -220,11 +221,13 @@ export function useClassLine(b: Pick<BrandMatch, 'name' | 'useClass'>, queryUseC
 
 export function acquisitiveLine(b: Pick<BrandMatch, 'name' | 'acquisitive'>): string {
   const a = b.acquisitive
-  if (!a) return `We haven't found requirements, recent opening news or planning applications for ${b.name}.`
+  if (!a) return `We haven't found requirements, news or planning applications for ${b.name}, so its news score is 0.`
+  if (a.level === 'low' && a.news)
+    return `${counted(a.news.count, 'news article')} about ${b.name} ${a.news.count === 1 ? 'suggests' : 'suggest'} it is not acquiring at the moment (news score ${formatNewsScore(a.news.score)}).`
   const reqs = a.requirements
   const sources = [
     reqs ? `${counted(reqs.count, 'requirement')} listed with SiteMatcher` : null,
-    a.news ? `${counted(a.news.count, 'news article')} in the last 90 days` : null,
+    a.news ? `${counted(a.news.count, 'news article')} (news score ${formatNewsScore(a.news.score)})` : null,
     a.planning ? `${counted(a.planning.count, 'planning application')} naming ${b.name}` : null,
   ].filter((x): x is string => !!x)
   const total = (reqs?.count ?? 0) + (a.news?.count ?? 0) + (a.planning?.count ?? 0)

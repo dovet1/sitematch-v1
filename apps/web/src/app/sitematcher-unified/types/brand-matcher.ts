@@ -101,7 +101,8 @@ export interface SizeFitSignal {
   postedAt?: string | null
 }
 
-export type AcquisitiveLevel = 'high' | 'medium'
+// low: the only evidence is news, and on balance it says the brand is not acquiring.
+export type AcquisitiveLevel = 'high' | 'medium' | 'low'
 
 export interface RequirementEvidence {
   count: number
@@ -127,9 +128,24 @@ export interface RequirementItem {
   postedAt: string | null
 }
 
+export type NewsKind = 'opening' | 'closure' | 'news'
+
+export interface NewsItem {
+  kind: NewsKind
+  headline: string
+  url: string | null
+  date: string
+  upcoming: boolean
+  // -5 (closing every store) to +5 (needs many stores soon); 0 is neutral.
+  rating: number
+}
+
 export interface NewsEvidence {
   count: number
-  items: { headline: string; url: string | null; date: string; upcoming: boolean }[]
+  // The brand's news score, -5 to +5, from every article's rating weighted by its age
+  // (activityScore in brand-matcher.ts). 0 when there are no articles.
+  score: number
+  items: NewsItem[]
 }
 
 export interface PlanningEvidence {
@@ -230,7 +246,7 @@ export interface BrandMatch {
   // brand has no stores in towns we hold figures for; absent when demographics were not loaded.
   townMatch?: TownMatch | null
   // Points out of 100 across the signals we hold data for; missing signals are left out, except
-  // turnover, which is always counted.
+  // turnover and acquisitive, which are always counted.
   score: number
   scoreParts: ScorePart[]
 }

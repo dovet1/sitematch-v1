@@ -14,6 +14,7 @@ import type {
   BrandMatcherSite,
   BrandMatcherSort,
   NewsEvidence,
+  NewsKind,
   RequirementEvidence,
   ScorePart,
   SizeFitSignal,
@@ -308,6 +309,7 @@ export function rankContacts(
 // Signal 2 — acquisitive
 // ---------------------------------------------------------------------------
 
+// News on its own is medium only when, on balance, it says the brand is opening; otherwise low.
 export function acquisitiveSignal(
   requirements: RequirementEvidence | null,
   news: NewsEvidence | null,
@@ -316,7 +318,39 @@ export function acquisitiveSignal(
   const planning = planningCount > 0 ? { count: planningCount } : null
   if (!requirements && !news && !planning) return null
   const coversSite = !!requirements && (requirements.nationwide || requirements.nearbyPlaces.length > 0)
-  return { level: coversSite ? 'high' : 'medium', requirements, news, planning }
+  const level = coversSite ? 'high' : requirements || planning || (news?.score ?? 0) > 0 ? 'medium' : 'low'
+  return { level, requirements, news, planning }
+}
+
+// ---------------------------------------------------------------------------
+// News score — every article is rated -5 (closing every store) to +5 (needs many stores soon)
+// when it is added (brand_activity.signal_rating). A brand's score is the sum of its ratings,
+// each weighted by age so that it halves every NEWS_HALF_LIFE_DAYS, rounded and capped to
+// -5..+5. No articles is 0: neutral, not a penalty.
+// ---------------------------------------------------------------------------
+
+export const NEWS_HALF_LIFE_DAYS = 182
+// Older articles weigh under a sixteenth of a fresh one, so they are not loaded.
+export const NEWS_WINDOW_DAYS = 730
+export const NEWS_SCORE_MAX = 5
+// A news score this high is evidence the brand is acquiring on its own (sortMatches 'best').
+export const NEWS_ACQUIRING_SCORE = 3
+
+export function newsWeight(item: { date: string; upcoming: boolean }, today: Date): number {
+  if (item.upcoming) return 1
+  const ageDays = (today.getTime() - Date.parse(item.date)) / 86_400_000
+  return ageDays <= 0 ? 1 : 0.5 ** (ageDays / NEWS_HALF_LIFE_DAYS)
+}
+
+export function newsScore(items: { rating: number; date: string; upcoming: boolean }[], today: Date): number {
+  const sum = items.reduce((s, n) => s + n.rating * newsWeight(n, today), 0)
+  // Rounded half away from zero so +2.5 and -2.5 are treated alike; never -0.
+  const rounded = Math.sign(sum) * Math.round(Math.abs(sum)) || 0
+  return Math.max(-NEWS_SCORE_MAX, Math.min(NEWS_SCORE_MAX, rounded))
+}
+
+export function formatNewsScore(score: number): string {
+  return score > 0 ? `+${score}` : score < 0 ? `−${-score}` : '0'
 }
 
 // ---------------------------------------------------------------------------
@@ -408,7 +442,9 @@ export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<Brand
       if (!m.acquisitive) return none
       return m.acquisitive.level === 'high'
         ? { key, status: 'good', value: 'High' }
-        : { key, status: 'caution', value: 'Medium' }
+        : m.acquisitive.level === 'medium'
+          ? { key, status: 'caution', value: 'Medium' }
+          : { key, status: 'poor', value: 'Low' }
     case 'demographics':
       return m.townMatch ? { key, ...TOWN_SUMMARY[m.townMatch.band] } : none
     case 'nearest': {
@@ -455,11 +491,34 @@ export function turnoverPoints(facts: TradingFacts | null | undefined): number {
 type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'townMatch' | 'nearest'> &
   Partial<Pick<BrandMatch, 'tradingFacts'>>
 
+// Acquisitive points, out of 30. A live requirement listed with us is the biggest contributor;
+// approved planning adds a little; the news score moves the total up or down, a brand with no
+// articles scoring 0 for news. So +5 news alone earns 7, and a requirement covering the site with
+// -5 news earns 13.
+export const ACQUISITIVE_REQUIREMENT_COVERS_POINTS = 20
+export const ACQUISITIVE_REQUIREMENT_ELSEWHERE_POINTS = 12
+export const ACQUISITIVE_PLANNING_POINTS = 3
+// Points at a news score of ±NEWS_SCORE_MAX; scaled in between.
+export const ACQUISITIVE_NEWS_POINTS = 7
+
+export function acquisitivePoints(a: AcquisitiveSignal | null): number {
+  if (!a) return 0
+  const requirement = !a.requirements
+    ? 0
+    : a.level === 'high'
+      ? ACQUISITIVE_REQUIREMENT_COVERS_POINTS
+      : ACQUISITIVE_REQUIREMENT_ELSEWHERE_POINTS
+  const planning = a.planning ? ACQUISITIVE_PLANNING_POINTS : 0
+  const news = Math.round((ACQUISITIVE_NEWS_POINTS * (a.news?.score ?? 0)) / NEWS_SCORE_MAX)
+  return Math.max(0, Math.min(SCORE_MAX.acquisitive, requirement + planning + news))
+}
+
 // A signal we hold no data for is left out of the score rather than counted against it: the
 // score is the points earned out of the points available from the signals we do hold, scaled to
-// 100 (handoff: "Based on n of 5 signals"). Turnover is the exception: it is always counted, so
-// a brand with no published turnover is pushed down. Demographics scores whether the brand trades
-// in a town like the site's: a close match anywhere in its estate earns the full 15.
+// 100 (handoff: "Based on n of 5 signals"). Turnover and Acquisitive are the exceptions: they
+// are always counted, so a brand with no published turnover, or with no requirement, planning or
+// positive news, is pushed down. Demographics scores whether the brand trades in a town like the
+// site's: a close match anywhere in its estate earns the full 15.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -467,7 +526,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
 
   add('size', m.size.state === 'fits' ? 30 : m.size.state === 'lower_end' || m.size.state === 'upper_end' ? 20 : 10)
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
-  if (m.acquisitive) add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
+  add('acquisitive', acquisitivePoints(m.acquisitive))
   if (m.townMatch) add('demographics', m.townMatch.band === 'close' ? 15 : m.townMatch.band === 'partial' ? 8 : 0)
   if (m.nearest) {
     const mi = m.nearest.miles
@@ -480,8 +539,15 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   return { score: available > 0 ? Math.round((100 * earned) / available) : 0, parts }
 }
 
+// News is the brand's only acquisitive evidence.
+function isNewsOnly(a: AcquisitiveSignal): a is AcquisitiveSignal & { news: NewsEvidence } {
+  return !a.requirements && !a.planning && !!a.news
+}
+
+// No requirement or planning evidence, and news that falls short of saying the brand is acquiring.
 export function isSparse(m: Pick<BrandMatch, 'acquisitive'>): boolean {
-  return m.acquisitive == null
+  const a = m.acquisitive
+  return !a || (isNewsOnly(a) && a.news.score < NEWS_ACQUIRING_SCORE)
 }
 
 // null when there is nothing verifiable to show (figures not read yet).
@@ -546,8 +612,13 @@ export function sortMatches(matches: BrandMatch[], sort: BrandMatcherSort): Bran
     case 'name':
       return list.sort(byName)
     case 'acquisitive': {
-      const rank = (m: BrandMatch) => (m.acquisitive?.level === 'high' ? 2 : m.acquisitive ? 1 : 0)
-      return list.sort((a, b) => rank(b) - rank(a) || b.score - a.score || byName(a, b))
+      // A brand whose news says it is not acquiring goes below one we know nothing about.
+      const rank = (m: BrandMatch) => {
+        const level = m.acquisitive?.level
+        return level === 'high' ? 3 : level === 'medium' ? 2 : level === 'low' ? 0 : 1
+      }
+      const news = (m: BrandMatch) => m.acquisitive?.news?.score ?? 0
+      return list.sort((a, b) => rank(b) - rank(a) || news(b) - news(a) || b.score - a.score || byName(a, b))
     }
     case 'gap': {
       // Furthest nearest-store first; brands with no located store go last.
@@ -573,7 +644,7 @@ function csvCell(v: string | number | null | undefined): string {
 export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): string {
   const header = [
     'Rank', 'Brand', 'Category', 'Match score', 'Size fit', 'Use class', 'Acquisitive',
-    'Open requirements', 'Town match', 'Nearest store (mi)', 'Nearest store',
+    'News score', 'Open requirements', 'Town match', 'Nearest store (mi)', 'Nearest store',
     'Primary contact', 'Role', 'Email', 'Phone',
   ]
   const rows = matches.map((m, i) => {
@@ -585,7 +656,7 @@ export function matchesToCsv(matches: BrandMatch[], query: BrandMatcherQuery): s
     const c = m.contacts.primary
     return [
       i + 1, m.name, m.category, `${m.score}/100`, value('size'), value('useClass'), value('acquisitive'),
-      m.acquisitive?.requirements?.count ?? '', value('demographics'),
+      formatNewsScore(m.acquisitive?.news?.score ?? 0), m.acquisitive?.requirements?.count ?? '', value('demographics'),
       m.nearest ? m.nearest.miles.toFixed(1) : '', m.nearest?.storeName ?? '',
       c?.name ?? '', c?.title ?? '', c?.email ?? '', c?.phone ?? '',
     ].map(csvCell).join(',')
@@ -619,10 +690,12 @@ export interface RawRequirement {
 
 export interface RawNewsItem {
   brandId: string
+  kind: NewsKind
   headline: string
   url: string | null
   date: string
   upcoming: boolean
+  rating: number
 }
 
 export interface RawBrandGeo {
@@ -651,6 +724,8 @@ export interface AssembleInput {
   // Per brand, how its stores' towns compare with the site's town. Absent when demographics were
   // not loaded; a brand missing from the map has no stores in towns we hold figures for.
   townMatches?: Map<string, TownMatch>
+  // For the news score's age weighting; defaults to now.
+  today?: Date
 }
 
 // Most evidence lines (requirements, news) carried per brand.
@@ -718,6 +793,7 @@ function requirementEvidence(
 export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; considered: number } {
   const { query, site } = input
   const key = regionKey(site.region, site.country)
+  const today = input.today ?? new Date()
 
   const reqsByBrand = new Map<string, RawRequirement[]>()
   for (const r of input.requirements) {
@@ -754,7 +830,11 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
 
     const newsItems = (newsByBrand.get(b.id) ?? []).sort((a, z) => z.date.localeCompare(a.date))
     const news: NewsEvidence | null = newsItems.length
-      ? { count: newsItems.length, items: newsItems.slice(0, MAX_EVIDENCE_ITEMS).map(({ brandId: _b, ...n }) => n) }
+      ? {
+          count: newsItems.length,
+          score: newsScore(newsItems, today),
+          items: newsItems.slice(0, MAX_EVIDENCE_ITEMS).map(({ brandId: _b, ...n }) => n),
+        }
       : null
     const acquisitive = acquisitiveSignal(
       requirementEvidence(reqs, site, key),
