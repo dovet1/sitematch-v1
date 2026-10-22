@@ -98,11 +98,12 @@ it('copies a match without its contacts', () => {
 it('orders by fit and counts pages', () => {
   expect(
     byFit([
-      { name: 'B', score: 80 },
-      { name: 'A', score: 80 },
-      { name: 'C', score: 95 },
+      { name: 'B', score: 80, storeCount: 10 },
+      { name: 'A', score: 80, storeCount: 10 },
+      { name: 'D', score: 80, storeCount: 400 },
+      { name: 'C', score: 95, storeCount: 1 },
     ]).map((b) => b.name)
-  ).toEqual(['C', 'A', 'B'])
+  ).toEqual(['C', 'D', 'A', 'B'])
   expect(reportPageCount(4)).toBe(1 + 1 + 4)
   expect(reportPageCount(12)).toBe(1 + 1 + 12)
   expect(reportPageCount(20)).toBe(1 + 2 + 20)

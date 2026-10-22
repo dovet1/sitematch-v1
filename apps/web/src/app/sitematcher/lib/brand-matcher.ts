@@ -673,6 +673,8 @@ export function filterBySector<T extends Pick<BrandMatch, 'category'>>(matches: 
 // ---------------------------------------------------------------------------
 
 const byName = (a: BrandMatch, b: BrandMatch) => a.name.localeCompare(b.name)
+// Higher score first; on a tie the larger UK estate ranks first, then name.
+const byScore = (a: BrandMatch, b: BrandMatch) => b.score - a.score || b.storeCount - a.storeCount || byName(a, b)
 
 export function sortMatches(matches: BrandMatch[], sort: BrandMatcherSort): BrandMatch[] {
   const list = [...matches]
@@ -686,18 +688,18 @@ export function sortMatches(matches: BrandMatch[], sort: BrandMatcherSort): Bran
         return level === 'high' ? 3 : level === 'medium' ? 2 : level === 'low' ? 0 : 1
       }
       const news = (m: BrandMatch) => m.acquisitive?.news?.score ?? 0
-      return list.sort((a, b) => rank(b) - rank(a) || news(b) - news(a) || b.score - a.score || byName(a, b))
+      return list.sort((a, b) => rank(b) - rank(a) || news(b) - news(a) || byScore(a, b))
     }
     case 'gap': {
       // Furthest nearest-store first; brands with no located store go last.
       const d = (m: BrandMatch) => m.nearest?.miles ?? -1
-      return list.sort((a, b) => d(b) - d(a) || b.score - a.score || byName(a, b))
+      return list.sort((a, b) => d(b) - d(a) || byScore(a, b))
     }
     case 'best':
     default:
       // Brands with evidence they are acquiring come first: a score scaled over fewer signals
       // must not lift a brand we know little about above one that is actively looking.
-      return list.sort((a, b) => Number(isSparse(a)) - Number(isSparse(b)) || b.score - a.score || byName(a, b))
+      return list.sort((a, b) => Number(isSparse(a)) - Number(isSparse(b)) || byScore(a, b))
   }
 }
 

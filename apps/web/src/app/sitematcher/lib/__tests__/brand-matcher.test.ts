@@ -429,6 +429,13 @@ describe('sortMatches', () => {
     expect(sortMatches([f, g, a], 'gap').map((m) => m.brandId)).toEqual(['g', 'a', 'f'])
     expect(sortMatches([f, g, a], 'name').map((m) => m.brandId)).toEqual(['a', 'f', 'g'])
   })
+  it('breaks a score tie by the larger estate, within the acquiring group', () => {
+    const acq = { level: 'high' as const, requirements: null, news: null, planning: null }
+    const small = baseMatch({ brandId: 'small', name: 'Aardvark', score: 70, storeCount: 12, acquisitive: acq })
+    const big = baseMatch({ brandId: 'big', name: 'Zebra', score: 70, storeCount: 900, acquisitive: acq })
+    const sparseBig = baseMatch({ brandId: 'sparse', name: 'Mammoth', score: 70, storeCount: 5000 })
+    expect(sortMatches([small, sparseBig, big], 'best').map((m) => m.brandId)).toEqual(['big', 'small', 'sparse'])
+  })
 })
 
 describe('news score', () => {
