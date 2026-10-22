@@ -2,7 +2,8 @@
 // assembles and ranks) and the UI (pills, sort, export), and unit-tested on its own.
 //
 // Ranking must stay explainable (handoff): every point of a score comes from a row shown on
-// the card. Published turnover counts towards the score, and a brand with none scores nothing for it.
+// the card. Published turnover counts towards the score, and a brand with none scores nothing for it,
+// unless it is a franchise: then turnover is left out of the score.
 
 import type {
   AcquisitiveSignal,
@@ -13,6 +14,7 @@ import type {
   BrandMatcherQuery,
   BrandMatcherSite,
   BrandMatcherSort,
+  FranchiseSignal,
   NearestStoreSignal,
   NewsEvidence,
   NewsKind,
@@ -538,7 +540,7 @@ export function turnoverPoints(facts: TradingFacts | null | undefined): number {
 }
 
 type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'townMatch' | 'nearest'> &
-  Partial<Pick<BrandMatch, 'tradingFacts'>>
+  Partial<Pick<BrandMatch, 'tradingFacts' | 'franchise'>>
 
 // Acquisitive points, out of 30. A live requirement listed with us is the biggest contributor;
 // approved planning adds a little; the news score moves the total up or down, a brand with no
@@ -566,7 +568,8 @@ export function acquisitivePoints(a: AcquisitiveSignal | null): number {
 // score is the points earned out of the points available from the signals we do hold, scaled to
 // 100 (handoff: "Based on n of 5 signals"). Turnover and Acquisitive are the exceptions: they
 // are always counted, so a brand with no published turnover, or with no requirement, planning or
-// positive news, is pushed down. Demographics scores whether the brand trades in a town like the
+// positive news, is pushed down. A franchise is the exception to that: its sites are let to
+// franchisees, so no one company's turnover speaks for it, and turnover is left out. Demographics scores whether the brand trades in a town like the
 // site's: a close match anywhere in its estate earns the full 15.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
@@ -578,7 +581,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   add('acquisitive', acquisitivePoints(m.acquisitive))
   if (m.townMatch) add('demographics', m.townMatch.band === 'close' ? 15 : m.townMatch.band === 'partial' ? 8 : 0)
   if (m.nearest) add('nearest', nearestPoints(m.nearest))
-  add('turnover', turnoverPoints(m.tradingFacts))
+  if (!m.franchise) add('turnover', turnoverPoints(m.tradingFacts))
   const earned = parts.reduce((s, p) => s + p.points, 0)
   const available = parts.reduce((s, p) => s + p.max, 0)
   return { score: available > 0 ? Math.round((100 * earned) / available) : 0, parts }
@@ -593,6 +596,14 @@ function isNewsOnly(a: AcquisitiveSignal): a is AcquisitiveSignal & { news: News
 export function isSparse(m: Pick<BrandMatch, 'acquisitive'>): boolean {
   const a = m.acquisitive
   return !a || (isNewsOnly(a) && a.news.score < NEWS_ACQUIRING_SCORE)
+}
+
+export const FRANCHISE_LABEL = 'Franchise'
+
+// The turnover column: "Franchise" stands in for the financials of a franchised brand.
+export function turnoverCell(m: { tradingFacts: TradingFacts | null; franchise?: FranchiseSignal | null }): string | null {
+  if (m.franchise) return FRANCHISE_LABEL
+  return m.tradingFacts ? turnoverValue(m.tradingFacts) : null
 }
 
 // null when there is nothing verifiable to show (figures not read yet).
@@ -769,6 +780,8 @@ export interface AssembleInput {
   planningCounts: Map<string, number>
   geo: Map<string, RawBrandGeo>
   tradingFacts?: Map<string, TradingFacts>
+  // Brands we are highly confident are franchised.
+  franchises?: Map<string, FranchiseSignal>
   // Per brand, how its stores' towns compare with the site's town. Absent when demographics were
   // not loaded; a brand missing from the map has no stores in towns we hold figures for.
   townMatches?: Map<string, TownMatch>
@@ -932,7 +945,8 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
 
     const partial = { size, useClass, acquisitive, locationType, nearest }
     const tradingFacts = input.tradingFacts?.get(b.id) ?? null
-    const { score, parts } = scoreMatch({ ...partial, townMatch, tradingFacts })
+    const franchise = input.franchises?.get(b.id) ?? null
+    const { score, parts } = scoreMatch({ ...partial, townMatch, tradingFacts, franchise })
     matches.push({
       brandId: b.id,
       name: b.name,
@@ -942,6 +956,7 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
       storeCount: g?.storeCount ?? b.storeCount,
       ...partial,
       tradingFacts,
+      franchise,
       typicalRange: typical ? { min: typical.p25, max: typical.p75 } : null,
       contacts,
       ...(townMatch !== undefined ? { townMatch } : {}),

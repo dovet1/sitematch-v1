@@ -18,6 +18,7 @@ import {
   scoreMatch,
   shortCentreName,
   signalSummaries,
+  turnoverCell,
   signalSummary,
   sizeFit,
   sortMatches,
@@ -300,6 +301,21 @@ describe('scoreMatch', () => {
     const big = scoreMatch(baseMatch({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } }))
     expect(big.score).toBe(Math.round((100 * 45) / 75))
     expect(big.score).toBeGreaterThan(scoreMatch(baseMatch({})).score)
+  })
+  it('leaves turnover out of the score for a franchise', () => {
+    const franchise = { sourceUrl: null, checkedAt: '2026-10-16' }
+    const { score, parts } = scoreMatch(baseMatch({ franchise }))
+    expect(parts.map((p) => p.component)).toEqual(['size', 'acquisitive'])
+    expect(score).toBe(Math.round((100 * 30) / 60))
+    // Even when a company with published turnover is linked: the franchise stands in for it.
+    const linked = scoreMatch(baseMatch({ franchise, tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } }))
+    expect(linked.parts.find((p) => p.component === 'turnover')).toBeUndefined()
+  })
+  it('shows "Franchise" in the turnover column for a franchise', () => {
+    const franchise = { sourceUrl: null, checkedAt: '2026-10-16' }
+    expect(turnoverCell({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } }, franchise })).toBe('Franchise')
+    expect(turnoverCell({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } })).toBe('£1.0bn')
+    expect(turnoverCell({ tradingFacts: null, franchise: null })).toBeNull()
   })
   it('does not score net assets', () => {
     const withAssets = { ...chFacts, netAssets: { status: 'filed' as const, value: 1e9 } }

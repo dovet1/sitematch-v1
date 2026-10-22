@@ -327,6 +327,17 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     expect(screen.getByText(/Small companies aren.t required to file turnover/)).toBeInTheDocument()
   })
 
+  it('shows the franchise flag in place of the financials', async () => {
+    const franchise = { sourceUrl: 'https://example.com/franchising', checkedAt: '2026-10-16' }
+    const match = { ...rich, franchise, tradingFacts: { ...facts, turnover: { status: 'filed' as const, value: 17.9e9 } } }
+    await openFinancials(match)
+    expect(screen.getByText('Franchise ›')).toBeInTheDocument()
+    expect(screen.getByText(/run by franchisees/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Franchise source/ })).toHaveAttribute('href', franchise.sourceUrl)
+    expect(screen.queryByText('£17.9bn')).not.toBeInTheDocument()
+    expect(screen.queryByText('ALDI STORES LIMITED, active', { exact: false })).not.toBeInTheDocument()
+  })
+
   it('offers the registered office when there is no named contact', async () => {
     renderCard({ ...sparse, tradingFacts: facts })
     await userEvent.click(screen.getByRole('button', { name: /No named contact/ }))

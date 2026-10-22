@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isBrandMatcherEnabled } from '@/lib/feature-flags'
-import { signalSummaries, sortMatches, turnoverValue } from '@/app/sitematcher/lib/brand-matcher'
+import { signalSummaries, sortMatches, turnoverCell } from '@/app/sitematcher/lib/brand-matcher'
 import type {
   BrandMatch,
   BrandMatcherPreviewList,
@@ -61,7 +61,7 @@ function toList(matches: BrandMatch[], query: Pick<BrandMatcherQuery, 'useClass'
       category: m.category,
       storeCount: m.storeCount,
       signals: signalSummaries(m, query),
-      turnover: m.tradingFacts ? turnoverValue(m.tradingFacts) : null,
+      turnover: turnoverCell(m),
       contactCount: m.contacts.total,
     })),
   }
