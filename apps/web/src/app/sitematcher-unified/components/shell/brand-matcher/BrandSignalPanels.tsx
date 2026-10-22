@@ -14,6 +14,7 @@ import {
   LOCATION_TYPE_RADIUS_MILES,
   TOWN_MATCH_AFFLUENCE_POINTS,
   TOWN_MATCH_POPULATION_RATIO,
+  TOWN_REACH_M,
 } from '../../../lib/brand-matcher'
 import { fetchBrandStoreTowns } from '../../../lib/services/brand-matcher-service'
 import { formatPeople } from '../../../lib/brand-matcher-demographics'
@@ -431,7 +432,7 @@ export function DemographicsPanel({ match, site }: PanelProps & { site: BrandMat
     return (
       <EmptyPanel kicker="Demographics · not enough data" title="Your site isn't in a town we hold">
         We compare towns using census figures for England and Wales&apos;s built-up areas, and your site isn&apos;t in one or
-        within 1km of one. Not scored.
+        within {TOWN_REACH_M / 1000}km of one. Not scored.
       </EmptyPanel>
     )
   }
@@ -462,7 +463,7 @@ export function DemographicsPanel({ match, site }: PanelProps & { site: BrandMat
       </div>
       <StoreTownList brandId={match.brandId} brandName={name} site={site} />
       <Footnote>
-        Towns are built-up areas from the 2021 Census; a site or store just outside one takes the largest town within 1km. A close match has a population within {TOWN_MATCH_POPULATION_RATIO} times{' '}
+        Towns are built-up areas from the 2021 Census; a site or store just outside one takes the largest town within {TOWN_REACH_M / 1000}km. A close match has a population within {TOWN_MATCH_POPULATION_RATIO} times{' '}
         {town.name}&apos;s and an affluence index within {TOWN_MATCH_AFFLUENCE_POINTS} points (100 is the England and Wales
         average; it combines home ownership, professional and managerial jobs and degree-level qualifications). A partial match
         is within {TOWN_MATCH_POPULATION_RATIO ** 2} times and {TOWN_MATCH_AFFLUENCE_POINTS * 2} points.

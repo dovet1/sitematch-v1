@@ -361,6 +361,10 @@ const SIZE_SUMMARY: Record<SizeFitState, { value: string; status: SignalStatus }
 export const TOWN_MATCH_POPULATION_RATIO = 1.5
 export const TOWN_MATCH_AFFLUENCE_POINTS = 10
 
+// A site or store outside every town takes the most populous town within this distance. Kept in
+// step with rebuild_store_buas() and the match functions (migration 20261101000000).
+export const TOWN_REACH_M = 1500
+
 // Gap in close-match units (brand_matcher_town_gap): up to 1 is close, up to 2 partial.
 export function townBand(gap: number | null | undefined): TownMatchBand | null {
   if (gap == null || !Number.isFinite(gap)) return null

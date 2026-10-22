@@ -8,6 +8,7 @@ import {
   sortStoreTowns,
   townBand,
   TOP_STORE_TOWNS,
+  TOWN_REACH_M,
   LOCATION_TYPE_RADIUS_MILES,
   METERS_PER_MILE,
   normalisePostcode,
@@ -361,8 +362,8 @@ async function loadTownMatches(
   site: BrandMatcherSite
 ): Promise<{ town: TownFigures | null; matches: Map<string, TownMatch> }> {
   const [siteTown, rows] = await Promise.all([
-    // A site just outside a town takes the largest town within 1km (migration 20261031000000).
-    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon, p_max_distance_m: 1000 }),
+    // A site just outside a town takes the largest town within TOWN_REACH_M (migration 20261101000000).
+    db.rpc('brand_matcher_site_bua', { p_lat: site.lat, p_lon: site.lon, p_max_distance_m: TOWN_REACH_M }),
     db.rpc('brand_matcher_town_matches', { p_lat: site.lat, p_lon: site.lon }),
   ])
   if (siteTown.error) throw siteTown.error
