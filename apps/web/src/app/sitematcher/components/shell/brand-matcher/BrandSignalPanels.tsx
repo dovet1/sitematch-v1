@@ -15,6 +15,7 @@ import {
   formLabel,
   isOverseas,
   LOCATION_TYPE_RADIUS_MILES,
+  turnoverLabel,
   NEWS_HALF_LIFE_DAYS,
   TOWN_MATCH_AFFLUENCE_POINTS,
   TOWN_MATCH_POPULATION_RATIO,
@@ -729,7 +730,7 @@ export function FinancialsPanel({ match }: { match: BrandMatch }) {
     ['Company name', facts.companyName],
     ['Company number', facts.companyNumber],
     ['Company status', facts.status],
-    ['Latest turnover', figureText(facts.turnover)],
+    [turnoverLabel(facts), figureText(facts.turnover)],
     ['Net assets', figureText(facts.netAssets)],
     ['Accounts filed', facts.accountsOverdue ? 'Overdue' : facts.accountsMadeUpTo ? 'On time' : 'None filed yet'],
     ['Accounts type', facts.accountsType],
@@ -766,7 +767,9 @@ export function FinancialsPanel({ match }: { match: BrandMatch }) {
       )}
       {/* Awaiting legal review (turnover scoring, Oct 2026). */}
       <p className="text-[12.5px] leading-[1.5] text-[#6B6B78]">
-        {facts.turnover.status === 'not_published'
+        {facts.isCharity
+          ? `${match.name} is a registered charity, so this figure is its total income, mostly donations and grants rather than trading. It is left out of the match score, so the brand is neither helped nor held back by it. This is not a credit or covenant rating.`
+          : facts.turnover.status === 'not_published'
           ? "Small companies aren't required to file turnover. With no published turnover, this brand scores nothing for turnover in the match score."
           : 'Figures as filed at Companies House, unedited. Published turnover counts towards the match score: larger turnover scores higher. This is not a credit or covenant rating, and any view on covenant strength is yours to form.'}
       </p>

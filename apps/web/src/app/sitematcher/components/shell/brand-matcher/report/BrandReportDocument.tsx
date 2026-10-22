@@ -597,7 +597,7 @@ function BrandPage({
             </div>
           ))}
           <div>
-            <div className="k">Turnover</div>
+            <div className="k">{facts?.isCharity ? 'Income (charity)' : 'Turnover'}</div>
             <span className={`sv${turnover && turnover !== 'Not disclosed' ? '' : ' none'}`}>
               {turnover ?? (facts ? 'Not published' : 'No record')}
             </span>

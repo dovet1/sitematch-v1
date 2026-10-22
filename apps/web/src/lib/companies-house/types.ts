@@ -90,6 +90,9 @@ export interface CompanyFactsRow {
   turnover_page: number | null
   net_assets_page: number | null
   figures_model: string | null
+  // A registered charity: its "turnover" is total income (mostly donations and grants). Set by an
+  // admin; a profile refresh never writes it (profileToFactsRow leaves it out), so it is kept.
+  is_charity?: boolean
   profile: ChCompanyProfile
   fetched_at: string
 }

@@ -19,6 +19,7 @@ import {
   shortCentreName,
   signalSummaries,
   turnoverCell,
+  turnoverLabel,
   signalSummary,
   sizeFit,
   sortMatches,
@@ -316,6 +317,14 @@ describe('scoreMatch', () => {
     expect(turnoverCell({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } }, franchise })).toBe('Franchise')
     expect(turnoverCell({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } })).toBe('£1.0bn')
     expect(turnoverCell({ tradingFacts: null, franchise: null })).toBeNull()
+  })
+  it('leaves a charity\'s income out of the score but keeps its figures', () => {
+    const charity = { ...chFacts, isCharity: true, turnover: { status: 'filed' as const, value: 3e8 } }
+    const { parts } = scoreMatch(baseMatch({ tradingFacts: charity }))
+    expect(parts.find((p) => p.component === 'turnover')).toBeUndefined()
+    expect(turnoverCell({ tradingFacts: charity })).toBe('£300m')
+    expect(turnoverLabel(charity)).toBe('Income (charity)')
+    expect(turnoverLabel(chFacts)).toBe('Latest turnover')
   })
   it('treats an overseas brand like a franchise, labelled "Overseas"', () => {
     const overseas = { kind: 'overseas' as const, sourceUrl: null, checkedAt: '2026-10-22' }

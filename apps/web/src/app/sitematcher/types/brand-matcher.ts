@@ -202,6 +202,9 @@ export interface TradingFacts {
   registeredOffice: string | null
   turnover: FiledFigure
   netAssets: FiledFigure
+  // A registered charity: turnover holds its total income, shown as income and left out of the
+  // score. Absent on reports shared before charities were recorded.
+  isCharity?: boolean
   fetchedAt: string
 }
 
