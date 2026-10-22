@@ -59,9 +59,9 @@ export function toReportBrand(m: BrandMatch, storeTowns: BrandStoreTownsResponse
 // Order and pagination
 // ---------------------------------------------------------------------------
 
-// Rank order follows fit, not the order brands were ticked.
-export function byFit<T extends Pick<BrandMatch, 'score' | 'name'>>(brands: T[]): T[] {
-  return [...brands].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+// Rank order follows fit, not the order brands were ticked; on a tie the larger estate first.
+export function byFit<T extends Pick<BrandMatch, 'score' | 'name' | 'storeCount'>>(brands: T[]): T[] {
+  return [...brands].sort((a, b) => b.score - a.score || b.storeCount - a.storeCount || a.name.localeCompare(b.name))
 }
 
 export const SUMMARY_ROWS_PER_PAGE = 12
