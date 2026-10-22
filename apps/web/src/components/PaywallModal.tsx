@@ -198,7 +198,7 @@ export function PaywallModal({
   }
 
   const handleContinueToFree = () => {
-    router.push('/new-dashboard')
+    router.push('/sitematcher')
     handleOpenChange(false)
   }
 

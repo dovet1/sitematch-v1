@@ -3,7 +3,7 @@ import { requirePlusAccess, directoryAdminClient, formatCategory } from '@/lib/d
 import type {
   DirectoryAgentProfile,
   DirectoryBrandCard,
-} from '@/app/sitematcher-unified/types/unified-workspace'
+} from '@/app/sitematcher/types/unified-workspace'
 
 export const dynamic = 'force-dynamic'
 

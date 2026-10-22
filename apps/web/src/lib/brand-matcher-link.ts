@@ -7,7 +7,7 @@ import type {
   BrandMatcherPreviewUseClass,
   BrandMatcherQueryUseClass,
   BrandMatcherUseClass,
-} from '@/app/sitematcher-unified/types/brand-matcher'
+} from '@/app/sitematcher/types/brand-matcher'
 
 export type HomeUseClass = BrandMatcherPreviewUseClass
 
@@ -94,5 +94,5 @@ export function workspaceHref(p: BrandMatcherSiteParams | null, extra?: Record<s
   const q = p ? siteSearchParams(p) : new URLSearchParams()
   q.set('mode', 'brand-matcher')
   for (const [k, v] of Object.entries(extra ?? {})) q.set(k, v)
-  return `/sitematcher-unified?${q.toString()}`
+  return `/sitematcher?${q.toString()}`
 }

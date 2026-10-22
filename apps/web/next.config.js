@@ -58,6 +58,29 @@ const nextConfig = {
         destination: '/siteanalyser',
         permanent: false,
       },
+      // The old post-login dashboard is gone; SiteMatcher is the signed-in home now.
+      // Keeps bookmarks and links in already-sent emails working.
+      {
+        source: '/new-dashboard',
+        destination: '/sitematcher',
+        permanent: false,
+      },
+      {
+        source: '/new-dashboard/:path*',
+        destination: '/sitematcher',
+        permanent: false,
+      },
+      // /sitematcher-unified was renamed to /sitematcher.
+      {
+        source: '/sitematcher-unified',
+        destination: '/sitematcher',
+        permanent: true,
+      },
+      {
+        source: '/sitematcher-unified/:path*',
+        destination: '/sitematcher/:path*',
+        permanent: true,
+      },
     ]
   },
   async rewrites() {

@@ -29,7 +29,7 @@ export default async function UnifiedWorkspaceLayout({
   // 2. Must be signed in.
   const user = await getCurrentUser()
   if (!user) {
-    redirect('/?login=1&redirect=/sitematcher-unified')
+    redirect('/?login=1&redirect=/sitematcher')
   }
 
   // 3. Plus tier only. Authoritative server-side gate.
@@ -84,7 +84,7 @@ function UpgradeState() {
     <div className="flex min-h-screen items-center justify-center bg-sm-bg px-6">
       <div className="max-w-md rounded-2xl border border-sm-border bg-sm-surface p-8 text-center shadow-sm">
         <h1 className="text-xl font-semibold text-sm-ink">
-          Unified Workspace is a Plus feature
+          SiteMatcher is a Plus feature
         </h1>
         <p className="mt-3 text-sm text-sm-ink2">
           Upgrade to the Plus plan to work gaps, catchment and site sketches on a

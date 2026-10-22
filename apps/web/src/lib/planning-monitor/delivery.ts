@@ -125,9 +125,9 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
       const base = siteUrl()
       const email = renderWeeklyEmail({
         report,
-        reportUrl: `${base}/sitematcher-unified?mode=planning&patch=${report.patchId}&report=${report.runId}`,
-        mapUrl: `${base}/sitematcher-unified?mode=planning&patch=${report.patchId}`,
-        preferencesUrl: `${base}/sitematcher-unified?mode=planning&patch=${report.patchId}&settings=notifications`,
+        reportUrl: `${base}/sitematcher?mode=planning&patch=${report.patchId}&report=${report.runId}`,
+        mapUrl: `${base}/sitematcher?mode=planning&patch=${report.patchId}`,
+        preferencesUrl: `${base}/sitematcher?mode=planning&patch=${report.patchId}&settings=notifications`,
         unsubscribeUrl: `${base}/api/planning-monitor/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(delivery.subscription_id))}`,
       })
       const unsubscribePost = `${base}/api/planning-monitor/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(delivery.subscription_id))}`

@@ -375,7 +375,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Use window.location.replace for a full page reload that replaces history
     // This ensures cookies are properly set and no race conditions occur
     const targetUrl = redirectTo && redirectTo !== 'SKIP_REDIRECT' ? redirectTo :
-                      (!redirectTo || redirectTo !== 'SKIP_REDIRECT' ? '/new-dashboard' : null)
+                      (!redirectTo || redirectTo !== 'SKIP_REDIRECT' ? '/sitematcher' : null)
 
     if (targetUrl) {
       console.log('[AUTH-CONTEXT] Redirecting to:', targetUrl)
@@ -444,7 +444,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               userEmail: data.user.email!,
-              dashboardUrl: `${baseUrl}/new-dashboard`
+              dashboardUrl: `${baseUrl}/sitematcher`
             })
           });
 
@@ -480,7 +480,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return true
     }
 
-    const safeRedirectTo = redirectTo && isValidReturnUrl(redirectTo) ? redirectTo : '/new-dashboard'
+    const safeRedirectTo = redirectTo && isValidReturnUrl(redirectTo) ? redirectTo : '/sitematcher'
 
     // Map UI provider names to Supabase provider IDs
     const supabaseProvider = provider === 'microsoft' ? 'azure' : provider

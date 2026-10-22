@@ -1,6 +1,6 @@
 import { directoryAdminClient, formatCategory } from '@/lib/directory'
 import { isBrandMatcherDemographicsEnabled } from '@/lib/feature-flags'
-import { sqFtFromM2 } from '@/app/sitematcher-unified/lib/size-filter'
+import { sqFtFromM2 } from '@/app/sitematcher/lib/size-filter'
 import { factsRowToTradingFacts } from '@/lib/companies-house/facts'
 import type { CompanyFactsRow } from '@/lib/companies-house/types'
 import {
@@ -18,7 +18,7 @@ import {
   type RawBrandGeo,
   type RawNewsItem,
   type RawRequirement,
-} from '@/app/sitematcher-unified/lib/brand-matcher'
+} from '@/app/sitematcher/lib/brand-matcher'
 import {
   BRAND_MATCHER_ALL_USE_CLASSES,
   BRAND_MATCHER_USE_CLASSES,
@@ -34,7 +34,7 @@ import {
   type TownFigures,
   type TownMatch,
   type TradingFacts,
-} from '@/app/sitematcher-unified/types/brand-matcher'
+} from '@/app/sitematcher/types/brand-matcher'
 
 // Brand Matcher: "who should I call about my empty site?" (docs/design_handoff_contact_brands).
 //

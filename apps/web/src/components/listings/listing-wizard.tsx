@@ -750,7 +750,7 @@ export function ListingWizard({
         if (result.listingId) {
           router.push(`/occupier/listing-submitted/${result.listingId}`);
         } else {
-          router.push('/new-dashboard');
+          router.push('/sitematcher');
         }
       } else {
         toast.error(result.error || 'Failed to create listing');

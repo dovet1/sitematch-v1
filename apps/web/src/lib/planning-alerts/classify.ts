@@ -1,4 +1,4 @@
-import { haversineMeters, pointInGeometry } from '@/app/sitematcher-unified/lib/geo'
+import { haversineMeters, pointInGeometry } from '@/app/sitematcher/lib/geo'
 import type {
   PlanningAlertApplication,
   PlanningAlertBoundary,

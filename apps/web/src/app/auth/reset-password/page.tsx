@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
       setSuccess(true)
       // Redirect after 3 seconds
       setTimeout(() => {
-        router.push('/new-dashboard')
+        router.push('/sitematcher')
       }, 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -123,8 +123,8 @@ export default function ResetPasswordPage() {
             <p className="text-muted-foreground mb-4">
               Your password has been successfully updated. You'll be redirected to your dashboard shortly.
             </p>
-            <Button onClick={() => router.push('/new-dashboard')}>
-              Go to Dashboard
+            <Button onClick={() => router.push('/sitematcher')}>
+              Go to SiteMatcher
             </Button>
           </CardContent>
         </Card>

@@ -3,7 +3,7 @@ import { requirePlusAccess, directoryAdminClient, AGENT_CAP } from '@/lib/direct
 import type {
   DirectoryAgentSummary,
   DirectoryList,
-} from '@/app/sitematcher-unified/types/unified-workspace'
+} from '@/app/sitematcher/types/unified-workspace'
 
 export const dynamic = 'force-dynamic'
 

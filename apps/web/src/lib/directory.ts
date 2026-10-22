@@ -1,6 +1,6 @@
-// Shared server-side helpers for the Company Directory (/sitematcher-unified, directory mode).
+// Shared server-side helpers for the Company Directory (/sitematcher, directory mode).
 //
-// ACCESS MODEL: the directory is Plus-only. sitematcher-unified/layout.tsx gates the page,
+// ACCESS MODEL: the directory is Plus-only. sitematcher/layout.tsx gates the page,
 // but the API routes are separately reachable, so every /api/public/directory/* route calls
 // requirePlusAccess() itself. The four directory tables carry NO public SELECT policy — reads
 // only ever happen here, through a service-role client, behind that gate.

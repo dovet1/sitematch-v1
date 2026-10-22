@@ -2,7 +2,7 @@
  * Backtest for Brand Matcher demographic fit (migrations 20261023000000 and 20261023020000).
  * Answers: does a fascia's town profile pick out the towns it really trades in, compared with
  * towns of the same size? The method is documented in
- * src/app/sitematcher-unified/lib/brand-matcher-demographics-backtest.ts.
+ * src/app/sitematcher/lib/brand-matcher-demographics-backtest.ts.
  *
  * Read-only. Needs rebuild_all_demographics() to have run (the ranks and profiles tables are not
  * read — both are rebuilt here from training towns only). Run from apps/web:
@@ -13,14 +13,14 @@
 import { writeFileSync } from 'node:fs'
 import { loadEnvConfig } from '@next/env'
 import { createClient } from '@supabase/supabase-js'
-import { percentileCont } from '../src/app/sitematcher-unified/lib/brand-matcher-demographics'
+import { percentileCont } from '../src/app/sitematcher/lib/brand-matcher-demographics'
 import {
   DEFAULT_FOLDS,
   VARIANTS,
   runBacktest,
   type BandCounts,
   type UnitResult,
-} from '../src/app/sitematcher-unified/lib/brand-matcher-demographics-backtest'
+} from '../src/app/sitematcher/lib/brand-matcher-demographics-backtest'
 
 loadEnvConfig(process.cwd())
 

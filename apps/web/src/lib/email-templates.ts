@@ -626,7 +626,7 @@ export function generateSavedSearchNotificationEmail(data: SavedSearchNotificati
 
   <!-- CTA -->
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${siteUrl}/new-dashboard?tab=searches" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+    <a href="${siteUrl}/sitematcher" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
       View All Saved Searches
     </a>
   </div>
@@ -637,7 +637,7 @@ export function generateSavedSearchNotificationEmail(data: SavedSearchNotificati
       You're receiving this because you have email notifications enabled for your saved searches.
     </p>
     <p style="color: #6b7280; font-size: 13px; margin: 0;">
-      <a href="${siteUrl}/new-dashboard?tab=searches" style="color: #7c3aed; text-decoration: none;">Manage your notification preferences</a>
+      <a href="${siteUrl}/sitematcher" style="color: #7c3aed; text-decoration: none;">Manage your notification preferences</a>
     </p>
   </div>
 
@@ -661,11 +661,11 @@ ${search.matches.map(match => `
 `).join('\n')}
 `).join('\n')}
 
-View all your saved searches: ${siteUrl}/new-dashboard?tab=searches
+View all your saved searches: ${siteUrl}/sitematcher
 
 ---
 You're receiving this because you have email notifications enabled for your saved searches.
-Manage your preferences: ${siteUrl}/new-dashboard?tab=searches
+Manage your preferences: ${siteUrl}/sitematcher
   `.trim();
 
   return { html, text };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminUser, adminClient, adminError } from '@/lib/admin-auth'
-import { sqFtFromM2 } from '@/app/sitematcher-unified/lib/size-filter'
+import { sqFtFromM2 } from '@/app/sitematcher/lib/size-filter'
 import { profileEligibility, profilePublication } from '@/lib/epc/profile-eligibility'
 import type { BrandFloorAreas, ProfileStore } from '@/types/floor-area-health'
 

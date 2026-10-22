@@ -13,7 +13,7 @@ import type {
   DirectoryBrandProfile,
   DirectoryRequirement,
   DirectoryActivityEvent,
-} from '@/app/sitematcher-unified/types/unified-workspace'
+} from '@/app/sitematcher/types/unified-workspace'
 
 export const dynamic = 'force-dynamic'
 

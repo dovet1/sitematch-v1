@@ -45,7 +45,7 @@ describe('brand-matcher-link', () => {
   it('opens Brand Matcher in the workspace', () => {
     const href = workspaceHref({ site: 'NG7 2PS', postcode: 'NG7 2PS', sqft: 1000, useClass: 'E' }, { welcome: 'trial' })
     const params = new URLSearchParams(href.split('?')[1])
-    expect(href.startsWith('/sitematcher-unified?')).toBe(true)
+    expect(href.startsWith('/sitematcher?')).toBe(true)
     expect(params.get('mode')).toBe('brand-matcher')
     expect(params.get('welcome')).toBe('trial')
     expect(params.get('uc')).toBe('E')

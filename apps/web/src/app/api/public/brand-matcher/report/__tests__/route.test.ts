@@ -4,7 +4,7 @@
 import { NextRequest } from 'next/server'
 import { POST } from '../route'
 import { brandStoreTowns, matchSite } from '../../engine'
-import type { BrandMatch } from '@/app/sitematcher-unified/types/brand-matcher'
+import type { BrandMatch } from '@/app/sitematcher/types/brand-matcher'
 
 jest.mock('@/lib/feature-flags', () => ({
   isBrandMatcherEnabled: jest.fn().mockResolvedValue(true),
