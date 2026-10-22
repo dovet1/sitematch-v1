@@ -32,7 +32,7 @@ function AuthPageContent() {
   // Redirect authenticated users
   useEffect(() => {
     if (!loading && user) {
-      let destination = returnUrl && returnUrl.startsWith('/') ? returnUrl : '/new-dashboard'
+      let destination = returnUrl && returnUrl.startsWith('/') ? returnUrl : '/sitematcher'
 
       // Preserve tier, billingInterval, and redirectPath params
       if (tier || billingInterval || redirectPath) {

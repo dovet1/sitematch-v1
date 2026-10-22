@@ -136,7 +136,7 @@ export default function ConsultantProfileEditor({ initialData, className }: Cons
 
       if (data.success) {
         toast.success('Profile updated successfully!');
-        router.push('/new-dashboard');
+        router.push('/sitematcher');
       } else {
         toast.error(data.message || 'Failed to update profile');
         if (data.errors) {
@@ -188,7 +188,7 @@ export default function ConsultantProfileEditor({ initialData, className }: Cons
   };
 
   const handleBack = () => {
-    router.push('/new-dashboard');
+    router.push('/sitematcher');
   };
 
   return (

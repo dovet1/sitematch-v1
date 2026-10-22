@@ -15,10 +15,10 @@ export default function UnsupportedViewport() {
           Please try again on desktop or tablet.
         </p>
         <Link
-          href="/new-dashboard"
+          href="/sitematcher"
           className="mt-8 inline-flex h-10 items-center justify-center rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
         >
-          Back to dashboard
+          Back to SiteMatcher
         </Link>
       </section>
     </main>

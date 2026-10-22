@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isBrandMatcherEnabled } from '@/lib/feature-flags'
-import { signalSummaries, sortMatches, turnoverValue } from '@/app/sitematcher-unified/lib/brand-matcher'
+import { signalSummaries, sortMatches, turnoverValue } from '@/app/sitematcher/lib/brand-matcher'
 import type {
   BrandMatch,
   BrandMatcherPreviewList,
@@ -8,7 +8,7 @@ import type {
   BrandMatcherPreviewUseClass,
   BrandMatcherQuery,
   BrandMatcherUseClass,
-} from '@/app/sitematcher-unified/types/brand-matcher'
+} from '@/app/sitematcher/types/brand-matcher'
 import { HOME_CLASS_CODES } from '@/lib/brand-matcher-link'
 import { matchSite, parseQuery } from '../engine'
 

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const result = await sendWelcomeEmail({
       userName: 'there',
       userEmail,
-      dashboardUrl: dashboardUrl || 'https://sitematcher.co.uk/new-dashboard'
+      dashboardUrl: dashboardUrl || 'https://sitematcher.co.uk/sitematcher'
     });
 
     console.log('📧 API: Email result:', result);

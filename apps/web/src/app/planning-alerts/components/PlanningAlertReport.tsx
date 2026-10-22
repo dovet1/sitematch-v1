@@ -17,7 +17,7 @@ import {
   MapPin,
   Store,
 } from 'lucide-react'
-import { circleGeometry, geometryBounds } from '@/app/sitematcher-unified/lib/geo'
+import { circleGeometry, geometryBounds } from '@/app/sitematcher/lib/geo'
 import type {
   PlanningAlertApplication,
   PlanningAlertDigest,

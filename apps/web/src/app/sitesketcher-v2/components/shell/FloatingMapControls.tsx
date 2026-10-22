@@ -16,7 +16,7 @@ interface FloatingMapControlsProps {
   /**
    * Shift the controls left when the inspector is open. Correct when the
    * inspector overlays the map (sitesketcher-v2). Should be false when the
-   * inspector is a layout sibling that reflows the map (sitematcher-unified),
+   * inspector is a layout sibling that reflows the map (sitematcher),
    * otherwise the controls double-compensate and jump toward the middle.
    */
   offsetForInspector?: boolean;

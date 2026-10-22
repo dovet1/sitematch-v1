@@ -43,7 +43,7 @@ export function MobileHeader({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push('/new-dashboard?tab=tools')}
+          onClick={() => router.push('/sitematcher')}
           className="h-10 w-10 rounded-lg hover:bg-violet-50"
         >
           <ArrowLeft className="h-5 w-5" />

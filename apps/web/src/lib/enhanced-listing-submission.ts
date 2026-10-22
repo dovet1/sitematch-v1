@@ -178,7 +178,7 @@ export async function submitEnhancedListing(
         contactName: enhancedListingData.contact_name || 'Valued Customer',
         companyName: enhancedListingData.company_name || 'Your Company',
         listingTitle: `Property Requirement - ${enhancedListingData.company_name}`,
-        dashboardUrl: `${baseUrl}/new-dashboard`,
+        dashboardUrl: `${baseUrl}/sitematcher`,
         previewUrl: `${baseUrl}/occupier/listing/${result.id}`,
         contactEmail: enhancedListingData.contact_email
       });

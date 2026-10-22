@@ -8,7 +8,7 @@ export async function GET() {
     const result = await sendWelcomeEmail({
       userName: 'there',
       userEmail: 'doveyt3+1@gmail.com',
-      dashboardUrl: 'http://localhost:3000/new-dashboard'
+      dashboardUrl: 'http://localhost:3000/sitematcher'
     });
 
     console.log('Email result:', result);

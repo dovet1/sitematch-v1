@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { geometryBounds, pointInGeometry } from '@/app/sitematcher-unified/lib/geo'
+import { geometryBounds, pointInGeometry } from '@/app/sitematcher/lib/geo'
 import { classifyPlanningApplications } from './classify'
 import { fetchPlanNexusApplications } from './plannexus'
 import type { MonthlyPeriod } from './period'

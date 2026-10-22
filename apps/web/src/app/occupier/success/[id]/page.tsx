@@ -114,9 +114,9 @@ export default async function ListingSuccessPage({ params }: PageProps) {
                 Track the progress of your submission and manage your requirements.
               </p>
               <Button asChild className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium h-12 shadow-lg hover:shadow-xl transition-all duration-200">
-                <Link href="/new-dashboard">
+                <Link href="/sitematcher">
                   <Home className="w-4 h-4 mr-2" />
-                  Go to Dashboard
+                  Go to SiteMatcher
                 </Link>
               </Button>
             </CardContent>

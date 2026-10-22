@@ -4,7 +4,7 @@ import { parseReportMeta, EMPTY_REPORT_META } from './brand-report'
 import type { BrandMatcherQuery, BrandReportMeta } from '../types/brand-matcher'
 
 // Browser storage for the brand report (docs/design_handoff_brand_report_export). The dialog
-// writes the job and the report page (/sitematcher-unified/brand-report) reads it; the dialog's
+// writes the job and the report page (/sitematcher/brand-report) reads it; the dialog's
 // fields are remembered per user. Storage can be missing or full: every read and write tolerates it.
 
 export interface BrandReportJob {

@@ -38,10 +38,9 @@ export function Header() {
     pathname === '/sitesketcher' ||
     pathname === '/sitesketcher-v2' ||
     pathname === '/siteanalyser' ||
-    pathname?.startsWith('/sitematcher-unified') ||
+    pathname?.startsWith('/sitematcher') ||
     pathname === '/brand-matcher' ||
-    pathname?.startsWith('/planning-alerts') ||
-    pathname?.startsWith('/new-dashboard')
+    pathname?.startsWith('/planning-alerts')
   ) {
     return null
   }
@@ -548,12 +547,12 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
         {/* Menu Items */}
         <div className="space-y-1.5">
           <Link
-            href="/new-dashboard"
+            href="/sitematcher"
             onClick={onClose}
             className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/60 transition-all duration-200 active:scale-[0.98] violet-bloom-touch"
           >
             <LayoutDashboard className="h-5 w-5 text-primary-600" />
-            <span className="text-base font-medium text-foreground">Dashboard</span>
+            <span className="text-base font-medium text-foreground">SiteMatcher</span>
           </Link>
 
           {isAdmin && (

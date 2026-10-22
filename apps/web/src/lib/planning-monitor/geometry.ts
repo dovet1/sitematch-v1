@@ -2,7 +2,7 @@ import area from '@turf/area'
 import booleanValid from '@turf/boolean-valid'
 import simplify from '@turf/simplify'
 import { UK_LAT, UK_LON } from '@/app/api/public/planning/boundary'
-import { circleGeometry, pointInGeometry } from '@/app/sitematcher-unified/lib/geo'
+import { circleGeometry, pointInGeometry } from '@/app/sitematcher/lib/geo'
 
 /**
  * Patch geometry intake. A patch is saved exactly as the user supplied it; a simplified copy is

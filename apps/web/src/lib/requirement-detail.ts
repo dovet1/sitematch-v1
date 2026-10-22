@@ -1,12 +1,12 @@
 // Helper B: transform a `requirements` row + its child rows into the RequirementDetail
-// response shape the /sitematcher-unified modal renders. Reads the normalized requirement
+// response shape the /sitematcher modal renders. Reads the normalized requirement
 // tables only — no listing_versions content. Used by
 // /api/public/requirements/[id]/detailed.
 
 import type {
   RequirementContact,
   RequirementDetail,
-} from '@/app/sitematcher-unified/types/unified-workspace'
+} from '@/app/sitematcher/types/unified-workspace'
 
 interface JoinedSector {
   sector: { name: string | null } | null

@@ -2004,8 +2004,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Error Loading Listing</h3>
             <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => router.push('/new-dashboard')}>
-              Back to Dashboard
+            <Button onClick={() => router.push('/sitematcher')}>
+              Back to SiteMatcher
             </Button>
           </CardContent>
         </Card>
@@ -3082,7 +3082,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             companyName={companyName}
             companyLogo={listingData?.logoPreview}
             status={listingData?.status || 'draft'}
-            onBack={() => router.push('/new-dashboard')}
+            onBack={() => router.push('/sitematcher')}
             onPreview={() => openModal('preview')}
             shareButton={listingData?.status === 'approved' ? (
               <ShareButton
@@ -6171,10 +6171,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 <Button
                   variant="ghost"
                   size="default"
-                  onClick={() => router.push('/new-dashboard')}
+                  onClick={() => router.push('/sitematcher')}
                   className="text-gray-900 hover:text-gray-900 font-medium bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2.5 rounded-lg border border-white/20"
                 >
-                  ← Dashboard
+                  ← SiteMatcher
                 </Button>
               </div>
             </div>

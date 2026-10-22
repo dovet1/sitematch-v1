@@ -81,7 +81,7 @@ export default async function PlanningAlertsPage({
         latestMonth: latestPeriod.start.slice(0, 7),
         activeSubscriptionId: selected.id,
         subscriptions,
-        backHref: isAdmin ? '/admin' : '/new-dashboard',
+        backHref: isAdmin ? '/admin' : '/sitematcher',
       }}
     />
   )

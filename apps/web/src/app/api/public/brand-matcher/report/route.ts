@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePlusAccess } from '@/lib/directory'
 import { isBrandMatcherDemographicsEnabled, isBrandMatcherEnabled } from '@/lib/feature-flags'
-import { byFit, toReportBrand } from '@/app/sitematcher-unified/lib/brand-report'
-import { BRAND_REPORT_MAX, type BrandReportResponse } from '@/app/sitematcher-unified/types/brand-matcher'
+import { byFit, toReportBrand } from '@/app/sitematcher/lib/brand-report'
+import { BRAND_REPORT_MAX, type BrandReportResponse } from '@/app/sitematcher/types/brand-matcher'
 import { brandStoreTowns, matchSite, parseQuery } from '../engine'
 
 export const dynamic = 'force-dynamic'

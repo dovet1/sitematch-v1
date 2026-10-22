@@ -9,6 +9,6 @@ const UnifiedWorkspace = dynamic(
   { ssr: false }
 )
 
-export default function SitematcherUnifiedPage() {
+export default function SitematcherPage() {
   return <UnifiedWorkspace />
 }

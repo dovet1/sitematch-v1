@@ -8,7 +8,7 @@ import { normalizeRequirementCoordinates } from '@/lib/requirement-map-data'
 import type {
   DirectoryContact,
   DirectoryTarget,
-} from '@/app/sitematcher-unified/types/unified-workspace'
+} from '@/app/sitematcher/types/unified-workspace'
 
 // "PARENT · CHILD", or just the child when there is no parent. Mirrors how
 // brand_primary_category's two columns are rendered elsewhere.

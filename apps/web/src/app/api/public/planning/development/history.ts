@@ -1,4 +1,4 @@
-import type { PlanningApplication } from '@/app/sitematcher-unified/types/unified-workspace'
+import type { PlanningApplication } from '@/app/sitematcher/types/unified-workspace'
 
 export interface HistoryRow {
   role: string

@@ -202,7 +202,7 @@ export default function AgencyEditPage() {
   }
 
   const handleBack = () => {
-    router.push('/new-dashboard')
+    router.push('/sitematcher')
   }
 
   const handleLocationSelect = (location: { name: string; coordinates: { lat: number; lng: number } }) => {
@@ -368,7 +368,7 @@ export default function AgencyEditPage() {
             agencyLogo={successData.agencyLogo}
             onViewDashboard={() => {
               hideSuccess()
-              router.push('/new-dashboard')
+              router.push('/sitematcher')
             }}
             onEditAgency={() => {
               hideSuccess()
@@ -398,7 +398,7 @@ export default function AgencyEditPage() {
           <div className="relative px-6 py-4 border-b border-violet-100/50">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <Link
-                href="/new-dashboard"
+                href="/sitematcher"
                 className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50/50 hover:bg-violet-100/70 text-violet-700 hover:text-violet-800 transition-all duration-200 text-sm font-medium border border-violet-200/50 hover:border-violet-300/70 hover:shadow-sm"
               >
                 <svg 
@@ -771,7 +771,7 @@ export default function AgencyEditPage() {
           agencyLogo={successData.agencyLogo}
           onViewDashboard={() => {
             hideSuccess()
-            router.push('/new-dashboard')
+            router.push('/sitematcher')
           }}
           onEditAgency={() => {
             hideSuccess()

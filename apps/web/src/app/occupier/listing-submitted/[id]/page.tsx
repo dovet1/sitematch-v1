@@ -44,7 +44,7 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
   const user = await getCurrentUser();
   
   if (!user) {
-    redirect('/?login=1&redirect=/new-dashboard');
+    redirect('/?login=1&redirect=/sitematcher');
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {
@@ -209,15 +209,15 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Button asChild className="flex-1">
-                <Link href="/new-dashboard">
+                <Link href="/sitematcher">
                   <Home className="w-4 h-4 mr-2" />
-                  View Dashboard
+                  Open SiteMatcher
                 </Link>
               </Button>
               <Button variant="outline" asChild className="flex-1">
-                <Link href="/new-dashboard">
+                <Link href="/sitematcher">
                   <ArrowRight className="w-4 h-4 mr-2" />
-                  Go to Dashboard
+                  Go to SiteMatcher
                 </Link>
               </Button>
             </div>

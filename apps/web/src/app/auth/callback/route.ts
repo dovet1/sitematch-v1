@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     // Validate and sanitize OAuth redirect URL
-    let finalRedirect = '/new-dashboard' // Safe default
+    let finalRedirect = '/sitematcher' // Safe default
 
     if (redirect) {
       const decodedRedirect = decodeURIComponent(redirect)

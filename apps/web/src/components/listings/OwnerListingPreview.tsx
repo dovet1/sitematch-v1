@@ -25,11 +25,11 @@ export function OwnerListingPreview({ listingId, userId }: OwnerListingPreviewPr
   const handleClose = () => {
     // Check if user came from dashboard by looking at the referrer
     const referrer = document.referrer;
-    const isDashboard = referrer.includes('/new-dashboard');
+    const isDashboard = referrer.includes('/sitematcher');
 
     if (isDashboard) {
       // Return to dashboard if they came from there
-      router.push('/new-dashboard');
+      router.push('/sitematcher');
     } else {
       // Otherwise return to listing detail page (default behavior)
       router.push(`/occupier/listing/${listingId}`);

@@ -4,7 +4,7 @@
 // Compliance (docs/design_handoff_contact_brands/README.md): figures are shown as filed and
 // never rated. Labels here describe the register; none of them judge a company.
 
-import type { TradingFacts } from '@/app/sitematcher-unified/types/brand-matcher'
+import type { TradingFacts } from '@/app/sitematcher/types/brand-matcher'
 import type { ChAddress, ChCompanyProfile, ChSearchItem, CompanyFactsRow, FiguresOutcome } from './types'
 
 // ---------------------------------------------------------------------------

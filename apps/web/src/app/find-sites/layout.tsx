@@ -5,7 +5,7 @@ import { checkPlusAccess } from '@/lib/gapfinder-access'
 import { isFindSitesEnabled } from '@/lib/feature-flags'
 
 // Find Sites is a standalone experimental route OUTSIDE the unified workspace (integrate later).
-// Same gate posture as sitematcher-unified: a runtime kill-switch flag, sign-in, then Plus.
+// Same gate posture as sitematcher: a runtime kill-switch flag, sign-in, then Plus.
 export default async function FindSitesLayout({
   children,
 }: {

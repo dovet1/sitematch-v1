@@ -259,7 +259,7 @@ export function SiteDemographerDesktop() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push('/new-dashboard?tab=tools')}
+              onClick={() => router.push('/sitematcher')}
               className="h-8 w-8 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200"
             >
               <ArrowLeft className="h-4 w-4" />

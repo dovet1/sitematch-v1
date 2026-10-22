@@ -286,7 +286,7 @@ function buildAndPrint(paper: BrandReportPaper): {
     finish('The report took too long to build. Try again.')
   }, BUILD_TIMEOUT_MS)
   window.addEventListener('message', onMessage)
-  frame.src = '/sitematcher-unified/brand-report?embed=1'
+  frame.src = '/sitematcher/brand-report?embed=1'
   document.body.appendChild(frame)
   return {
     done,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { requireGapFinderAccess } from '@/lib/gapfinder-access'
-import { sqFtFromM2 } from '@/app/sitematcher-unified/lib/size-filter'
+import { sqFtFromM2 } from '@/app/sitematcher/lib/size-filter'
 
 export const dynamic = 'force-dynamic'
 

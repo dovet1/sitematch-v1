@@ -32,7 +32,7 @@ export type RequirementMapFeature = {
     company_domain: string | null
     logo_url: string | null
     // Raw uploaded logo (never a logo.dev URL). Only the requirements builder
-    // populates this; used by /sitematcher-unified assess-area cards.
+    // populates this; used by /sitematcher assess-area cards.
     uploaded_logo_url?: string | null
     sector: string | null
     use_class: string | null
@@ -376,7 +376,7 @@ function applyListingFilters(query: any, filters: RequirementMapFilters, validLi
 }
 
 // ---------------------------------------------------------------------------
-// requirements-sourced variant (for /sitematcher-unified). Same RequirementMapFeature
+// requirements-sourced variant (for /sitematcher). Same RequirementMapFeature
 // output as getRequirementMapFeatures so UnifiedMap.tsx is unchanged, but reads the
 // admin-curated `requirements` tables instead of `listings`.
 // ---------------------------------------------------------------------------

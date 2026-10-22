@@ -176,9 +176,9 @@ export function UserMenu() {
           <div className="p-1">
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/new-dashboard" className="flex items-center gap-2 cursor-pointer">
+                <Link href="/sitematcher" className="flex items-center gap-2 cursor-pointer">
                   <LayoutDashboard className="h-4 w-4" />
-                  <span>Dashboard</span>
+                  <span>SiteMatcher</span>
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (

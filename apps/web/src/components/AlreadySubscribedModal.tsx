@@ -77,8 +77,8 @@ export function AlreadySubscribedModal({
               asChild
               className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold shadow-md hover:shadow-lg transition-all"
             >
-              <Link href="/new-dashboard">
-                Go to Dashboard
+              <Link href="/sitematcher">
+                Go to SiteMatcher
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

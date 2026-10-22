@@ -1,7 +1,7 @@
 import type {
   PlanningApplication,
   PlanningTruncationReason,
-} from '@/app/sitematcher-unified/types/unified-workspace'
+} from '@/app/sitematcher/types/unified-workspace'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
 import {
   FRESHNESS_UNAVAILABLE,
