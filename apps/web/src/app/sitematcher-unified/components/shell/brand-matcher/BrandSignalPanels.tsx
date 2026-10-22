@@ -290,8 +290,7 @@ export function AcquisitivePanel({ match }: PanelProps) {
       <div className="flex flex-col gap-3.5">
         <PanelTitle title="Acquisitive: no evidence">
           We haven&apos;t found any requirements listed with SiteMatcher, news about {name}&apos;s stores, or planning
-          applications naming it. This signal is left out of the score rather than counted against it, and with no
-          articles its news score is 0.
+          applications naming it, so it scores 0 for this signal.
         </PanelTitle>
         <KvRows
           labelWidth={130}
@@ -409,7 +408,8 @@ export function AcquisitivePanel({ match }: PanelProps) {
       {a.news && (
         <Footnote>
           Each article is rated from −5 (closing stores) to +5 (opening at pace). The news score adds them up, an
-          article counting half as much every {Math.round(NEWS_HALF_LIFE_DAYS / 30)} months, capped at ±5.
+          article counting half as much every {Math.round(NEWS_HALF_LIFE_DAYS / 30)} months, capped at ±5, and moves
+          this signal up or down. A live requirement counts for most.
         </Footnote>
       )}
     </div>

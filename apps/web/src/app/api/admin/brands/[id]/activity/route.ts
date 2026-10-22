@@ -4,7 +4,6 @@ import { requireAdminUser, adminClient, adminError } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 const KINDS = ['opening', 'closure', 'news'] as const
-const RATED_BY = ['admin', 'model'] as const
 const COLUMNS =
   'id, kind, event_date, is_upcoming, headline, url, signal_rating, signal_reason, signal_rated_by'
 
@@ -13,9 +12,6 @@ function validateRating(body: Record<string, unknown>): string | null {
   if (typeof r !== 'number' || !Number.isInteger(r) || r < -5 || r > 5) {
     return 'signal_rating must be a whole number from -5 to 5'
   }
-  if (body.signal_rated_by != null && !RATED_BY.includes(body.signal_rated_by as (typeof RATED_BY)[number])) {
-    return "signal_rated_by must be 'admin' or 'model'"
-  }
   return null
 }
 
@@ -23,8 +19,8 @@ function ratingFields(body: Record<string, unknown>) {
   return {
     signal_rating: body.signal_rating as number,
     signal_reason: typeof body.signal_reason === 'string' && body.signal_reason.trim() ? body.signal_reason.trim() : null,
-    // A suggestion the admin left untouched stays marked as the model's.
-    signal_rated_by: body.signal_rated_by === 'model' ? 'model' : 'admin',
+    // Saving or re-rating through this route is an admin review of the rating.
+    signal_rated_by: 'admin',
   }
 }
 

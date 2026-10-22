@@ -955,7 +955,7 @@ function AgentsSection({ brandId }: { brandId: string }) {
 // ---------------------------------------------------------------------------
 
 type ActivityKind = 'opening' | 'closure' | 'news'
-type RatedBy = 'admin' | 'model' | 'default'
+type RatedBy = 'admin' | 'default'
 
 interface ActivityRow {
   id: string
@@ -976,7 +976,6 @@ const ratingText = (r: number) => (r > 0 ? `+${r}` : String(r))
 
 const RATED_BY_LABEL: Record<RatedBy, string> = {
   admin: 'rated by admin',
-  model: 'suggested by model',
   default: 'default, not reviewed',
 }
 
@@ -988,8 +987,6 @@ const EMPTY_DRAFT = {
   is_upcoming: false,
   signal_rating: KIND_DEFAULT_RATING.opening,
   signal_reason: '',
-  // 'model' only while the rating is the model's untouched suggestion.
-  signal_rated_by: 'admin' as 'admin' | 'model',
 }
 
 function RatingSelect({ value, onChange }: { value: number; onChange: (r: number) => void }) {
@@ -1013,8 +1010,6 @@ function ActivitySection({ brandId }: { brandId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [suggesting, setSuggesting] = useState(false)
-  const [suggestNote, setSuggestNote] = useState<string | null>(null)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
 
   const load = useCallback(async () => {
@@ -1036,28 +1031,6 @@ function ActivitySection({ brandId }: { brandId: string }) {
     load()
   }, [load])
 
-  const suggest = async () => {
-    setSuggesting(true)
-    setError(null)
-    setSuggestNote(null)
-    try {
-      const res = await fetch(`/api/admin/brands/${brandId}/activity/suggest-rating`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
-      })
-      const d = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(d.details || d.error || 'Failed to suggest a rating')
-      const s = d.suggestion as { rating: number; reason: string; readArticle: boolean }
-      setDraft((cur) => ({ ...cur, signal_rating: s.rating, signal_reason: s.reason, signal_rated_by: 'model' }))
-      setSuggestNote(s.readArticle ? null : 'The article could not be read, so this is from the headline alone.')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to suggest a rating')
-    } finally {
-      setSuggesting(false)
-    }
-  }
-
   const add = async () => {
     setSaving(true)
     setError(null)
@@ -1070,7 +1043,6 @@ function ActivitySection({ brandId }: { brandId: string }) {
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Failed to add event')
       setDraft(EMPTY_DRAFT)
-      setSuggestNote(null)
       load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add event')
@@ -1083,7 +1055,7 @@ function ActivitySection({ brandId }: { brandId: string }) {
     const res = await fetch(`/api/admin/brands/${brandId}/activity`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      // A changed rating no longer carries the model's or the default's reason.
+      // A changed rating no longer carries the default's reason.
       body: JSON.stringify({
         event_id: row.id,
         signal_rating: rating,
@@ -1103,7 +1075,7 @@ function ActivitySection({ brandId }: { brandId: string }) {
 
   if (loading) return <p className="text-sm text-gray-500">Loading activity…</p>
 
-  const setRating = (r: number) => setDraft({ ...draft, signal_rating: r, signal_rated_by: 'admin' })
+  const setRating = (r: number) => setDraft({ ...draft, signal_rating: r })
 
   return (
     <div className="space-y-4">
@@ -1113,8 +1085,9 @@ function ActivitySection({ brandId }: { brandId: string }) {
         <p className="text-xs text-gray-500">
           Every article is rated from −5 (closing all stores) to +5 (needs many stores soon). The
           Brand Matcher adds a brand&apos;s ratings into its news score, halving each one&apos;s
-          weight every six months; a brand with no articles scores 0. Imported openings come in at
-          +2 until they are reviewed here.
+          weight every six months, and the news score moves the brand&apos;s Acquisitive score up or
+          down; a brand with no articles scores 0. Imported openings come in at +2 until they are
+          reviewed here.
         </p>
         <div className="grid grid-cols-[130px_150px_1fr] gap-3">
           <div>
@@ -1124,7 +1097,7 @@ function ActivitySection({ brandId }: { brandId: string }) {
               value={draft.kind}
               onChange={(e) => {
                 const kind = e.target.value as ActivityKind
-                // Follow the kind's default until a rating has been chosen or suggested.
+                // Follow the kind's default until a rating has been chosen.
                 const untouched = draft.signal_rating === KIND_DEFAULT_RATING[draft.kind] && !draft.signal_reason
                 setDraft({ ...draft, kind, ...(untouched ? { signal_rating: KIND_DEFAULT_RATING[kind] } : {}) })
               }}
@@ -1169,21 +1142,11 @@ function ActivitySection({ brandId }: { brandId: string }) {
             Upcoming
           </label>
         </div>
-        <div className="grid grid-cols-[90px_auto_1fr_auto] items-end gap-3">
+        <div className="grid grid-cols-[90px_1fr_auto] items-end gap-3">
           <div>
             <Label>Rating</Label>
             <RatingSelect value={draft.signal_rating} onChange={setRating} />
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="mb-0.5"
-            disabled={suggesting || !draft.headline.trim()}
-            onClick={suggest}
-          >
-            {suggesting ? 'Reading…' : 'Suggest'}
-          </Button>
           <div>
             <Label>Reason (optional)</Label>
             <Input
@@ -1202,7 +1165,6 @@ function ActivitySection({ brandId }: { brandId: string }) {
             {saving ? 'Adding…' : 'Add article'}
           </Button>
         </div>
-        {suggestNote && <p className="text-xs text-amber-700">{suggestNote}</p>}
       </div>
 
       {rows.length === 0 ? (

@@ -255,7 +255,7 @@ export function BrandReportDocument({ site, query, brands, meta, date }: BrandRe
                 Financials are as filed at Companies House, unedited. Published turnover counts towards the match score:
                 larger turnover scores higher. This is not a credit or covenant rating. Each news article is rated from −5
                 (closing stores) to +5 (opening at pace); a brand&apos;s news score adds them up, recent articles counting
-                most, and a brand with no articles scores 0.
+                most, and moves its Acquisitive score up or down. Live requirements count for most of that score.
               </p>
             </>
           )}

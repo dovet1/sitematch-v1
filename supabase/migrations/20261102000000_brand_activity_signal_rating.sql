@@ -1,6 +1,7 @@
 -- Brand activity as an acquisition signal: every article carries a rating from -5 (the brand is
 -- closing stores) to +5 (it is opening as fast as it can), and the Brand Matcher derives a
--- brand's news score from them (activityScore in apps/web/src/app/sitematcher-unified/lib/brand-matcher.ts).
+-- brand's news score from them, which moves its Acquisitive score (newsScore and acquisitivePoints in
+-- apps/web/src/app/sitematcher-unified/lib/brand-matcher.ts).
 --
 -- brand_activity becomes the one article log the matcher reads. brand_openings stays the sourced
 -- opening history; each of its rows is mirrored here as an opening article so imports keep
@@ -13,13 +14,13 @@ ALTER TABLE public.brand_activity
 ALTER TABLE public.brand_activity
   ADD COLUMN signal_rating smallint NOT NULL DEFAULT 0 CHECK (signal_rating BETWEEN -5 AND 5),
   ADD COLUMN signal_reason text,
-  ADD COLUMN signal_rated_by text NOT NULL DEFAULT 'default' CHECK (signal_rated_by IN ('admin', 'model', 'default')),
+  ADD COLUMN signal_rated_by text NOT NULL DEFAULT 'default' CHECK (signal_rated_by IN ('admin', 'default')),
   ADD COLUMN brand_opening_id uuid UNIQUE REFERENCES public.brand_openings(id) ON DELETE CASCADE;
 
 COMMENT ON COLUMN public.brand_activity.kind IS 'opening / closure for a single store; news for anything else about the estate (expansion plans, administration, funding).';
 COMMENT ON COLUMN public.brand_activity.signal_rating IS 'How strong a signal the article is that the brand is acquiring now: -5 (closing every store) to +5 (needs many stores soon). 0 is neutral.';
-COMMENT ON COLUMN public.brand_activity.signal_reason IS 'One line on why the rating was given; the model''s reason when it was suggested.';
-COMMENT ON COLUMN public.brand_activity.signal_rated_by IS 'admin: set or confirmed by an admin. model: a model suggestion saved without review. default: the kind''s default (opening +2, closure -2), not yet reviewed.';
+COMMENT ON COLUMN public.brand_activity.signal_reason IS 'Optional line on why the rating was given.';
+COMMENT ON COLUMN public.brand_activity.signal_rated_by IS 'admin: set or confirmed by an admin. default: the kind''s default (opening +2, closure -2), not yet reviewed.';
 COMMENT ON COLUMN public.brand_activity.brand_opening_id IS 'Set when the article was mirrored from brand_openings.';
 
 -- Existing curated rows take the kind's default until someone reviews them.

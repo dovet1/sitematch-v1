@@ -349,11 +349,6 @@ export function newsScore(items: { rating: number; date: string; upcoming: boole
   return Math.max(-NEWS_SCORE_MAX, Math.min(NEWS_SCORE_MAX, rounded))
 }
 
-// -5 earns nothing, 0 half the points, +5 all of them.
-export function newsPoints(score: number): number {
-  return Math.round((SCORE_MAX.news * (score + NEWS_SCORE_MAX)) / (2 * NEWS_SCORE_MAX))
-}
-
 export function formatNewsScore(score: number): string {
   return score > 0 ? `+${score}` : score < 0 ? `−${-score}` : '0'
 }
@@ -475,7 +470,6 @@ export function signalSummaries(m: Summarisable, query: Pick<BrandMatcherQuery, 
 export const SCORE_MAX: Record<ScorePart['component'], number> = {
   size: 30,
   acquisitive: 30,
-  news: 20,
   demographics: 15,
   nearest: 15,
   useClass: 10,
@@ -497,13 +491,34 @@ export function turnoverPoints(facts: TradingFacts | null | undefined): number {
 type Scorable = Pick<BrandMatch, 'size' | 'useClass' | 'acquisitive' | 'townMatch' | 'nearest'> &
   Partial<Pick<BrandMatch, 'tradingFacts'>>
 
+// Acquisitive points, out of 30. A live requirement listed with us is the biggest contributor;
+// approved planning adds a little; the news score moves the total up or down, a brand with no
+// articles scoring 0 for news. So +5 news alone earns 7, and a requirement covering the site with
+// -5 news earns 13.
+export const ACQUISITIVE_REQUIREMENT_COVERS_POINTS = 20
+export const ACQUISITIVE_REQUIREMENT_ELSEWHERE_POINTS = 12
+export const ACQUISITIVE_PLANNING_POINTS = 3
+// Points at a news score of ±NEWS_SCORE_MAX; scaled in between.
+export const ACQUISITIVE_NEWS_POINTS = 7
+
+export function acquisitivePoints(a: AcquisitiveSignal | null): number {
+  if (!a) return 0
+  const requirement = !a.requirements
+    ? 0
+    : a.level === 'high'
+      ? ACQUISITIVE_REQUIREMENT_COVERS_POINTS
+      : ACQUISITIVE_REQUIREMENT_ELSEWHERE_POINTS
+  const planning = a.planning ? ACQUISITIVE_PLANNING_POINTS : 0
+  const news = Math.round((ACQUISITIVE_NEWS_POINTS * (a.news?.score ?? 0)) / NEWS_SCORE_MAX)
+  return Math.max(0, Math.min(SCORE_MAX.acquisitive, requirement + planning + news))
+}
+
 // A signal we hold no data for is left out of the score rather than counted against it: the
 // score is the points earned out of the points available from the signals we do hold, scaled to
-// 100 (handoff: "Based on n of 5 signals"). Turnover is the exception: it is always counted, so
-// a brand with no published turnover is pushed down. The news score is always counted too, but a
-// brand with no articles scores 0, which earns half its points. Acquisitive scores requirements
-// and planning only; news has its own part. Demographics scores whether the brand trades in a
-// town like the site's: a close match anywhere in its estate earns the full 15.
+// 100 (handoff: "Based on n of 5 signals"). Turnover and Acquisitive are the exceptions: they
+// are always counted, so a brand with no published turnover, or with no requirement, planning or
+// positive news, is pushed down. Demographics scores whether the brand trades in a town like the
+// site's: a close match anywhere in its estate earns the full 15.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
   const add = (component: ScorePart['component'], points: number) =>
@@ -511,9 +526,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
 
   add('size', m.size.state === 'fits' ? 30 : m.size.state === 'lower_end' || m.size.state === 'upper_end' ? 20 : 10)
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
-  if (m.acquisitive && !isNewsOnly(m.acquisitive))
-    add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
-  add('news', newsPoints(m.acquisitive?.news?.score ?? 0))
+  add('acquisitive', acquisitivePoints(m.acquisitive))
   if (m.townMatch) add('demographics', m.townMatch.band === 'close' ? 15 : m.townMatch.band === 'partial' ? 8 : 0)
   if (m.nearest) {
     const mi = m.nearest.miles
@@ -526,7 +539,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   return { score: available > 0 ? Math.round((100 * earned) / available) : 0, parts }
 }
 
-// News is the brand's only acquisitive evidence: it is scored by its own part, not Acquisitive.
+// News is the brand's only acquisitive evidence.
 function isNewsOnly(a: AcquisitiveSignal): a is AcquisitiveSignal & { news: NewsEvidence } {
   return !a.requirements && !a.planning && !!a.news
 }

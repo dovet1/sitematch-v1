@@ -217,7 +217,7 @@ export interface BrandMatcherContacts {
   total: number
 }
 
-export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'news' | 'demographics' | 'nearest' | 'turnover'
+export type ScoreComponent = 'size' | 'useClass' | 'acquisitive' | 'demographics' | 'nearest' | 'turnover'
 
 export interface ScorePart {
   component: ScoreComponent
@@ -246,7 +246,7 @@ export interface BrandMatch {
   // brand has no stores in towns we hold figures for; absent when demographics were not loaded.
   townMatch?: TownMatch | null
   // Points out of 100 across the signals we hold data for; missing signals are left out, except
-  // turnover, which is always counted.
+  // turnover and acquisitive, which are always counted.
   score: number
   scoreParts: ScorePart[]
 }
