@@ -5,6 +5,7 @@
 import {
   BLOCKER_MILES,
   CAUTION_MILES,
+  tradingAreaLine,
   classLabel,
   formatMiles,
   formatMoney,
@@ -280,7 +281,7 @@ export function nearestLine(b: Pick<BrandMatch, 'name' | 'nearest'>): string {
     return `An existing ${b.name} store is only ${formatMiles(n.miles)} away, which is likely to block a new opening.`
   if (n.miles < CAUTION_MILES)
     return `An existing ${b.name} store is ${formatMiles(n.miles)} away, so a new store here may compete with it.`
-  return `Far enough from existing ${b.name} stores to avoid cannibalising them.`
+  return tradingAreaLine(b.name, n)
 }
 
 // ---------------------------------------------------------------------------

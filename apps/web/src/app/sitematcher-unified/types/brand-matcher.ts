@@ -173,6 +173,12 @@ export interface NearestStoreSignal {
   town: string | null
   // The three nearest stores, nearest first (absent until brand_matcher_brand_geo returns them).
   stores?: { name: string | null; town: string | null; miles: number }[]
+  // How far apart the brand's stores usually are, in miles (tradingArea in brand-matcher.ts).
+  // Absent when we hold no spacing for the brand: distance is then scored without it.
+  spacingMiles?: number
+  // A live requirement names a place within reach of the site: the brand wants to trade here,
+  // however far it is from its current estate.
+  wantedHere?: boolean
 }
 
 // A filed figure. 'unread' (we have not read the accounts) and 'not_published' (the filing
