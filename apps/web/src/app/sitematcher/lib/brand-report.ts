@@ -13,6 +13,7 @@ import {
   formatSqft,
   formatSqftShort,
   type SignalStatus,
+  turnoverLabel,
 } from './brand-matcher'
 import type {
   BrandMatch,
@@ -314,7 +315,7 @@ export function financialRows(facts: TradingFacts): { label: string; value: stri
     { label: 'Company name', value: facts.companyName },
     { label: 'Company number', value: facts.companyNumber },
     { label: 'Company status', value: facts.status },
-    { label: 'Latest turnover', value: figureText(facts.turnover) },
+    { label: turnoverLabel(facts), value: figureText(facts.turnover) },
     { label: 'Net assets', value: figureText(facts.netAssets) },
     {
       label: 'Accounts filed',

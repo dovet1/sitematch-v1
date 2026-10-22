@@ -197,7 +197,9 @@ function CollapsedRow({
             ? isOverseas(match.franchise)
               ? 'Run from overseas, with no UK company filing accounts'
               : 'Sites are run by franchisees, so no one company’s accounts represent the brand'
-            : turnover
+            : match.tradingFacts?.isCharity && turnover
+              ? 'Total income of a registered charity, as filed at Companies House'
+              : turnover
               ? 'Latest turnover, as filed at Companies House'
               : undefined
         }

@@ -3,7 +3,7 @@
 //
 // Ranking must stay explainable (handoff): every point of a score comes from a row shown on
 // the card. Published turnover counts towards the score, and a brand with none scores nothing for it,
-// unless it is a franchise or run from overseas: then turnover is left out of the score.
+// unless it is a franchise, run from overseas or a charity: then turnover is left out of the score.
 
 import type {
   AcquisitiveSignal,
@@ -570,7 +570,8 @@ export function acquisitivePoints(a: AcquisitiveSignal | null): number {
 // are always counted, so a brand with no published turnover, or with no requirement, planning or
 // positive news, is pushed down. A franchise is the exception to that: its sites are let to
 // franchisees, so no one company's turnover speaks for it, and turnover is left out. So is a brand
-// run from overseas, which has no UK company filing accounts. Demographics scores whether the brand trades in a town like the
+// run from overseas, which has no UK company filing accounts, and a charity, whose income is mostly
+// donations and grants rather than trading. Demographics scores whether the brand trades in a town like the
 // site's: a close match anywhere in its estate earns the full 15.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
@@ -582,7 +583,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   add('acquisitive', acquisitivePoints(m.acquisitive))
   if (m.townMatch) add('demographics', m.townMatch.band === 'close' ? 15 : m.townMatch.band === 'partial' ? 8 : 0)
   if (m.nearest) add('nearest', nearestPoints(m.nearest))
-  if (!m.franchise) add('turnover', turnoverPoints(m.tradingFacts))
+  if (!m.franchise && !m.tradingFacts?.isCharity) add('turnover', turnoverPoints(m.tradingFacts))
   const earned = parts.reduce((s, p) => s + p.points, 0)
   const available = parts.reduce((s, p) => s + p.max, 0)
   return { score: available > 0 ? Math.round((100 * earned) / available) : 0, parts }
@@ -601,6 +602,11 @@ export function isSparse(m: Pick<BrandMatch, 'acquisitive'>): boolean {
 
 export const FRANCHISE_LABEL = 'Franchise'
 export const OVERSEAS_LABEL = 'Overseas'
+
+// How the turnover figure is labelled: a charity's is its total income.
+export function turnoverLabel(facts: Pick<TradingFacts, 'isCharity'> | null | undefined): string {
+  return facts?.isCharity ? 'Income (charity)' : 'Latest turnover'
+}
 
 export function isOverseas(f: FranchiseSignal | null | undefined): boolean {
   return f?.kind === 'overseas'

@@ -338,6 +338,13 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     expect(screen.queryByText('ALDI STORES LIMITED, active', { exact: false })).not.toBeInTheDocument()
   })
 
+  it('shows a charity\'s turnover as income', async () => {
+    const charity = { ...facts, isCharity: true, turnover: { status: 'filed' as const, value: 3e8 } }
+    await openFinancials({ ...rich, tradingFacts: charity })
+    expect(screen.getByText('Income (charity)')).toBeInTheDocument()
+    expect(screen.getByText(/is a registered charity/)).toBeInTheDocument()
+  })
+
   it('shows the overseas flag in place of the financials', async () => {
     const franchise = { kind: 'overseas' as const, sourceUrl: null, checkedAt: '2026-10-22' }
     await openFinancials({ ...rich, franchise, tradingFacts: facts })

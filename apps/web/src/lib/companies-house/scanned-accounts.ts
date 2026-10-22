@@ -20,8 +20,9 @@ const TIMEOUT_MS = 90_000
 
 const SYSTEM = `You read UK statutory accounts filed at Companies House. The PDF is a scan.
 Report figures exactly as printed, for the CURRENT financial year only (never the comparative column).
-- turnover: the "Turnover" or "Revenue" line of the profit and loss account / income statement.
-  null if the accounts contain no profit and loss account.
+- turnover: the "Turnover" or "Revenue" line of the profit and loss account / income statement. For a
+  charity, whose accounts have a statement of financial activities instead, the "Total income" line
+  (total of all funds). null if the accounts contain neither.
 - net_assets: the "Net assets" or "Net liabilities" total on the balance sheet. Net liabilities are negative.
 - total_equity: the total of "Capital and reserves" (also called shareholders' funds, total equity or
   shareholder's deficit) on the same balance sheet. A deficit is negative.
