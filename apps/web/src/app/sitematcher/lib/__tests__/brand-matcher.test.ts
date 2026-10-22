@@ -317,6 +317,14 @@ describe('scoreMatch', () => {
     expect(turnoverCell({ tradingFacts: { ...chFacts, turnover: { status: 'filed', value: 1e9 } } })).toBe('£1.0bn')
     expect(turnoverCell({ tradingFacts: null, franchise: null })).toBeNull()
   })
+  it('treats an overseas brand like a franchise, labelled "Overseas"', () => {
+    const overseas = { kind: 'overseas' as const, sourceUrl: null, checkedAt: '2026-10-22' }
+    const { parts } = scoreMatch(baseMatch({ franchise: overseas }))
+    expect(parts.find((p) => p.component === 'turnover')).toBeUndefined()
+    expect(turnoverCell({ tradingFacts: null, franchise: overseas })).toBe('Overseas')
+    // Reports shared before overseas brands were recorded carry no kind: those are franchises.
+    expect(turnoverCell({ tradingFacts: null, franchise: { sourceUrl: null, checkedAt: '2026-10-16' } })).toBe('Franchise')
+  })
   it('does not score net assets', () => {
     const withAssets = { ...chFacts, netAssets: { status: 'filed' as const, value: 1e9 } }
     expect(scoreMatch(baseMatch({ tradingFacts: withAssets })).score).toBe(scoreMatch(baseMatch({})).score)

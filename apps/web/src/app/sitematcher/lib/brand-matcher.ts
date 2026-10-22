@@ -3,7 +3,7 @@
 //
 // Ranking must stay explainable (handoff): every point of a score comes from a row shown on
 // the card. Published turnover counts towards the score, and a brand with none scores nothing for it,
-// unless it is a franchise: then turnover is left out of the score.
+// unless it is a franchise or run from overseas: then turnover is left out of the score.
 
 import type {
   AcquisitiveSignal,
@@ -569,7 +569,8 @@ export function acquisitivePoints(a: AcquisitiveSignal | null): number {
 // 100 (handoff: "Based on n of 5 signals"). Turnover and Acquisitive are the exceptions: they
 // are always counted, so a brand with no published turnover, or with no requirement, planning or
 // positive news, is pushed down. A franchise is the exception to that: its sites are let to
-// franchisees, so no one company's turnover speaks for it, and turnover is left out. Demographics scores whether the brand trades in a town like the
+// franchisees, so no one company's turnover speaks for it, and turnover is left out. So is a brand
+// run from overseas, which has no UK company filing accounts. Demographics scores whether the brand trades in a town like the
 // site's: a close match anywhere in its estate earns the full 15.
 export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   const parts: ScorePart[] = []
@@ -599,10 +600,21 @@ export function isSparse(m: Pick<BrandMatch, 'acquisitive'>): boolean {
 }
 
 export const FRANCHISE_LABEL = 'Franchise'
+export const OVERSEAS_LABEL = 'Overseas'
 
-// The turnover column: "Franchise" stands in for the financials of a franchised brand.
+export function isOverseas(f: FranchiseSignal | null | undefined): boolean {
+  return f?.kind === 'overseas'
+}
+
+// "Franchise" or "Overseas": what stands in for the financials of a brand with no UK record.
+export function noUkRecordLabel(f: FranchiseSignal): string {
+  return isOverseas(f) ? OVERSEAS_LABEL : FRANCHISE_LABEL
+}
+
+// The turnover column: "Franchise" or "Overseas" stands in for the financials of a brand that no
+// UK company's accounts represent.
 export function turnoverCell(m: { tradingFacts: TradingFacts | null; franchise?: FranchiseSignal | null }): string | null {
-  if (m.franchise) return FRANCHISE_LABEL
+  if (m.franchise) return noUkRecordLabel(m.franchise)
   return m.tradingFacts ? turnoverValue(m.tradingFacts) : null
 }
 
@@ -780,7 +792,7 @@ export interface AssembleInput {
   planningCounts: Map<string, number>
   geo: Map<string, RawBrandGeo>
   tradingFacts?: Map<string, TradingFacts>
-  // Brands we are highly confident are franchised.
+  // Brands we are highly confident are franchised or run from overseas.
   franchises?: Map<string, FranchiseSignal>
   // Per brand, how its stores' towns compare with the site's town. Absent when demographics were
   // not loaded; a brand missing from the map has no stores in towns we hold figures for.
