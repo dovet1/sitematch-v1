@@ -44,6 +44,7 @@ export function toReportBrand(m: BrandMatch, storeTowns: BrandStoreTownsResponse
     useClass: m.useClass,
     acquisitive: m.acquisitive,
     tradingFacts: m.tradingFacts,
+    franchise: m.franchise ?? null,
     locationType: m.locationType,
     nearest: m.nearest,
     typicalRange: m.typicalRange,

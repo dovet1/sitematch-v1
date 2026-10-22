@@ -659,6 +659,27 @@ function formatDate(iso: string): string {
 }
 
 export function FinancialsPanel({ match }: { match: BrandMatch }) {
+  if (match.franchise) {
+    const source = match.franchise.sourceUrl
+    return (
+      <div className="flex flex-col gap-4">
+        <PanelTitle title="Franchise">Shown in place of Companies House financials</PanelTitle>
+        <p className="text-[13.5px] leading-[1.5] text-[#4B4A55] [text-wrap:pretty]">
+          {match.name}&apos;s UK sites are run by franchisees, each through its own company, so no single
+          Companies House record represents the brand. The tenant of a unit here would be the franchisee,
+          and its accounts are the ones to check.
+        </p>
+        {source && (
+          <a href={source} target="_blank" rel="noopener noreferrer" className={PANEL_LINK}>
+            Franchise source ↗
+          </a>
+        )}
+        <p className="text-[12.5px] leading-[1.5] text-[#6B6B78]">
+          Turnover is left out of this brand&apos;s match score, so it is neither helped nor held back by it.
+        </p>
+      </div>
+    )
+  }
   const facts: TradingFacts | null = match.tradingFacts
   if (!facts) {
     return (

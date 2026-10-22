@@ -32,6 +32,7 @@ import {
   type BrandMatcherQueryUseClass,
   type BrandStoreTown,
   type BrandStoreTownsResponse,
+  type FranchiseSignal,
   type TownFigures,
   type TownMatch,
   type TradingFacts,
@@ -266,6 +267,15 @@ async function loadTradingFacts(db: Db): Promise<Map<string, TradingFacts>> {
   return map
 }
 
+// Brands we are highly confident are franchised (brand_franchise). Medium and low confidence
+// rows are for admin review only and never reach Brand Matcher.
+async function loadFranchises(db: Db): Promise<Map<string, FranchiseSignal>> {
+  const rows = await selectAll<{ brand_id: string; source_url: string | null; checked_at: string }>(() =>
+    db.from('brand_franchise').select('brand_id, source_url, checked_at').eq('confidence', 'high').order('brand_id')
+  )
+  return new Map(rows.map((r) => [r.brand_id, { sourceUrl: r.source_url, checkedAt: r.checked_at }]))
+}
+
 async function loadBrands(db: Db): Promise<RawBrand[]> {
   const { data, error } = await db.rpc('directory_brand_cards')
   if (error) throw error
@@ -461,7 +471,7 @@ export async function matchSite(query: BrandMatcherQuery): Promise<MatchSiteResu
     return { ok: false, status: 422, error: `We couldn't find ${query.postcode}. Check the postcode and try again.` }
   }
 
-  const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, towns] =
+  const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, franchises, towns] =
     await Promise.all([
       loadBrands(db),
       loadEstateRanges(db),
@@ -471,6 +481,11 @@ export async function matchSite(query: BrandMatcherQuery): Promise<MatchSiteResu
       loadPlanningCounts(db),
       loadGeo(db, site),
       loadTradingFacts(db),
+      // A missing franchise read shows financials as before rather than failing the search.
+      loadFranchises(db).catch((error) => {
+        console.error('Brand matcher franchises failed:', error)
+        return new Map<string, FranchiseSignal>()
+      }),
       // Never lets a demographic problem take the matcher down: no read rather than no results.
       isBrandMatcherDemographicsEnabled().then((on) =>
         on
@@ -493,6 +508,7 @@ export async function matchSite(query: BrandMatcherQuery): Promise<MatchSiteResu
     planningCounts,
     geo,
     tradingFacts,
+    franchises,
     townMatches: towns?.matches,
   })
 

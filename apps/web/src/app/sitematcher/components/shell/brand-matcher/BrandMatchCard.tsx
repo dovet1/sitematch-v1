@@ -9,7 +9,7 @@ import {
   SIGNAL_KEYS,
   SIGNAL_LABEL,
   signalSummaries,
-  turnoverValue,
+  turnoverCell,
   type SignalKey,
   type SignalSummary,
 } from '../../../lib/brand-matcher'
@@ -151,7 +151,7 @@ function CollapsedRow({
   onContacts: () => void
 }) {
   const sub = subline(match)
-  const turnover = match.tradingFacts ? turnoverValue(match.tradingFacts) : null
+  const turnover = turnoverCell(match)
   const total = match.contacts.total
   return (
     <article
@@ -191,7 +191,13 @@ function CollapsedRow({
       </div>
       <span
         className={`hidden text-[13.5px] lg:block ${turnover ? 'font-semibold text-[#2A2833]' : 'text-[#8A8895]'}`}
-        title={turnover ? 'Latest turnover, as filed at Companies House' : undefined}
+        title={
+          match.franchise
+            ? 'Sites are run by franchisees, so no one company’s accounts represent the brand'
+            : turnover
+              ? 'Latest turnover, as filed at Companies House'
+              : undefined
+        }
       >
         {turnover ?? '—'}
       </span>
@@ -256,7 +262,8 @@ function ExpandedCard({
   onPanel: (p: CardPanel) => void
   onCollapse: () => void
 }) {
-  const facts = match.tradingFacts
+  // A franchise's financials are replaced by the franchise flag, company and all.
+  const facts = match.franchise ? null : match.tradingFacts
   const sub = [subline(match), facts ? `${facts.companyName}${facts.status ? `, ${facts.status.toLowerCase()}` : ''}` : null]
     .filter(Boolean)
     .join(' · ')
@@ -269,7 +276,7 @@ function ExpandedCard({
   const { primary, others } = match.contacts
   const used = match.scoreParts.filter((p) => p.component !== 'turnover').length
   const turnoverPart = match.scoreParts.find((p) => p.component === 'turnover')
-  const turnover = facts ? turnoverValue(facts) : null
+  const turnover = turnoverCell(match)
 
   return (
     <article
@@ -362,7 +369,7 @@ function ExpandedCard({
           })}
           <BreakdownRow
             label="Financials"
-            value={facts ? `${turnover ?? 'No turnover figure'} ›` : 'No record found'}
+            value={match.franchise || facts ? `${turnover ?? 'No turnover figure'} ›` : 'No record found'}
             fill={turnoverPart ? turnoverPart.points / turnoverPart.max : undefined}
             selected={panel === 'financials'}
             onSelect={() => onPanel('financials')}

@@ -205,6 +205,14 @@ export interface TradingFacts {
   fetchedAt: string
 }
 
+// The brand's UK sites are run by franchisee companies, so no one Companies House record
+// represents it. Only set when we are highly confident (brand_franchise.confidence = 'high');
+// it then stands in for the financials, and turnover is left out of the score.
+export interface FranchiseSignal {
+  sourceUrl: string | null
+  checkedAt: string
+}
+
 export interface BrandMatcherContact {
   id: string
   name: string | null
@@ -243,6 +251,8 @@ export interface BrandMatch {
   useClass: { codes: string[]; matches: boolean } | null
   acquisitive: AcquisitiveSignal | null
   tradingFacts: TradingFacts | null
+  // Absent on reports shared before franchises were recorded.
+  franchise?: FranchiseSignal | null
   locationType: LocationTypeSignal | null
   nearest: NearestStoreSignal | null
   // Typical unit for the band copy, from the estate profile (p25–p75), in sq ft.
@@ -252,7 +262,7 @@ export interface BrandMatch {
   // brand has no stores in towns we hold figures for; absent when demographics were not loaded.
   townMatch?: TownMatch | null
   // Points out of 100 across the signals we hold data for; missing signals are left out, except
-  // turnover and acquisitive, which are always counted.
+  // turnover and acquisitive, which are always counted (turnover is left out for a franchise).
   score: number
   scoreParts: ScorePart[]
 }

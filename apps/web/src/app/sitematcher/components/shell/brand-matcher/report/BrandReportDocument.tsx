@@ -10,7 +10,7 @@ import {
   SIGNAL_LABEL,
   TOP_STORE_TOWNS,
   signalSummaries,
-  turnoverValue,
+  turnoverCell,
   type SignalSummary,
 } from '../../../../lib/brand-matcher'
 import {
@@ -426,7 +426,7 @@ function SummaryTable({
       <tbody>
         {brands.map((b, j) => {
           const signals = signalSummaries(b, query)
-          const turnover = b.tradingFacts ? turnoverValue(b.tradingFacts) : null
+          const turnover = turnoverCell(b)
           const sub = subline(b, plural(b.storeCount, 'store'))
           return (
             <tr key={b.brandId}>
@@ -537,8 +537,9 @@ function BrandPage({
   const signals = signalSummaries(b, query)
   const sig = (k: SignalSummary['key']) => signals.find((s) => s.key === k) as SignalSummary
   const tone = (k: SignalSummary['key']) => REPORT_TONE[sig(k).status]
-  const facts = b.tradingFacts
-  const turnover = facts ? turnoverValue(facts) : null
+  // A franchise's financials are replaced by the franchise flag, company and all.
+  const facts = b.franchise ? null : b.tradingFacts
+  const turnover = turnoverCell(b)
   const meta = [
     subline(b, `UK ${plural(b.storeCount, 'store')}`),
     facts ? `${facts.companyName}${facts.status ? `, ${facts.status.toLowerCase()}` : ''}` : null,
@@ -787,9 +788,14 @@ function BrandPage({
           <div className="sec">
             <div className="sh">
               <h3>Financials</h3>
-              <span className="src">Companies House, as filed</span>
+              <span className="src">{b.franchise ? 'Franchise' : 'Companies House, as filed'}</span>
             </div>
-            {facts ? (
+            {b.franchise ? (
+              <div className="empty" style={{ marginTop: 8 }}>
+                {b.name}&apos;s UK sites are run by franchisees, each through its own company, so no single Companies
+                House record represents the brand. Turnover is left out of its fit score.
+              </div>
+            ) : facts ? (
               <>
                 <div className="kv" style={{ marginTop: 6 }}>
                   {financialRows(facts).map((r) => (
