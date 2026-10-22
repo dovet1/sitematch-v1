@@ -318,14 +318,31 @@ async function loadSite(db: Db, postcode: string): Promise<BrandMatcherSite | nu
   }
 }
 
+// How far apart each brand's stores usually are (migration 20261103000000). Never takes the
+// matcher down: without it, distance is scored as it was before spacing existed.
+async function loadSpacing(db: Db): Promise<Map<string, number | null>> {
+  try {
+    const rows = await selectAll<{ brand_id: string; p90_gap_m: number | null }>(() =>
+      db.from('brand_store_spacing').select('brand_id, p90_gap_m').order('brand_id')
+    )
+    return new Map(rows.map((r) => [r.brand_id, r.p90_gap_m]))
+  } catch (error) {
+    console.error('Brand matcher store spacing failed:', error)
+    return new Map()
+  }
+}
+
 async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawBrandGeo>> {
-  const { data, error } = await db.rpc('brand_matcher_brand_geo', {
-    p_lat: site.lat,
-    p_lon: site.lon,
-    p_form: site.centre?.form ?? null,
-    p_exclude_rc_id: site.centre?.id ?? null,
-    p_radius_m: Math.round(LOCATION_TYPE_RADIUS_MILES * METERS_PER_MILE),
-  })
+  const [{ data, error }, spacing] = await Promise.all([
+    db.rpc('brand_matcher_brand_geo', {
+      p_lat: site.lat,
+      p_lon: site.lon,
+      p_form: site.centre?.form ?? null,
+      p_exclude_rc_id: site.centre?.id ?? null,
+      p_radius_m: Math.round(LOCATION_TYPE_RADIUS_MILES * METERS_PER_MILE),
+    }),
+    loadSpacing(db),
+  ])
   if (error) throw error
   const map = new Map<string, RawBrandGeo>()
   for (const r of (data ?? []) as {
@@ -349,6 +366,7 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
       sameFormNames: r.same_form_names ?? [],
       sameFormNearestMeters: r.same_form_nearest_m,
       nearestStores: (r.nearest_stores ?? []).map((x) => ({ name: x.name, town: x.town, meters: x.distance_m })),
+      ...(spacing.has(r.brand_id) ? { spacingMeters: spacing.get(r.brand_id) } : {}),
     })
   }
   return map

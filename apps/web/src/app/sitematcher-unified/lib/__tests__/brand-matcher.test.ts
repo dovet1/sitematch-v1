@@ -8,6 +8,7 @@ import {
   formatSqftRange,
   isNationalArea,
   matchesToCsv,
+  nearestPoints,
   normalisePostcode,
   rankContacts,
   regionKey,
@@ -19,6 +20,8 @@ import {
   sortMatches,
   sortStoreTowns,
   townBand,
+  tradingArea,
+  tradingAreaLine,
   type AssembleInput,
 } from '../brand-matcher'
 import type {
@@ -299,6 +302,55 @@ describe('scoreMatch', () => {
   })
 })
 
+describe('trading area', () => {
+  const near = (miles: number, extra: { spacingMiles?: number; wantedHere?: boolean } = {}) => ({
+    miles,
+    storeName: null,
+    town: null,
+    ...extra,
+  })
+
+  it('scores distance as before when we hold no spacing for the brand', () => {
+    expect(nearestPoints(near(300))).toBe(15)
+    expect(tradingArea(near(300))).toBe('in')
+  })
+  it('keeps full points up to two spacings, tapers to five, and gives none beyond', () => {
+    // Spacing 5 mi: full to 10 mi, nothing from 25 mi.
+    expect(nearestPoints(near(10, { spacingMiles: 5 }))).toBe(15)
+    expect(nearestPoints(near(17.5, { spacingMiles: 5 }))).toBe(8)
+    expect(nearestPoints(near(24, { spacingMiles: 5 }))).toBe(1)
+    expect(nearestPoints(near(25, { spacingMiles: 5 }))).toBe(0)
+    expect(tradingArea(near(17.5, { spacingMiles: 5 }))).toBe('edge')
+    expect(tradingArea(near(300, { spacingMiles: 5 }))).toBe('outside')
+  })
+  it('never gives more on the taper than the distance bands allow', () => {
+    // A 1.5-mi spacing tapers from 3 mi to 7.5 mi; 4 and 6 mi are in the 3-10 mi band (10 points).
+    expect(nearestPoints(near(4, { spacingMiles: 1.5 }))).toBe(10)
+    expect(nearestPoints(near(6, { spacingMiles: 1.5 }))).toBe(5)
+  })
+  it('keeps close stores a blocker or caution whatever the spacing', () => {
+    expect(nearestPoints(near(0.6, { spacingMiles: 40 }))).toBe(0)
+    expect(nearestPoints(near(2, { spacingMiles: 40 }))).toBe(5)
+  })
+  it('gives full points outside the area when a requirement names the site', () => {
+    expect(nearestPoints(near(300, { spacingMiles: 5, wantedHere: true }))).toBe(15)
+    expect(tradingAreaLine('Centra', near(300, { spacingMiles: 5, wantedHere: true }))).toBe(
+      "The nearest Centra store is 300 mi away, but Centra's requirement names this area."
+    )
+  })
+  it('says why a brand outside its area scores nothing for distance', () => {
+    const m = baseMatch({ nearest: near(300, { spacingMiles: 5 }) })
+    expect(scoreMatch(m).parts.find((p) => p.component === 'nearest')?.points).toBe(0)
+    expect(signalSummary(m, 'nearest', { useClass: 'E' }).status).toBe('poor')
+    expect(signalSummary(baseMatch({ nearest: near(17.5, { spacingMiles: 5 }) }), 'nearest', { useClass: 'E' }).status).toBe(
+      'caution'
+    )
+    expect(tradingAreaLine('Centra', near(300, { spacingMiles: 5 }))).toBe(
+      "Centra's stores are usually within 5.0 mi of each other, so at 300 mi from the nearest one this site is outside the area Centra trades in today."
+    )
+  })
+})
+
 describe('signalSummaries', () => {
   it('gives every signal a status and value, with No data where we hold nothing', () => {
     const signals = signalSummaries(
@@ -424,6 +476,20 @@ describe('assembleMatches', () => {
     const gym = matches.find((m) => m.brandId === 'gym')
     expect(gym?.useClass).toEqual({ codes: ['F'], matches: true })
     expect(signalSummary(gym!, 'useClass', { useClass: 'All' })).toEqual({ key: 'useClass', status: 'good', value: 'Class F' })
+  })
+  it("carries the brand's store spacing, floored, and whether a requirement names the site", () => {
+    const geo = input().geo
+    geo.set('aldi', { ...geo.get('aldi')!, spacingMeters: 16093.44 })
+    geo.set('fettle', { ...geo.get('fettle')!, spacingMeters: null })
+    const { matches } = assembleMatches(input({ geo }))
+    const aldi = matches.find((m) => m.brandId === 'aldi')!
+    expect(aldi.nearest?.spacingMiles).toBeCloseTo(10)
+    expect(aldi.nearest?.wantedHere).toBe(true)
+    const fettle = matches.find((m) => m.brandId === 'fettle')!
+    // One store: no gap to measure, so the floor applies; 67 km is beyond 5 spacings.
+    expect(fettle.nearest?.spacingMiles).toBe(5)
+    expect(fettle.nearest?.wantedHere).toBeUndefined()
+    expect(tradingArea(fettle.nearest!)).toBe('outside')
   })
   it('leaves the location-type signal out when the site is in no centre', () => {
     const { matches } = assembleMatches(input({ site: { ...site, centre: null } }))

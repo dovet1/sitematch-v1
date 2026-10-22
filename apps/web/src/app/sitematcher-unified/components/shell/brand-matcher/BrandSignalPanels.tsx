@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   BLOCKER_MILES,
   CAUTION_MILES,
+  tradingAreaLine,
   classLabel,
   CONTACT_CORRECTIONS_EMAIL,
   formatMiles,
@@ -571,7 +572,7 @@ export function NearestPanel({ match }: PanelProps) {
       ? `An existing ${name} store is only ${dist} away, which is likely to block a new opening.`
       : n.miles < CAUTION_MILES
         ? `An existing ${name} store is ${dist} away, so check a new one wouldn't cannibalise it.`
-        : `Far enough from existing ${name} stores to avoid cannibalising them.`
+        : tradingAreaLine(name, n)
   const lt = match.locationType
   return (
     <div className="flex flex-col gap-4">

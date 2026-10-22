@@ -13,6 +13,7 @@ import type {
   BrandMatcherQuery,
   BrandMatcherSite,
   BrandMatcherSort,
+  NearestStoreSignal,
   NewsEvidence,
   RequirementEvidence,
   ScorePart,
@@ -340,6 +341,52 @@ export const SIGNAL_LABEL: Record<SignalKey, string> = {
 // A store closer than this is a caution; closer than BLOCKER_MILES a likely blocker.
 export const CAUTION_MILES = 3
 
+// Distance only counts as a gap inside the area a brand trades in. A brand's spacing is how far
+// apart its stores usually are (the 90th percentile gap to each store's next nearest one, migration
+// 20261103000000), never less than SPACING_FLOOR_MILES. Of 3,679 dated openings since 2021, 90%
+// opened within 1.2 spacings of an existing store and 99% within 3.4. Up to SWEET_SPOT_SPACINGS
+// the site is in the brand's area; from there the points taper to nothing at REACH_SPACINGS,
+// beyond which it is outside it. So a brand that only trades in Northern Ireland or London no
+// longer scores a "gap" everywhere else.
+export const SPACING_FLOOR_MILES = 5
+export const SWEET_SPOT_SPACINGS = 2
+export const REACH_SPACINGS = 5
+
+export type TradingArea = 'in' | 'edge' | 'outside'
+
+export function tradingArea(n: NearestStoreSignal): TradingArea {
+  if (n.spacingMiles == null || n.wantedHere || n.miles <= SWEET_SPOT_SPACINGS * n.spacingMiles) return 'in'
+  return n.miles < REACH_SPACINGS * n.spacingMiles ? 'edge' : 'outside'
+}
+
+// The sentence under the Nearest store panel and in the report, for a store at least
+// CAUTION_MILES away: whether the site is inside the area the brand trades in.
+export function tradingAreaLine(name: string, n: NearestStoreSignal): string {
+  const area = tradingArea(n)
+  const usual = n.spacingMiles != null ? `${name}'s stores are usually within ${formatMiles(n.spacingMiles)} of each other` : ''
+  if (area === 'outside')
+    return `${usual}, so at ${formatMiles(n.miles)} from the nearest one this site is outside the area ${name} trades in today.`
+  if (area === 'edge')
+    return `${usual}, so at ${formatMiles(n.miles)} from the nearest one this site is at the edge of the area ${name} trades in today.`
+  if (n.wantedHere && n.spacingMiles != null && n.miles > SWEET_SPOT_SPACINGS * n.spacingMiles)
+    return `The nearest ${name} store is ${formatMiles(n.miles)} away, but ${name}'s requirement names this area.`
+  return `Far enough from existing ${name} stores to avoid cannibalising them.`
+}
+
+// Points for the Nearest store signal. Close stores cost points (cannibalisation); further away
+// earns more, up to the edge of the brand's area, then tapers to nothing outside it.
+export function nearestPoints(n: NearestStoreSignal): number {
+  const mi = n.miles
+  const points = mi >= 10 ? 15 : mi >= CAUTION_MILES ? 10 : mi >= BLOCKER_MILES ? 5 : 0
+  const area = tradingArea(n)
+  if (area === 'in') return points
+  if (area === 'outside') return 0
+  const s = n.spacingMiles as number
+  const full = SWEET_SPOT_SPACINGS * s
+  const none = REACH_SPACINGS * s
+  return Math.min(points, Math.round((SCORE_MAX.nearest * (none - mi)) / (none - full)))
+}
+
 export interface SignalSummary {
   key: SignalKey
   status: SignalStatus
@@ -410,9 +457,11 @@ export function signalSummary(m: Summarisable, key: SignalKey, query: Pick<Brand
     case 'nearest': {
       if (!m.nearest) return none
       const mi = m.nearest.miles
+      const area = tradingArea(m.nearest)
       return {
         key,
-        status: mi < BLOCKER_MILES ? 'poor' : mi < CAUTION_MILES ? 'caution' : 'good',
+        status:
+          mi < BLOCKER_MILES || area === 'outside' ? 'poor' : mi < CAUTION_MILES || area === 'edge' ? 'caution' : 'good',
         value: formatMiles(mi),
       }
     }
@@ -465,11 +514,7 @@ export function scoreMatch(m: Scorable): { score: number; parts: ScorePart[] } {
   if (m.useClass) add('useClass', m.useClass.matches ? 10 : 0)
   if (m.acquisitive) add('acquisitive', m.acquisitive.level === 'high' ? 30 : 15)
   if (m.townMatch) add('demographics', m.townMatch.band === 'close' ? 15 : m.townMatch.band === 'partial' ? 8 : 0)
-  if (m.nearest) {
-    const mi = m.nearest.miles
-    // Distance is a gap: the further the nearest branch, the stronger the reason to take it.
-    add('nearest', mi >= 10 ? 15 : mi >= CAUTION_MILES ? 10 : mi >= BLOCKER_MILES ? 5 : 0)
-  }
+  if (m.nearest) add('nearest', nearestPoints(m.nearest))
   add('turnover', turnoverPoints(m.tradingFacts))
   const earned = parts.reduce((s, p) => s + p.points, 0)
   const available = parts.reduce((s, p) => s + p.max, 0)
@@ -631,6 +676,9 @@ export interface RawBrandGeo {
   sameFormNearestMeters: number | null
   // The three nearest stores, nearest first; empty when the RPC predates them.
   nearestStores?: { name: string | null; town: string | null; meters: number }[]
+  // The brand's usual store spacing (brand_store_spacing.p90_gap_m); null for a one-store brand,
+  // absent when we hold no spacing for it.
+  spacingMeters?: number | null
 }
 
 export interface AssembleInput {
@@ -752,8 +800,9 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
     const news: NewsEvidence | null = newsItems.length
       ? { count: newsItems.length, items: newsItems.slice(0, MAX_EVIDENCE_ITEMS).map(({ brandId: _b, ...n }) => n) }
       : null
+    const reqEvidence = requirementEvidence(reqs, site, key)
     const acquisitive = acquisitiveSignal(
-      requirementEvidence(reqs, site, key),
+      reqEvidence,
       news,
       input.planningCounts.get(b.id) ?? 0
     )
@@ -776,6 +825,10 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
           ...(g.nearestStores?.length
             ? { stores: g.nearestStores.map((x) => ({ name: x.name, town: x.town, miles: x.meters / METERS_PER_MILE })) }
             : {}),
+          ...(g.spacingMeters !== undefined
+            ? { spacingMiles: Math.max((g.spacingMeters ?? 0) / METERS_PER_MILE, SPACING_FLOOR_MILES) }
+            : {}),
+          ...((reqEvidence?.nearbyPlaces.length ?? 0) > 0 ? { wantedHere: true } : {}),
         }
       : null
 

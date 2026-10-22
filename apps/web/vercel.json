@@ -21,6 +21,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/refresh-brand-store-spacing",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/cron/match-store-floor-areas",
       "schedule": "0 4 * * *"
     },
@@ -53,6 +57,9 @@
       "maxDuration": 300
     },
     "app/api/cron/match-store-floor-areas/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/refresh-brand-store-spacing/route.ts": {
       "maxDuration": 300
     },
     "app/api/cron/sync-plota/route.ts": {
