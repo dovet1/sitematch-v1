@@ -183,8 +183,8 @@ export function BrandMatcherHero() {
               tint="bg-[#FDF0DC] text-[#B7860B]"
               title="Acquisitive signals"
             >
-              Are they actively growing? Blended from advertised requirements, news articles and
-              planning activity.
+              Are they actively growing? Blended from advertised requirements, planning activity and
+              news articles, each rated for how strongly it says the brand is acquiring.
             </SignalCard>
             <SignalCard
               icon={<Landmark size={17} />}

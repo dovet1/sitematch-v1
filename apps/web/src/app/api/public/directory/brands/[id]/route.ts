@@ -42,7 +42,7 @@ interface RequirementRow {
 
 interface ActivityRow {
   id: string
-  kind: 'opening' | 'closure'
+  kind: 'opening' | 'closure' | 'news'
   event_date: string
   is_upcoming: boolean
   headline: string

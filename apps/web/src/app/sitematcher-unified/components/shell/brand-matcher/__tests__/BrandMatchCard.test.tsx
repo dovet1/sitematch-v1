@@ -49,7 +49,8 @@ const rich = withScore({
     },
     news: {
       count: 1,
-      items: [{ headline: 'Aldi confirms 40 new UK stores this year', url: 'https://example.com/aldi', date: '2026-09-22', upcoming: false }],
+      score: 4,
+      items: [{ kind: 'news', headline: 'Aldi confirms 40 new UK stores this year', url: 'https://example.com/aldi', date: '2026-09-22', upcoming: false, rating: 4 }],
     },
     planning: { count: 5 },
   },
@@ -195,8 +196,10 @@ describe('BrandMatchCard — collapsed row', () => {
 describe('BrandMatchCard — expanded card', () => {
   it('shows the score over the signals held and opens on the first signal worth a look', () => {
     renderCard(rich)
-    // 80 of 100 points: demographics is missing, so it is left out; no turnover scores 0 of 15.
-    expect(screen.getByText('80')).toBeInTheDocument()
+    // 98 of 120 points: demographics is missing, so it is left out; no turnover scores 0 of 15;
+    // a news score of +4 earns 18 of 20.
+    expect(screen.getByText('82')).toBeInTheDocument()
+    expect(screen.getByText('+4 ›')).toBeInTheDocument()
     expect(screen.getByText('Based on 4 of 5 signals')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Demographics/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('No stores in towns we hold')).toBeInTheDocument()

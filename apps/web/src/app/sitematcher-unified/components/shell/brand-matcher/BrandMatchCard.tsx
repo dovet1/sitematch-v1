@@ -5,6 +5,7 @@ import { Check, ChevronUp } from 'lucide-react'
 import { UBrandAvatar } from '../directory/UDirectoryPrimitives'
 import {
   classLabel,
+  formatNewsScore,
   formatSqft,
   SIGNAL_KEYS,
   SIGNAL_LABEL,
@@ -267,8 +268,11 @@ function ExpandedCard({
     .filter(Boolean)
     .join(', ')
   const { primary, others } = match.contacts
-  const used = match.scoreParts.filter((p) => p.component !== 'turnover').length
+  // Turnover and news are counted for every brand, so they are not among the "n of 5 signals".
+  const used = match.scoreParts.filter((p) => p.component !== 'turnover' && p.component !== 'news').length
   const turnoverPart = match.scoreParts.find((p) => p.component === 'turnover')
+  const newsPart = match.scoreParts.find((p) => p.component === 'news')
+  const news = match.acquisitive?.news
   const turnover = facts ? turnoverValue(facts) : null
 
   return (
@@ -367,6 +371,13 @@ function ExpandedCard({
             selected={panel === 'financials'}
             onSelect={() => onPanel('financials')}
             spaced
+          />
+          <BreakdownRow
+            label="News score"
+            value={news ? `${formatNewsScore(news.score)} ›` : '0 · No articles'}
+            fill={newsPart ? newsPart.points / newsPart.max : undefined}
+            selected={false}
+            onSelect={() => onPanel('acquisitive')}
           />
         </div>
 

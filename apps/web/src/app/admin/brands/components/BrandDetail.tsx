@@ -950,16 +950,62 @@ function AgentsSection({ brandId }: { brandId: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Directory: curated openings / closures for the brand profile activity band
+// Directory: curated articles for the brand profile activity band and the Brand Matcher's news
+// score. Each article is rated -5..+5 for how strongly it says the brand is acquiring now.
 // ---------------------------------------------------------------------------
+
+type ActivityKind = 'opening' | 'closure' | 'news'
+type RatedBy = 'admin' | 'model' | 'default'
 
 interface ActivityRow {
   id: string
-  kind: 'opening' | 'closure'
+  kind: ActivityKind
   event_date: string
   is_upcoming: boolean
   headline: string
   url: string | null
+  signal_rating: number
+  signal_reason: string | null
+  signal_rated_by: RatedBy
+}
+
+const KIND_DEFAULT_RATING: Record<ActivityKind, number> = { opening: 2, closure: -2, news: 0 }
+const RATINGS = [5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5]
+
+const ratingText = (r: number) => (r > 0 ? `+${r}` : String(r))
+
+const RATED_BY_LABEL: Record<RatedBy, string> = {
+  admin: 'rated by admin',
+  model: 'suggested by model',
+  default: 'default, not reviewed',
+}
+
+const EMPTY_DRAFT = {
+  kind: 'opening' as ActivityKind,
+  event_date: '',
+  headline: '',
+  url: '',
+  is_upcoming: false,
+  signal_rating: KIND_DEFAULT_RATING.opening,
+  signal_reason: '',
+  // 'model' only while the rating is the model's untouched suggestion.
+  signal_rated_by: 'admin' as 'admin' | 'model',
+}
+
+function RatingSelect({ value, onChange }: { value: number; onChange: (r: number) => void }) {
+  return (
+    <select
+      className="w-full rounded-md border border-gray-300 px-2 py-2 text-sm"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+    >
+      {RATINGS.map((r) => (
+        <option key={r} value={r}>
+          {ratingText(r)}
+        </option>
+      ))}
+    </select>
+  )
 }
 
 function ActivitySection({ brandId }: { brandId: string }) {
@@ -967,13 +1013,9 @@ function ActivitySection({ brandId }: { brandId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [draft, setDraft] = useState({
-    kind: 'opening' as 'opening' | 'closure',
-    event_date: '',
-    headline: '',
-    url: '',
-    is_upcoming: false,
-  })
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestNote, setSuggestNote] = useState<string | null>(null)
+  const [draft, setDraft] = useState(EMPTY_DRAFT)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -994,6 +1036,28 @@ function ActivitySection({ brandId }: { brandId: string }) {
     load()
   }, [load])
 
+  const suggest = async () => {
+    setSuggesting(true)
+    setError(null)
+    setSuggestNote(null)
+    try {
+      const res = await fetch(`/api/admin/brands/${brandId}/activity/suggest-rating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.details || d.error || 'Failed to suggest a rating')
+      const s = d.suggestion as { rating: number; reason: string; readArticle: boolean }
+      setDraft((cur) => ({ ...cur, signal_rating: s.rating, signal_reason: s.reason, signal_rated_by: 'model' }))
+      setSuggestNote(s.readArticle ? null : 'The article could not be read, so this is from the headline alone.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to suggest a rating')
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
   const add = async () => {
     setSaving(true)
     setError(null)
@@ -1005,13 +1069,29 @@ function ActivitySection({ brandId }: { brandId: string }) {
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Failed to add event')
-      setDraft({ kind: 'opening', event_date: '', headline: '', url: '', is_upcoming: false })
+      setDraft(EMPTY_DRAFT)
+      setSuggestNote(null)
       load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add event')
     } finally {
       setSaving(false)
     }
+  }
+
+  const rerate = async (row: ActivityRow, rating: number) => {
+    const res = await fetch(`/api/admin/brands/${brandId}/activity`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      // A changed rating no longer carries the model's or the default's reason.
+      body: JSON.stringify({
+        event_id: row.id,
+        signal_rating: rating,
+        signal_reason: rating === row.signal_rating ? row.signal_reason : null,
+      }),
+    })
+    if (res.ok) load()
+    else setError('Failed to save the rating')
   }
 
   const remove = async (eventId: string) => {
@@ -1023,14 +1103,18 @@ function ActivitySection({ brandId }: { brandId: string }) {
 
   if (loading) return <p className="text-sm text-gray-500">Loading activity…</p>
 
+  const setRating = (r: number) => setDraft({ ...draft, signal_rating: r, signal_rated_by: 'admin' })
+
   return (
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="space-y-3 rounded-md border border-gray-200 p-4">
         <p className="text-xs text-gray-500">
-          Curated because there is no source for it: <code>stores.open_date</code> gives past
-          openings only — closures, upcoming signings and news links all have to be entered here.
+          Every article is rated from −5 (closing all stores) to +5 (needs many stores soon). The
+          Brand Matcher adds a brand&apos;s ratings into its news score, halving each one&apos;s
+          weight every six months; a brand with no articles scores 0. Imported openings come in at
+          +2 until they are reviewed here.
         </p>
         <div className="grid grid-cols-[130px_150px_1fr] gap-3">
           <div>
@@ -1038,12 +1122,16 @@ function ActivitySection({ brandId }: { brandId: string }) {
             <select
               className="w-full rounded-md border border-gray-300 px-2 py-2 text-sm"
               value={draft.kind}
-              onChange={(e) =>
-                setDraft({ ...draft, kind: e.target.value as 'opening' | 'closure' })
-              }
+              onChange={(e) => {
+                const kind = e.target.value as ActivityKind
+                // Follow the kind's default until a rating has been chosen or suggested.
+                const untouched = draft.signal_rating === KIND_DEFAULT_RATING[draft.kind] && !draft.signal_reason
+                setDraft({ ...draft, kind, ...(untouched ? { signal_rating: KIND_DEFAULT_RATING[kind] } : {}) })
+              }}
             >
               <option value="opening">Opening</option>
               <option value="closure">Closure</option>
+              <option value="news">News</option>
             </select>
           </div>
           <div>
@@ -1063,7 +1151,7 @@ function ActivitySection({ brandId }: { brandId: string }) {
             />
           </div>
         </div>
-        <div className="grid grid-cols-[1fr_auto_auto] items-end gap-3">
+        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
           <div>
             <Label>Source URL (optional)</Label>
             <Input
@@ -1080,21 +1168,47 @@ function ActivitySection({ brandId }: { brandId: string }) {
             />
             Upcoming
           </label>
+        </div>
+        <div className="grid grid-cols-[90px_auto_1fr_auto] items-end gap-3">
+          <div>
+            <Label>Rating</Label>
+            <RatingSelect value={draft.signal_rating} onChange={setRating} />
+          </div>
           <Button
             type="button"
             size="sm"
+            variant="outline"
+            className="mb-0.5"
+            disabled={suggesting || !draft.headline.trim()}
+            onClick={suggest}
+          >
+            {suggesting ? 'Reading…' : 'Suggest'}
+          </Button>
+          <div>
+            <Label>Reason (optional)</Label>
+            <Input
+              value={draft.signal_reason}
+              onChange={(e) => setDraft({ ...draft, signal_reason: e.target.value })}
+              placeholder="Plans 30 openings before Christmas"
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="mb-0.5"
             disabled={saving || !draft.headline.trim() || !draft.event_date}
             onClick={add}
           >
-            {saving ? 'Adding…' : 'Add event'}
+            {saving ? 'Adding…' : 'Add article'}
           </Button>
         </div>
+        {suggestNote && <p className="text-xs text-amber-700">{suggestNote}</p>}
       </div>
 
       {rows.length === 0 ? (
         <p className="text-sm text-gray-500">
-          No activity recorded — the band is hidden on the brand profile until there is at
-          least one event.
+          No activity recorded — the band is hidden on the brand profile and the news score is 0
+          until there is at least one article.
         </p>
       ) : (
         <ul className="divide-y divide-gray-100 rounded-md border border-gray-200">
@@ -1106,20 +1220,42 @@ function ActivitySection({ brandId }: { brandId: string }) {
                     'mr-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ' +
                     (r.kind === 'opening'
                       ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-700')
+                      : r.kind === 'closure'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700')
                   }
                 >
                   {r.kind}
                 </span>
                 <span className="mr-2 font-mono text-xs text-gray-600">{r.event_date}</span>
-                {r.headline}
+                {r.url ? (
+                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    {r.headline}
+                  </a>
+                ) : (
+                  r.headline
+                )}
                 {r.is_upcoming && (
                   <span className="ml-2 text-[10px] uppercase text-gray-400">upcoming</span>
                 )}
+                <span className="mt-0.5 block text-xs text-gray-500">
+                  {RATED_BY_LABEL[r.signal_rated_by]}
+                  {r.signal_reason ? ` — ${r.signal_reason}` : ''}
+                </span>
               </span>
-              <Button type="button" size="sm" variant="outline" onClick={() => remove(r.id)}>
-                Delete
-              </Button>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="w-[72px]">
+                  <RatingSelect value={r.signal_rating} onChange={(v) => rerate(r, v)} />
+                </span>
+                {r.signal_rated_by !== 'admin' && (
+                  <Button type="button" size="sm" variant="outline" onClick={() => rerate(r, r.signal_rating)}>
+                    Confirm
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant="outline" onClick={() => remove(r.id)}>
+                  Delete
+                </Button>
+              </span>
             </li>
           ))}
         </ul>

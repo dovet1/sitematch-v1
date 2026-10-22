@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Globe, FileText, ChevronRight, Check, Store } from 'lucide-react'
 import { UStoreEstateMap, type EstateMapMode } from '../UStoreEstateMap'
 import { UBrandAvatar, UKicker, UPanel, UPanelHeader, UOcContact } from './UDirectoryPrimitives'
-import type { DirectoryBrandProfile } from '../../../types/unified-workspace'
+import type { DirectoryActivityEvent, DirectoryBrandProfile } from '../../../types/unified-workspace'
 
 function formatSqft(n: number | null): string | null {
   return n == null ? null : n.toLocaleString()
@@ -27,6 +27,12 @@ function relativeDate(iso: string | null): string | null {
   if (days < 14) return '1 week ago'
   if (days < 60) return `${Math.floor(days / 7)} weeks ago`
   return `${Math.floor(days / 30)} months ago`
+}
+
+const ACTIVITY_TONE: Record<DirectoryActivityEvent['kind'], { label: string; border: string; bg: string; fg: string }> = {
+  opening: { label: 'Opening', border: '#16A34A', bg: '#DCFCE7', fg: '#15803D' },
+  closure: { label: 'Closure', border: '#DC2626', bg: '#FEE2E2', fg: '#DC2626' },
+  news: { label: 'News', border: '#8A8895', bg: '#F1EEFA', fg: '#4B23C9' },
 }
 
 function formatEventDate(iso: string): string {
@@ -314,23 +320,19 @@ export function UBrandProfile({
           <div className="p-4 pt-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {activity.map((e) => {
-                const opening = e.kind === 'opening'
+                const tone = ACTIVITY_TONE[e.kind]
                 return (
                   <div
                     key={e.id}
                     className="rounded-[11px] border border-sm-border-soft bg-sm-bg p-3.5"
-                    style={{ borderTop: `3px solid ${opening ? '#16A34A' : '#DC2626'}` }}
+                    style={{ borderTop: `3px solid ${tone.border}` }}
                   >
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
                       <span
                         className="rounded px-1.5 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.08em]"
-                        style={
-                          opening
-                            ? { background: '#DCFCE7', color: '#15803D' }
-                            : { background: '#FEE2E2', color: '#DC2626' }
-                        }
+                        style={{ background: tone.bg, color: tone.fg }}
                       >
-                        {opening ? 'Opening' : 'Closure'}
+                        {tone.label}
                       </span>
                       <span className="font-mono text-[10.5px] font-semibold text-sm-ink">
                         {formatEventDate(e.eventDate)}
