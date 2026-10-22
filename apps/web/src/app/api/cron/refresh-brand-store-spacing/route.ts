@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-// Stores per call: about 1.2ms each, kept well inside PostgREST's 8-second statement cap.
-const STORES_PER_CALL = 4000
-// A full pass is about 16 calls; this stops a broken cursor from looping until the timeout.
+// Stores per call: 4,000 took 4.2s, so 3,000 stays well inside PostgREST's 8-second statement cap.
+const STORES_PER_CALL = 3000
+// A full pass is about 21 calls; this stops a broken cursor from looping until the timeout.
 const MAX_CALLS = 200
 
 /**

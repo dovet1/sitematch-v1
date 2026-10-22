@@ -51,10 +51,12 @@ BEGIN
     SELECT c.brand_id, sum(c.n) OVER (ORDER BY c.brand_id) - c.n AS before
     FROM counts c
   )
-  SELECT array_agg(r.brand_id ORDER BY r.brand_id), max(r.brand_id)
-  INTO v_ids, v_last
+  SELECT array_agg(r.brand_id ORDER BY r.brand_id)
+  INTO v_ids
   FROM running r
   WHERE r.before < p_max_stores;
+  -- uuid has no max(); the ids are in order, so the last is the furthest along.
+  v_last := v_ids[cardinality(v_ids)];
 
   IF v_ids IS NULL THEN
     -- Past the last brand: drop rows for brands that no longer have a located store.
