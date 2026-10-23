@@ -34,6 +34,8 @@ export type CardPanel = SignalKey | 'financials' | 'contacts'
 
 // Shared by the column header in BrandMatcherResults. The first column is the report checkbox.
 export const ROW_GRID = 'lg:grid-cols-[22px_44px_160px_minmax(0,1fr)_70px_64px_110px]'
+// The same columns without the checkbox, for the logged-out preview (BrandMatcherPreview).
+export const PREVIEW_ROW_GRID = 'lg:grid-cols-[44px_160px_minmax(0,1fr)_70px_64px_110px]'
 
 // Report selection (docs/design_handoff_brand_report_export). `limited`: the report is full and
 // this brand isn't in it, so ticking it shows the limit toast instead.
