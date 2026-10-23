@@ -322,7 +322,8 @@ $$;
 
 -- BUA weights for the LSOAs / data zones with codes in [p_from, p_to), leaving the rest in place
 -- (calculate_bua_lsoa_weights() recomputes every pair). Same rule: share of the zone's area inside
--- the town, pairs under 1,000 m² dropped.
+-- the town, pairs under 1,000 m² dropped. The geometries are stored in WGS84, so areas are taken in
+-- British National Grid metres, and the join uses the raw geometries so the spatial indexes apply.
 CREATE OR REPLACE FUNCTION public.rebuild_bua_lsoa_weights_for_lsoas(p_from text, p_to text)
 RETURNS TABLE(step_name text, message text)
 LANGUAGE plpgsql
@@ -337,11 +338,12 @@ BEGIN
   DELETE FROM bua_lsoa_weights WHERE lsoa_code >= p_from AND lsoa_code < p_to;
 
   INSERT INTO bua_lsoa_weights (bua_gsscode, lsoa_code, intersection_area_sqm, lsoa_total_area_sqm, weight)
-  SELECT bg.gsscode, lb.lsoa_code, x.area, ST_Area(lb.geometry), LEAST(x.area / NULLIF(ST_Area(lb.geometry), 0), 1.0)
+  SELECT bg.gsscode, lb.lsoa_code, x.area, x.total, LEAST(x.area / NULLIF(x.total, 0), 1.0)
   FROM lsoa_boundaries lb
-  JOIN built_up_area_geometries bg ON ST_Intersects(ST_Buffer(bg.geom, 0), ST_Buffer(lb.geometry, 0))
+  JOIN built_up_area_geometries bg ON ST_Intersects(bg.geom, lb.geometry)
   CROSS JOIN LATERAL (
-    SELECT ST_Area(ST_Intersection(ST_Buffer(bg.geom, 0), ST_Buffer(lb.geometry, 0))) AS area
+    SELECT ST_Area(ST_Transform(ST_Intersection(ST_Buffer(bg.geom, 0), ST_Buffer(lb.geometry, 0)), 27700)) AS area,
+           ST_Area(ST_Transform(lb.geometry, 27700)) AS total
   ) x
   WHERE lb.lsoa_code >= p_from AND lb.lsoa_code < p_to
     AND x.area > 1000;
