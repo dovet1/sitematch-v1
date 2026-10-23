@@ -1,29 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
 
-// After the trial flow (docs/design_handoff_homepage_trial, trial-07): a banner with the days
-// left while trialing, and a one-off tip beside the rail on arrival (?welcome=trial).
-
-const DAY_MS = 24 * 60 * 60 * 1000
-
-export function TrialBanner() {
-  const { isTrialing, trialEndDate } = useSubscriptionTier()
-  if (!isTrialing || !trialEndDate) return null
-  const days = Math.max(0, Math.ceil((new Date(trialEndDate).getTime() - Date.now()) / DAY_MS))
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#EAE3FF] bg-sm-violet-tint-soft px-8 py-2.5 text-[13px] font-medium text-sm-violet-deep max-md:px-4">
-      <span>
-        <b className="font-semibold">Free trial</b> · {days} {days === 1 ? 'day' : 'days'} left
-      </span>
-      <Link href="/account/billing" className="text-sm-violet hover:text-sm-violet-deep">
-        Choose a plan
-      </Link>
-    </div>
-  )
-}
+// After the trial flow (docs/design_handoff_homepage_trial, trial-07): a one-off tip beside the
+// rail on arrival (?welcome=trial).
 
 export function TrialWelcomeTip() {
   const [show, setShow] = useState(false)
