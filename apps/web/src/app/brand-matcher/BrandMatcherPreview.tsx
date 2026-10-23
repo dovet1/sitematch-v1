@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { parseProPlan, PRO_TRIAL_DAYS } from '@/lib/pro-plan'
 import { readSiteParams, toQueryUseClass, workspaceHref, type HomeUseClass, HOME_USE_CLASSES } from '@/lib/brand-matcher-link'
 import { formatSqft, SIGNAL_LABEL } from '@/app/sitematcher/lib/brand-matcher'
-import { ROW_GRID } from '@/app/sitematcher/components/shell/brand-matcher/BrandMatchCard'
+import { PREVIEW_ROW_GRID } from '@/app/sitematcher/components/shell/brand-matcher/BrandMatchCard'
 import { SignalCell, plural } from '@/app/sitematcher/components/shell/brand-matcher/BrandMatcherUi'
 import { BrandMatcherScanningView } from '@/app/sitematcher/components/shell/brand-matcher/BrandMatcherScanning'
 import type { BrandMatcherPreviewResponse, BrandMatcherPreviewRow } from '@/app/sitematcher/types/brand-matcher'
@@ -356,7 +356,7 @@ function PreviewHeader({
       </div>
       <div className="mx-auto max-w-[1480px] px-8">
         <div
-          className={`hidden gap-3.5 whitespace-nowrap px-[22px] pb-2.5 text-[11px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:grid ${ROW_GRID}`}
+          className={`hidden gap-3.5 whitespace-nowrap px-[22px] pb-2.5 text-[11px] font-bold uppercase tracking-[0.02em] text-[#8A8895] lg:grid ${PREVIEW_ROW_GRID}`}
         >
           <span />
           <span>Brand</span>
@@ -385,7 +385,7 @@ function PreviewRow({ row, rank, onContact }: { row: BrandMatcherPreviewRow; ran
     <article
       className={
         'grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border border-[#E4E0F0] bg-white px-[22px] py-4 ' +
-        ROW_GRID
+        PREVIEW_ROW_GRID
       }
     >
       <span
@@ -436,7 +436,7 @@ function PlaceholderRow({ rank }: { rank: number }) {
     <div
       className={
         'grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border border-[#E4E0F0] bg-white px-[22px] py-4 ' +
-        ROW_GRID
+        PREVIEW_ROW_GRID
       }
     >
       <span className="h-11 w-11 rounded-[11px] bg-[#D9D4E8]" />
