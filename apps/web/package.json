@@ -12,6 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "import:onspd": "tsx scripts/import-onspd-postcodes.ts",
+    "import:scotland-census": "tsx scripts/import-scotland-census.ts",
     "backtest:brand-demographics": "tsx scripts/backtest-brand-demographics.ts",
     "import:retail-centres": "tsx scripts/import-retail-centres.ts",
     "build:retail-centre-tiles": "bash scripts/build-retail-centre-tiles.sh",

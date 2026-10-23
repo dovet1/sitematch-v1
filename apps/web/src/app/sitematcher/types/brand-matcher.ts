@@ -35,8 +35,8 @@ export interface BrandMatcherSite {
   centre: BrandMatcherCentre | null
   region: string | null
   country: string | null
-  // The built-up area (town) the site is in, with its figures. null outside every England and
-  // Wales town; absent when demographics were not loaded.
+  // The built-up area (town) the site is in, with its figures. null outside every British town;
+  // absent when demographics were not loaded.
   town?: TownFigures | null
 }
 

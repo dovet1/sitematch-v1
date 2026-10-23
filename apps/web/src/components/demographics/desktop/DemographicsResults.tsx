@@ -420,7 +420,7 @@ export function DemographicsResults({
             <div className="flex-1">
               <p className="text-xs font-medium text-amber-900">Partial Coverage</p>
               <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                Your search area crosses regional boundaries. Results show only the England & Wales portion of your search area.
+                Your search area crosses regional boundaries. Results show only the Great Britain portion of your search area.
               </p>
             </div>
           </div>

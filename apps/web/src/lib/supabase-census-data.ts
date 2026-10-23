@@ -1,6 +1,7 @@
 /**
- * Census 2021 Data from Supabase
- * Fetches demographic metrics from the lsoa_metrics table
+ * Census Data from Supabase
+ * Fetches demographic metrics from the lsoa_metrics table: England & Wales Census 2021 by LSOA,
+ * and Scotland's Census 2022 by 2022 data zone (mapped onto the same component ids)
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -370,7 +371,7 @@ export async function getLSOATooltipData(
     .select('geo_code, geo_name, numerator')
     .in('geo_code', geographyCodes)
     .eq('component_id', 'population_total')
-    .eq('edition', '2021');
+    .in('edition', ['2021', '2022']); // E&W Census 2021, Scotland's Census 2022
 
   if (popError) {
     console.error('[Supabase] Error fetching population data:', popError);

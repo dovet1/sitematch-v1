@@ -390,7 +390,7 @@ async function loadGeo(db: Db, site: BrandMatcherSite): Promise<Map<string, RawB
 }
 
 // The site's town and, per brand, how its stores' towns compare with it (migration
-// 20261029000000). No town (outside England and Wales, or in open country) means no read.
+// 20261029000000). No town (outside Great Britain, or in open country) means no read.
 async function loadTownMatches(
   db: Db,
   site: BrandMatcherSite
