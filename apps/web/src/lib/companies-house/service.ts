@@ -125,17 +125,24 @@ export async function refreshCompanyFactsWithOutcome(
   const row = profileToFactsRow(profile)
   const existing = await db
     .from('company_facts')
-    .select('turnover, turnover_status, net_assets, net_assets_status, turnover_page, net_assets_page, figures_model, figures_period_end')
+    .select(
+      'turnover, turnover_status, net_assets, net_assets_status, turnover_page, net_assets_page, figures_model, figures_period_end, figures_source'
+    )
     .eq('company_number', companyNumber)
     .maybeSingle()
   if (existing.error) throw new Error(`read facts: ${existing.error.message}`)
-  const prior = existing.data as (FiguresFields & Pick<CompanyFactsRow, 'figures_period_end'>) | null
-  const samePeriod = !!prior?.figures_period_end && prior.figures_period_end === row.last_accounts_made_up_to
+  const prior = existing.data as (FiguresFields & Pick<CompanyFactsRow, 'figures_period_end' | 'figures_source'>) | null
+  // Figures read from the FCA register: Companies House holds no accounts to replace them with.
+  const fromRegister = prior?.figures_source === 'fca_mutuals'
+  const samePeriod =
+    fromRegister || (!!prior?.figures_period_end && prior.figures_period_end === row.last_accounts_made_up_to)
   let merged: CompanyFactsRow = samePeriod ? { ...row, ...prior } : row
   const madeUpTo = row.last_accounts_made_up_to
 
   let outcome: FiguresOutcome
-  if (!madeUpTo) {
+  if (fromRegister) {
+    outcome = { kind: 'kept' }
+  } else if (!madeUpTo) {
     outcome = { kind: 'no_accounts' }
   } else if (samePeriod && !options.rereadFigures) {
     outcome = { kind: 'kept' }

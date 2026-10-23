@@ -317,16 +317,21 @@ export function financialRows(facts: TradingFacts): { label: string; value: stri
     { label: 'Company status', value: facts.status },
     { label: turnoverLabel(facts), value: figureText(facts.turnover) },
     { label: 'Net assets', value: figureText(facts.netAssets) },
-    {
-      label: 'Accounts filed',
-      value: facts.accountsOverdue ? 'Overdue' : facts.accountsMadeUpTo ? 'On time' : 'None filed yet',
-      tone: facts.accountsOverdue ? 'bad' : undefined,
-    },
-    { label: 'Accounts type', value: facts.accountsType },
-    {
-      label: 'Accounts made up to',
-      value: facts.accountsMadeUpTo ? longDate(facts.accountsMadeUpTo) : null,
-    },
+    // A society's accounts are filed with the FCA, so Companies House's filing dates say nothing.
+    ...(facts.figuresSource === 'fca_mutuals'
+      ? [{ label: 'Accounts made up to', value: facts.figuresPeriodEnd ? longDate(facts.figuresPeriodEnd) : null }]
+      : [
+          {
+            label: 'Accounts filed',
+            value: facts.accountsOverdue ? 'Overdue' : facts.accountsMadeUpTo ? 'On time' : 'None filed yet',
+            tone: facts.accountsOverdue ? ('bad' as const) : undefined,
+          },
+          { label: 'Accounts type', value: facts.accountsType },
+          {
+            label: 'Accounts made up to',
+            value: facts.accountsMadeUpTo ? longDate(facts.accountsMadeUpTo) : null,
+          },
+        ]),
   ]
   return rows
     .filter((r): r is { label: string; value: string; tone?: 'bad' | 'muted' } => r.value != null)

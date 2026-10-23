@@ -145,7 +145,7 @@ type FactsFields = Pick<
   | 'net_assets_status'
   | 'fetched_at'
 > &
-  Partial<Pick<CompanyFactsRow, 'turnover_page' | 'net_assets_page' | 'is_charity'>>
+  Partial<Pick<CompanyFactsRow, 'turnover_page' | 'net_assets_page' | 'is_charity' | 'figures_source' | 'figures_period_end'>>
 
 function figure(
   value: number | null,
@@ -196,6 +196,9 @@ export function factsRowToTradingFacts(row: FactsFields): TradingFacts {
     netAssets: figure(row.net_assets, row.net_assets_status, row.net_assets_page),
     turnoverBand: turnoverBand(row.last_accounts_type, row.last_accounts_made_up_to),
     isCharity: row.is_charity === true,
+    ...(row.figures_source === 'fca_mutuals'
+      ? { figuresSource: 'fca_mutuals' as const, figuresPeriodEnd: row.figures_period_end ?? null }
+      : {}),
     fetchedAt: row.fetched_at,
   }
 }

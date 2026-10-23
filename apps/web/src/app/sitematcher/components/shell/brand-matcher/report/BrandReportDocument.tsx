@@ -790,7 +790,11 @@ function BrandPage({
           <div className="sec">
             <div className="sh">
               <h3>Financials</h3>
-              <span className="src">{b.franchise ? noUkRecordLabel(b.franchise) : 'Companies House, as filed'}</span>
+              <span className="src">{b.franchise
+                  ? noUkRecordLabel(b.franchise)
+                  : b.tradingFacts?.figuresSource === 'fca_mutuals'
+                    ? 'FCA Mutuals Register, as filed'
+                    : 'Companies House, as filed'}</span>
             </div>
             {b.franchise && isOverseas(b.franchise) ? (
               <div className="empty" style={{ marginTop: 8 }}>

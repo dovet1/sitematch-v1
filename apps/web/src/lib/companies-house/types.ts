@@ -93,6 +93,10 @@ export interface CompanyFactsRow {
   // A registered charity: its "turnover" is total income (mostly donations and grants). Set by an
   // admin; a profile refresh never writes it (profileToFactsRow leaves it out), so it is kept.
   is_charity?: boolean
+  // Where the figures were read from when Companies House holds no accounts: 'fca_mutuals' for a
+  // co-operative society, whose accounts are filed with the FCA Mutuals Public Register. Set with
+  // the figures by an admin; a refresh keeps those figures. null means Companies House.
+  figures_source?: 'fca_mutuals' | null
   profile: ChCompanyProfile
   fetched_at: string
 }

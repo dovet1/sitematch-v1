@@ -607,6 +607,13 @@ export function isSparse(m: Pick<BrandMatch, 'acquisitive'>): boolean {
 export const FRANCHISE_LABEL = 'Franchise'
 export const OVERSEAS_LABEL = 'Overseas'
 
+export const FCA_MUTUALS_REGISTER_URL = 'https://mutuals.fca.org.uk/'
+
+// Where a brand's figures were filed, for "… as filed" labels.
+export function figuresSourceName(facts: Pick<TradingFacts, 'figuresSource'> | null | undefined): string {
+  return facts?.figuresSource === 'fca_mutuals' ? 'the FCA Mutuals Public Register' : 'Companies House'
+}
+
 // How the turnover figure is labelled: a charity's is its total income.
 export function turnoverLabel(facts: Pick<TradingFacts, 'isCharity'> | null | undefined): string {
   return facts?.isCharity ? 'Income (charity)' : 'Latest turnover'

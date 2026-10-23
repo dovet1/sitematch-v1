@@ -50,6 +50,19 @@ beforeEach(() => {
 })
 
 describe('refreshCompanyFactsWithOutcome', () => {
+  it("keeps a co-operative society's figures from the FCA register, even on a re-read", async () => {
+    // A society has no accounts at Companies House: the profile carries no accounts date.
+    mocked.getCompanyProfile.mockResolvedValue({ company_number: 'IP10143R', company_name: 'CENTRAL ENGLAND CO-OPERATIVE LIMITED' })
+    const register = {
+      ...stored, turnover: 828_643_000, turnover_page: 20, net_assets: 101_240_000, net_assets_page: 22,
+      figures_model: 'manual', figures_period_end: '2026-01-24', figures_source: 'fca_mutuals',
+    }
+    const { db, upserts } = fakeDb(register)
+    const r = await refreshCompanyFactsWithOutcome(db, 'IP10143R', { rereadFigures: true })
+    expect(r.outcome).toEqual({ kind: 'kept' })
+    expect(upserts[0]).toMatchObject({ turnover: 828_643_000, net_assets: 101_240_000, figures_period_end: '2026-01-24' })
+    expect(mocked.getAccountsFilings).not.toHaveBeenCalled()
+  })
   it('keeps an already-read period without reading again, unless asked to', async () => {
     const { db } = fakeDb(stored)
     const r = await refreshCompanyFactsWithOutcome(db, '04386537')

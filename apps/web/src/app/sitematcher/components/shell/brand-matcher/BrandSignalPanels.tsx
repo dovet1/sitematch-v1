@@ -13,6 +13,8 @@ import {
   formatSqft,
   formatSqftShort,
   formLabel,
+  FCA_MUTUALS_REGISTER_URL,
+  figuresSourceName,
   isOverseas,
   LOCATION_TYPE_RADIUS_MILES,
   turnoverLabel,
@@ -732,21 +734,29 @@ export function FinancialsPanel({ match }: { match: BrandMatch }) {
     ['Company status', facts.status],
     [turnoverLabel(facts), figureText(facts.turnover)],
     ['Net assets', figureText(facts.netAssets)],
-    ['Accounts filed', facts.accountsOverdue ? 'Overdue' : facts.accountsMadeUpTo ? 'On time' : 'None filed yet'],
-    ['Accounts type', facts.accountsType],
-    ['Accounts made up to', facts.accountsMadeUpTo ? formatDate(facts.accountsMadeUpTo) : null],
+    // A society's accounts are filed with the FCA, so Companies House's filing dates say nothing.
+    ...((facts.figuresSource === 'fca_mutuals'
+      ? [['Accounts made up to', facts.figuresPeriodEnd ? formatDate(facts.figuresPeriodEnd) : null]]
+      : [
+          ['Accounts filed', facts.accountsOverdue ? 'Overdue' : facts.accountsMadeUpTo ? 'On time' : 'None filed yet'],
+          ['Accounts type', facts.accountsType],
+          ['Accounts made up to', facts.accountsMadeUpTo ? formatDate(facts.accountsMadeUpTo) : null],
+        ]) as [string, string | null][]),
   ]
+  const fromRegister = facts.figuresSource === 'fca_mutuals'
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
-        <PanelTitle title="Financials">From Companies House, as filed</PanelTitle>
+        <PanelTitle title="Financials">
+          {fromRegister ? 'From the FCA Mutuals Public Register, as filed' : 'From Companies House, as filed'}
+        </PanelTitle>
         <a
-          href={companiesHouseUrl(facts.companyNumber, 'filing-history')}
+          href={fromRegister ? FCA_MUTUALS_REGISTER_URL : companiesHouseUrl(facts.companyNumber, 'filing-history')}
           target="_blank"
           rel="noopener noreferrer"
           className={`whitespace-nowrap ${PANEL_LINK}`}
         >
-          View on Companies House ↗
+          {fromRegister ? 'View the FCA register ↗' : 'View on Companies House ↗'}
         </a>
       </div>
       <KvRows
@@ -773,7 +783,7 @@ export function FinancialsPanel({ match }: { match: BrandMatch }) {
           ? `${match.name}'s company files ${facts.turnoverBand.size}-company accounts, which don't have to show turnover. Only a company with turnover under ${facts.turnoverBand.limitLabel} may file them, so it scores what a published figure under £10m would. This is not a credit or covenant rating.`
           : facts.turnover.status === 'not_published'
           ? "Small companies aren't required to file turnover. With no published turnover, this brand scores nothing for turnover in the match score."
-          : 'Figures as filed at Companies House, unedited. Published turnover counts towards the match score: larger turnover scores higher. This is not a credit or covenant rating, and any view on covenant strength is yours to form.'}
+          : `Figures as filed at ${figuresSourceName(facts)}, unedited. Published turnover counts towards the match score: larger turnover scores higher. This is not a credit or covenant rating, and any view on covenant strength is yours to form.`}
       </p>
     </div>
   )

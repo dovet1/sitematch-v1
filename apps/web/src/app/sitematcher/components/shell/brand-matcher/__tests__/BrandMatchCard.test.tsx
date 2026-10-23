@@ -345,6 +345,14 @@ describe('BrandMatchCard — Companies House facts (when present)', () => {
     expect(screen.getByText(/is a registered charity/)).toBeInTheDocument()
   })
 
+  it("names the FCA register as the source of a co-operative society's figures", async () => {
+    const society = { ...facts, figuresSource: 'fca_mutuals' as const, figuresPeriodEnd: '2026-01-24', accountsMadeUpTo: null }
+    await openFinancials({ ...rich, tradingFacts: society })
+    expect(screen.getByText('From the FCA Mutuals Public Register, as filed')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /View the FCA register/ })).toHaveAttribute('href', 'https://mutuals.fca.org.uk/')
+    expect(screen.queryByText('None filed yet')).not.toBeInTheDocument()
+  })
+
   it('shows the overseas flag in place of the financials', async () => {
     const franchise = { kind: 'overseas' as const, sourceUrl: null, checkedAt: '2026-10-22' }
     await openFinancials({ ...rich, franchise, tradingFacts: facts })

@@ -8,6 +8,7 @@ import {
   formatSqft,
   SIGNAL_KEYS,
   SIGNAL_LABEL,
+  figuresSourceName,
   isOverseas,
   signalSummaries,
   turnoverCell,
@@ -198,9 +199,9 @@ function CollapsedRow({
               ? 'Run from overseas, with no UK company filing accounts'
               : 'Sites are run by franchisees, so no one company’s accounts represent the brand'
             : match.tradingFacts?.isCharity && turnover
-              ? 'Total income of a registered charity, as filed at Companies House'
+              ? `Total income of a registered charity, as filed at ${figuresSourceName(match.tradingFacts)}`
               : turnover
-              ? 'Latest turnover, as filed at Companies House'
+              ? `Latest turnover, as filed at ${figuresSourceName(match.tradingFacts)}`
               : undefined
         }
       >

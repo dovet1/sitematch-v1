@@ -217,6 +217,10 @@ export interface TradingFacts {
   // A registered charity: turnover holds its total income, shown as income and left out of the
   // score. Absent on reports shared before charities were recorded.
   isCharity?: boolean
+  // Set when the figures come from the FCA Mutuals Public Register (a co-operative society, whose
+  // accounts Companies House does not hold), with the date those accounts were made up to.
+  figuresSource?: 'fca_mutuals'
+  figuresPeriodEnd?: string | null
   fetchedAt: string
 }
 
