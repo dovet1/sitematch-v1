@@ -25,6 +25,7 @@ import type {
   TownMatch,
   TownMatchBand,
   TradingFacts,
+  TurnoverBand,
 } from '../types/brand-matcher'
 
 export const METERS_PER_MILE = 1609.344
@@ -531,11 +532,14 @@ export const SCORE_MAX: Record<ScorePart['component'], number> = {
 export const TURNOVER_LARGE = 100e6
 export const TURNOVER_MEDIUM = 10e6
 
-// Points for the latest published turnover. No Companies House record, a figure not published or
-// one not read yet all score nothing: the absence counts against the brand.
+// Points for the latest published turnover. A small or micro company that does not publish its
+// turnover is known from its accounts type to be under the small-company limit, so it scores what
+// a published figure under £10m would: 5. No Companies House record, a figure not published by a
+// larger company or one not read yet all score nothing: the absence counts against the brand.
 export function turnoverPoints(facts: TradingFacts | null | undefined): number {
   const t = facts?.turnover
-  if (!t || (t.status !== 'filed' && t.status !== 'extracted')) return 0
+  if (!t) return 0
+  if (t.status !== 'filed' && t.status !== 'extracted') return facts.turnoverBand ? 5 : 0
   return t.value >= TURNOVER_LARGE ? 15 : t.value >= TURNOVER_MEDIUM ? 10 : 5
 }
 
@@ -625,8 +629,13 @@ export function turnoverCell(m: { tradingFacts: TradingFacts | null; franchise?:
 }
 
 // null when there is nothing verifiable to show (figures not read yet).
+export function turnoverBandText(band: TurnoverBand): string {
+  return `Under ${band.limitLabel} (${band.size} company)`
+}
+
 export function turnoverValue(facts: TradingFacts): string | null {
   if (facts.turnover.status === 'filed' || facts.turnover.status === 'extracted') return formatMoney(facts.turnover.value)
+  if (facts.turnoverBand) return turnoverBandText(facts.turnoverBand)
   if (facts.turnover.status === 'not_published') return 'Not disclosed'
   return null
 }

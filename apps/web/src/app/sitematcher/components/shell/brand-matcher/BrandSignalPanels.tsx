@@ -769,6 +769,8 @@ export function FinancialsPanel({ match }: { match: BrandMatch }) {
       <p className="text-[12.5px] leading-[1.5] text-[#6B6B78]">
         {facts.isCharity
           ? `${match.name} is a registered charity, so this figure is its total income, mostly donations and grants rather than trading. It is left out of the match score, so the brand is neither helped nor held back by it. This is not a credit or covenant rating.`
+          : facts.turnoverBand && facts.turnover.status !== 'filed' && facts.turnover.status !== 'extracted'
+          ? `${match.name}'s company files ${facts.turnoverBand.size}-company accounts, which don't have to show turnover. Only a company with turnover under ${facts.turnoverBand.limitLabel} may file them, so it scores what a published figure under £10m would. This is not a credit or covenant rating.`
           : facts.turnover.status === 'not_published'
           ? "Small companies aren't required to file turnover. With no published turnover, this brand scores nothing for turnover in the match score."
           : 'Figures as filed at Companies House, unedited. Published turnover counts towards the match score: larger turnover scores higher. This is not a credit or covenant rating, and any view on covenant strength is yours to form.'}

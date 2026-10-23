@@ -19,6 +19,7 @@ import {
   shortCentreName,
   signalSummaries,
   turnoverCell,
+  turnoverPoints,
   turnoverLabel,
   signalSummary,
   sizeFit,
@@ -325,6 +326,15 @@ describe('scoreMatch', () => {
     expect(turnoverCell({ tradingFacts: charity })).toBe('£300m')
     expect(turnoverLabel(charity)).toBe('Income (charity)')
     expect(turnoverLabel(chFacts)).toBe('Latest turnover')
+  })
+  it('scores a small company that does not publish turnover as under £10m', () => {
+    const band = { size: 'small' as const, limit: 10.2e6, limitLabel: '£10.2m' }
+    const small = { ...chFacts, turnover: { status: 'unread' as const }, turnoverBand: band }
+    expect(turnoverPoints(small)).toBe(5)
+    expect(turnoverCell({ tradingFacts: small })).toBe('Under £10.2m (small company)')
+    // A published figure still wins over the band.
+    expect(turnoverPoints({ ...small, turnover: { status: 'filed', value: 50e6 } })).toBe(10)
+    expect(turnoverPoints({ ...chFacts, turnover: { status: 'not_published' } })).toBe(0)
   })
   it('treats an overseas brand like a franchise, labelled "Overseas"', () => {
     const overseas = { kind: 'overseas' as const, sourceUrl: null, checkedAt: '2026-10-22' }

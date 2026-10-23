@@ -4,7 +4,7 @@
 // Compliance (docs/design_handoff_contact_brands/README.md): figures are shown as filed and
 // never rated. Labels here describe the register; none of them judge a company.
 
-import type { TradingFacts } from '@/app/sitematcher/types/brand-matcher'
+import type { TradingFacts, TurnoverBand } from '@/app/sitematcher/types/brand-matcher'
 import type { ChAddress, ChCompanyProfile, ChSearchItem, CompanyFactsRow, FiguresOutcome } from './types'
 
 // ---------------------------------------------------------------------------
@@ -158,6 +158,31 @@ function figure(
   return { status: 'unread' }
 }
 
+// Accounts only a small or micro company may file. Subsidiary exemptions are left out: a
+// subsidiary of any size can claim them.
+const MICRO_ACCOUNTS = new Set(['micro-entity'])
+const SMALL_ACCOUNTS = new Set([
+  'small',
+  'total-exemption-full',
+  'total-exemption-small',
+  'unaudited-abridged',
+  'audited-abridged',
+])
+// The size thresholds rose for financial years starting on or after 6 April 2025; a year that
+// ends on or after 5 April 2026 is taken to have started under the new ones.
+const NEW_THRESHOLDS_FROM = '2026-04-05'
+
+export function turnoverBand(accountsType: string | null, madeUpTo: string | null): TurnoverBand | null {
+  const raised = !!madeUpTo && madeUpTo >= NEW_THRESHOLDS_FROM
+  if (accountsType && MICRO_ACCOUNTS.has(accountsType)) {
+    return raised ? { size: 'micro', limit: 1e6, limitLabel: '£1m' } : { size: 'micro', limit: 632e3, limitLabel: '£632k' }
+  }
+  if (accountsType && SMALL_ACCOUNTS.has(accountsType)) {
+    return raised ? { size: 'small', limit: 15e6, limitLabel: '£15m' } : { size: 'small', limit: 10.2e6, limitLabel: '£10.2m' }
+  }
+  return null
+}
+
 export function factsRowToTradingFacts(row: FactsFields): TradingFacts {
   return {
     companyNumber: row.company_number,
@@ -169,6 +194,7 @@ export function factsRowToTradingFacts(row: FactsFields): TradingFacts {
     registeredOffice: row.registered_office,
     turnover: figure(row.turnover, row.turnover_status, row.turnover_page),
     netAssets: figure(row.net_assets, row.net_assets_status, row.net_assets_page),
+    turnoverBand: turnoverBand(row.last_accounts_type, row.last_accounts_made_up_to),
     isCharity: row.is_charity === true,
     fetchedAt: row.fetched_at,
   }

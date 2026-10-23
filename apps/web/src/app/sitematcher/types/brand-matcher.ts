@@ -190,6 +190,15 @@ export type FiledFigure =
   | { status: 'not_published' }
   | { status: 'unread' }
 
+// The legal turnover limit a company's filed accounts type puts it under (Companies Act size
+// thresholds; they rose for financial years starting on or after 6 April 2025).
+export interface TurnoverBand {
+  size: 'micro' | 'small'
+  // Pounds, and as shown: "£10.2m".
+  limit: number
+  limitLabel: string
+}
+
 // Companies House facts for the brand's admin-confirmed UK trading company. Shown as filed;
 // only the latest turnover counts towards the score (turnoverPoints in brand-matcher.ts).
 export interface TradingFacts {
@@ -202,6 +211,9 @@ export interface TradingFacts {
   registeredOffice: string | null
   turnover: FiledFigure
   netAssets: FiledFigure
+  // Set when no turnover was published but the accounts filed are ones only a small or micro
+  // company may file, so turnover is known to be under that size's legal limit.
+  turnoverBand?: TurnoverBand | null
   // A registered charity: turnover holds its total income, shown as income and left out of the
   // score. Absent on reports shared before charities were recorded.
   isCharity?: boolean
