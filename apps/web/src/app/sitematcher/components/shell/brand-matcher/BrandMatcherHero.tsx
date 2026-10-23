@@ -183,34 +183,32 @@ export function BrandMatcherHero() {
               tint="bg-[#FDF0DC] text-[#B7860B]"
               title="Acquisitive signals"
             >
-              Are they actively growing? Blended from advertised requirements, planning activity and
-              news articles, each rated for how strongly it says the brand is acquiring.
+              Are they actively growing? Read from news articles and active requirements, each
+              rated for how strongly it says the brand is taking new space.
             </SignalCard>
             <SignalCard
               icon={<Landmark size={17} />}
               tint="bg-[#EAF8F1] text-[#177E4E]"
-              title="Published trading facts"
-              badge="Coming soon"
+              title="Companies House data"
             >
               Turnover, net assets, filing history and company status, taken straight from
-              Companies House, shown as filed. Published turnover counts towards the match score.
+              Companies House and shown as filed. Published turnover counts towards the match score.
             </SignalCard>
             <SignalCard
               icon={<BarChart3 size={17} />}
               tint="bg-sm-violet-tint text-sm-violet"
-              title="Already trades in your type of location"
+              title="Demographic matches"
             >
-              We work out whether your site is in a retail park, high street or shopping centre,
-              and count the ones nearby the brand already trades in — proof the format works for
-              them.
+              Does your site&apos;s town look like the towns the brand already trades in? We compare
+              population and affluence against every store in their estate.
             </SignalCard>
             <SignalCard
               icon={<MapPin size={17} />}
               tint="bg-sm-violet-tint text-sm-violet"
-              title="Distance to nearest store"
+              title="Fit with current store estate"
             >
-              How far is their closest branch? A gap near your site is a strong reason for them to
-              take it.
+              Where does your site sit against their existing stores? A gap inside the area they
+              trade in is a strong reason to take it; a store next door is a likely blocker.
             </SignalCard>
             <div className="flex flex-col justify-center rounded-2xl bg-[linear-gradient(135deg,#7033FF_0%,#5421CC_100%)] p-6 text-white">
               <h3 className="text-[20px] font-bold leading-snug">
