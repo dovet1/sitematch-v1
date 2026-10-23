@@ -20,6 +20,14 @@ import {
 } from './store-badges'
 import { StorePinCluster } from './StorePinCluster'
 import { decideMapClick } from './map-click'
+import {
+  addScottishZoneLayers,
+  scottishTwinId,
+  setFilterWithTwin,
+  setVisibilityWithTwin,
+  showScottishZones,
+  withScottishTwins,
+} from '@/lib/scottish-zone-layers'
 import type { GapPinsStatus } from '../../lib/hooks/useFindGapsStorePins'
 import { useRetailCentreGapsEnabled } from '../../lib/retail-centre-flag-context'
 
@@ -754,6 +762,16 @@ export function UnifiedMap({
       )
     }
 
+    // Scottish data zones aren't in the tileset; twin layers draw them from GeoJSON.
+    if (!map.getLayer(scottishTwinId(LSOA_FILL_SELECTED))) {
+      addScottishZoneLayers(map, [
+        LSOA_FILL_DESELECTED,
+        LSOA_FILL_SELECTED,
+        LSOA_OUTLINE_DESELECTED,
+        LSOA_OUTLINE_SELECTED,
+      ])
+    }
+
     if (!map.getSource(CATCH_SOURCE)) {
       map.addSource(CATCH_SOURCE, {
         type: 'geojson',
@@ -960,10 +978,11 @@ export function UnifiedMap({
     const deselectedArr = all.filter((c) => !selected.has(c))
     const selFilter = ['in', ['get', LSOA_CODE_PROP], ['literal', selectedArr]] as any
     const deselFilter = ['in', ['get', LSOA_CODE_PROP], ['literal', deselectedArr]] as any
-    map.setFilter(LSOA_FILL_SELECTED, selFilter)
-    map.setFilter(LSOA_OUTLINE_SELECTED, selFilter)
-    map.setFilter(LSOA_FILL_DESELECTED, deselFilter)
-    map.setFilter(LSOA_OUTLINE_DESELECTED, deselFilter)
+    setFilterWithTwin(map, LSOA_FILL_SELECTED, selFilter)
+    setFilterWithTwin(map, LSOA_OUTLINE_SELECTED, selFilter)
+    setFilterWithTwin(map, LSOA_FILL_DESELECTED, deselFilter)
+    setFilterWithTwin(map, LSOA_OUTLINE_DESELECTED, deselFilter)
+    void showScottishZones(map, all)
   }
 
   const applyCatchmentBoundary = (map: mapboxgl.Map) => {
@@ -1043,9 +1062,7 @@ export function UnifiedMap({
       LSOA_OUTLINE_DESELECTED,
       LSOA_OUTLINE_SELECTED,
     ]) {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, 'visibility', lsoaVisible ? 'visible' : 'none')
-      }
+      setVisibilityWithTwin(map, id, lsoaVisible)
     }
     // The Assess boundary (circle for distance, isochrone for drive/walk) is the
     // single dashed shape for a dropped pin — show it whenever a pin exists, not
@@ -1180,7 +1197,7 @@ export function UnifiedMap({
         lsoa:
           st.tab === 'catchment'
             ? str(
-                queryFirst([LSOA_FILL_SELECTED, LSOA_FILL_DESELECTED])?.[
+                queryFirst(withScottishTwins([LSOA_FILL_SELECTED, LSOA_FILL_DESELECTED]))?.[
                   LSOA_CODE_PROP
                 ]
               )
@@ -1303,7 +1320,7 @@ export function UnifiedMap({
       const code = e.features?.[0]?.properties?.[LSOA_CODE_PROP]
       if (code) lsoaToggleRef.current?.(code)
     }
-    for (const id of [LSOA_FILL_SELECTED, LSOA_FILL_DESELECTED]) {
+    for (const id of withScottishTwins([LSOA_FILL_SELECTED, LSOA_FILL_DESELECTED])) {
       map.on('click', id, lsoaClick)
       map.on('mouseenter', id, () => {
         if (useWorkspaceStore.getState().tab === 'catchment') {

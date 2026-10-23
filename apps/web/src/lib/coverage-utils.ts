@@ -1,7 +1,8 @@
 /**
  * Coverage utilities for demographics analysis
  * Handles detection of geographic coverage areas and provides educational messaging
- * for regions outside current data coverage (England & Wales)
+ * for regions outside current data coverage (Great Britain: England & Wales Census 2021,
+ * Scotland's Census 2022)
  */
 
 export type CoverageRegion = 'england_wales' | 'scotland' | 'northern_ireland';
@@ -14,12 +15,19 @@ export interface CoverageStatus {
   lsoaCount: number;
 }
 
-// LSOA code patterns by region
+// LSOA code patterns by region (Scottish codes are 2022 data zones, which stand in for LSOAs)
 const REGION_PATTERNS = {
   england_wales: /^[EW]\d{8}$/,  // E01000001 or W01000001
-  scotland: /^S\d{8}$/,           // S01000001
+  scotland: /^S\d{8}$/,           // S01013482
   northern_ireland: /^N\d{8}$/,   // N00000001
 };
+
+// Regions with census data loaded
+const COVERED_REGIONS: CoverageRegion[] = ['england_wales', 'scotland'];
+
+function isCoveredRegion(region: CoverageRegion | null): boolean {
+  return region !== null && COVERED_REGIONS.includes(region);
+}
 
 // Approximate bounding boxes for quick region detection
 const REGION_BOUNDS = {
@@ -76,11 +84,11 @@ export function determineCoverageStatus(
   });
 
   const coveredRegions = Array.from(regions);
-  const hasEnglandWales = coveredRegions.includes('england_wales');
+  const covered = coveredRegions.filter(isCoveredRegion);
 
   return {
-    isFullyCovered: hasEnglandWales && coveredRegions.length === 1,
-    isPartiallyCovered: hasEnglandWales && coveredRegions.length > 1,
+    isFullyCovered: covered.length > 0 && covered.length === coveredRegions.length,
+    isPartiallyCovered: covered.length > 0 && covered.length < coveredRegions.length,
     coveredRegions,
     primaryRegion: coveredRegions[0] || null,
     lsoaCount: lsoaCodes.length,
@@ -133,8 +141,8 @@ export function getCoverageMessages(
   if (status.lsoaCount === 0) {
     const region = status.primaryRegion;
 
-    // Check if it's within England & Wales bounds
-    if (region === 'england_wales') {
+    // Within Great Britain: a genuinely empty area
+    if (isCoveredRegion(region)) {
       // Genuinely empty area within coverage
       return {
         searchHint: null,
@@ -146,19 +154,6 @@ export function getCoverageMessages(
       };
     }
 
-    // Outside coverage - Scotland
-    if (region === 'scotland') {
-      return {
-        searchHint: 'Scotland coverage coming soon',
-        validationError: 'Scotland is not yet covered by our demographic data',
-        emptyStateTitle: 'Scotland Coverage Coming Soon',
-        emptyStateDescription:
-          "Our demographic data currently covers England and Wales. We're working to expand coverage to Scotland.",
-        futureExpansion:
-          "We're actively working to bring Census 2022 data for Scotland to the platform. Check back soon for updates!",
-      };
-    }
-
     // Outside coverage - Northern Ireland
     if (region === 'northern_ireland') {
       return {
@@ -166,7 +161,7 @@ export function getCoverageMessages(
         validationError: 'Northern Ireland is not yet covered by our demographic data',
         emptyStateTitle: 'Northern Ireland Coverage Coming Soon',
         emptyStateDescription:
-          "Our demographic data currently covers England and Wales. We're working to expand coverage to Northern Ireland.",
+          "Our demographic data currently covers England, Wales and Scotland. We're working to expand coverage to Northern Ireland.",
         futureExpansion:
           "We're actively working to bring Census 2021 data for Northern Ireland to the platform. Check back soon for updates!",
       };
@@ -177,7 +172,7 @@ export function getCoverageMessages(
       searchHint: 'This location may be outside the UK',
       validationError: 'This location is outside our coverage area',
       emptyStateTitle: 'Location Not Covered',
-      emptyStateDescription: `Demographic data for ${locationName} is not available. Our service currently covers England and Wales.`,
+      emptyStateDescription: `Demographic data for ${locationName} is not available. Our service currently covers England, Wales and Scotland.`,
       futureExpansion: null,
     };
   }
@@ -210,6 +205,6 @@ export function getCoverageMessages(
 export function isLikelyOutsideCoverage(lat: number, lng: number): boolean {
   const region = detectRegionFromCoordinates(lat, lng);
 
-  // If it's in Scotland or Northern Ireland, it's outside current coverage
-  return region === 'scotland' || region === 'northern_ireland';
+  // Northern Ireland is outside current coverage
+  return region === 'northern_ireland';
 }

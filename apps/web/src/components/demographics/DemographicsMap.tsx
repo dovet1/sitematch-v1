@@ -5,6 +5,12 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MeasurementMode } from './LocationInputPanel';
 import type { LSOATooltipData } from '@/lib/supabase-census-data';
+import {
+  addScottishZoneLayers,
+  setFilterWithTwin,
+  showScottishZones,
+  withScottishTwins,
+} from '@/lib/scottish-zone-layers';
 
 // Set your Mapbox access token
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
@@ -344,6 +350,14 @@ export function DemographicsMap({
         },
       }, firstSymbolId);
 
+      // Scottish data zones aren't in the tileset; draw them from GeoJSON with the same styling.
+      addScottishZoneLayers(map.current, [
+        'lsoa-fill-selected',
+        'lsoa-fill-deselected',
+        'lsoa-outline-selected',
+        'lsoa-outline-deselected',
+      ]);
+
       // Add traffic layer immediately after LSOA layers
       // Only add if source doesn't already exist
       if (!map.current.getSource(TRAFFIC_SOURCE_ID)) {
@@ -643,7 +657,7 @@ export function DemographicsMap({
       };
 
       // Add event listeners to both selected and deselected layers
-      const lsoaLayers = ['lsoa-fill-selected', 'lsoa-fill-deselected'];
+      const lsoaLayers = withScottishTwins(['lsoa-fill-selected', 'lsoa-fill-deselected']);
       lsoaLayers.forEach(layerId => {
         map.current?.on('click', layerId, handleClick);
         map.current?.on('mouseenter', layerId, handleMouseEnter);
@@ -691,6 +705,8 @@ export function DemographicsMap({
       console.log('[DemographicsMap] Updating filters for', allLsoaCodes.length, 'LSOAs');
       console.log('[DemographicsMap] Selected count:', selectedLsoaCodes.size);
 
+      void showScottishZones(map.current, allLsoaCodes);
+
       // Convert Sets to Arrays for filter expressions
       const selectedArray = Array.from(selectedLsoaCodes);
       const deselectedArray = allLsoaCodes.filter(code => !selectedLsoaCodes.has(code));
@@ -699,12 +715,12 @@ export function DemographicsMap({
       console.log('[DemographicsMap] Deselected LSOAs:', deselectedArray.length);
 
       // Update selected layers to show only selected LSOAs
-      map.current.setFilter('lsoa-fill-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
-      map.current.setFilter('lsoa-outline-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+      setFilterWithTwin(map.current, 'lsoa-fill-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+      setFilterWithTwin(map.current, 'lsoa-outline-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
 
       // Update deselected layers to show only deselected LSOAs
-      map.current.setFilter('lsoa-fill-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
-      map.current.setFilter('lsoa-outline-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+      setFilterWithTwin(map.current, 'lsoa-fill-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+      setFilterWithTwin(map.current, 'lsoa-outline-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
 
       console.log('[DemographicsMap] Filters updated');
     };

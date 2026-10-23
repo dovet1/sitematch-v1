@@ -94,7 +94,7 @@ export interface DemographicsAPIResponse {
   by_lsoa: Record<string, LSOADemographics>;
 }
 
-// Coverage types for handling searches outside England & Wales
+// Coverage types for handling searches outside Great Britain
 export type CoverageRegion = 'england_wales' | 'scotland' | 'northern_ireland';
 
 export interface CoverageStatus {

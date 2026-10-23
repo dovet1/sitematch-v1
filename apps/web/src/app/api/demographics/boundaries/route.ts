@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       place_name: place_name || 'Selected location',
     });
 
-    // Return coverage error if outside England & Wales
+    // Return coverage error if outside Great Britain
     if (!coverageStatus.isFullyCovered) {
       console.log(`[Boundaries API] Coverage unavailable:`, coverageStatus);
       return NextResponse.json(

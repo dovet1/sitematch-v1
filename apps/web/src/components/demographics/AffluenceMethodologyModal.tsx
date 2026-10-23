@@ -42,6 +42,10 @@ export function AffluenceMethodologyModal({
             <p className="text-gray-700 mt-3">
               The result is a single score from <strong>0 to 100</strong>, where higher numbers indicate more affluent areas.
             </p>
+            <p className="text-gray-700">
+              In Scotland, neighbourhoods are 2022 data zones and the score uses Scotland&apos;s Census measures only (there is
+              no comparable small-area income data). It is scaled within Scotland, so 50 is the Scottish median.
+            </p>
           </div>
 
           <hr className="border-gray-200" />
