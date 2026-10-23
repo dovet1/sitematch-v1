@@ -804,6 +804,9 @@ export interface AssembleInput {
   brands: RawBrand[]
   estateRanges: Map<string, EstateRange[]>
   requirements: RawRequirement[]
+  // Use class codes held against the brand itself (brand_use_classes). A brand missing from the
+  // map falls back to the union of its requirements' use classes.
+  brandUseClasses?: Map<string, string[]>
   brandContacts: Map<string, BrandMatcherContact[]>
   news: RawNewsItem[]
   planningCounts: Map<string, number>
@@ -914,7 +917,8 @@ export function assembleMatches(input: AssembleInput): { matches: BrandMatch[]; 
     )
     if (!size) continue
 
-    const codes = Array.from(new Set(reqs.flatMap((r) => r.useClasses)))
+    const own = input.brandUseClasses?.get(b.id) ?? []
+    const codes = own.length > 0 ? own : Array.from(new Set(reqs.flatMap((r) => r.useClasses)))
     const useClass = codes.length > 0 ? { codes, matches: query.useClass === 'All' || codes.includes(query.useClass) } : null
     if (useClass && !useClass.matches && !query.widen) continue
 

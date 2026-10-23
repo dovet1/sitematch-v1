@@ -26,6 +26,8 @@ interface BrandData {
   storeCount: number
   requirementCount: number
   contactCount: number
+  use_class_codes: string[]
+  useClassOptions: { code: string; name: string }[]
 }
 
 const TABS: { key: Tab; label: string }[] = [
@@ -63,7 +65,7 @@ export function BrandDetail({ brandId }: { brandId: string }) {
       const res = await fetch(`/api/admin/brands/${brandId}`)
       if (!res.ok) throw new Error(`Failed (${res.status})`)
       const data = await res.json()
-      setBrand(data.brand)
+      setBrand({ ...data.brand, use_class_codes: data.brand.use_class_codes ?? [], useClassOptions: data.useClassOptions ?? [] })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load')
     } finally {
@@ -139,6 +141,7 @@ function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => v
   const [openedAt, setOpenedAt] = useState(
     brand.latest_store_opened_at ? brand.latest_store_opened_at.slice(0, 10) : ''
   )
+  const [useClassCodes, setUseClassCodes] = useState<string[]>(brand.use_class_codes)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -180,6 +183,7 @@ function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => v
           latest_store_name: storeName || null,
           latest_store_town: storeTown || null,
           latest_store_opened_at: openedAt || null,
+          use_class_codes: useClassCodes,
         }),
       })
       if (!res.ok) {
@@ -239,6 +243,30 @@ function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => v
         <p className="mt-1 text-xs text-gray-500">
           The brand&apos;s own store finder — shown beside the estate map as provenance for the
           store count.
+        </p>
+      </div>
+
+      <div>
+        <Label>Use classes</Label>
+        <div className="mt-2 flex flex-wrap gap-4">
+          {brand.useClassOptions.map((o) => (
+            <label key={o.code} className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={useClassCodes.includes(o.code)}
+                onChange={(e) =>
+                  setUseClassCodes((prev) =>
+                    e.target.checked ? [...prev, o.code] : prev.filter((c) => c !== o.code)
+                  )
+                }
+              />
+              {o.code === 'Sui Generis' ? o.code : `Class ${o.code}`} · {o.name}
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          The classes this brand trades under. Brand Matcher uses these first, falling back to the
+          brand&apos;s requirements when none are set.
         </p>
       </div>
 

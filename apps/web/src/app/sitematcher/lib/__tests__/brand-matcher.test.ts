@@ -595,6 +595,16 @@ describe('assembleMatches', () => {
     expect(gym?.useClass).toEqual({ codes: ['F'], matches: true })
     expect(signalSummary(gym!, 'useClass', { useClass: 'All' })).toEqual({ key: 'useClass', status: 'good', value: 'Class F' })
   })
+  it("prefers the brand's own use classes over its requirements'", () => {
+    const { matches } = assembleMatches(input({ brandUseClasses: new Map([['gym', ['E']]]) }))
+    expect(matches.find((m) => m.brandId === 'gym')?.useClass).toEqual({ codes: ['E'], matches: true })
+  })
+  it('gives a brand with no requirement a use class from brand_use_classes', () => {
+    const { matches } = assembleMatches(
+      input({ query: { sqft: 14000, useClass: 'B', postcode: 'LS6 2AT' }, brandUseClasses: new Map([['fettle', ['E']]]) })
+    )
+    expect(matches.map((m) => m.brandId)).not.toContain('fettle')
+  })
   it('rates each brand on its news, newest first', () => {
     const today = new Date('2026-10-22T00:00:00Z')
     const n = (kind: 'opening' | 'closure' | 'news', date: string, rating: number) => ({

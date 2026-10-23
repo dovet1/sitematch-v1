@@ -38,7 +38,7 @@ export async function GET(
     const { data: brand, error } = await supabase
       .from('brands')
       .select(
-        'id, name, logo_url, domain, website_url, store_locator_url, latest_store_name, latest_store_town, latest_store_opened_at, stores(count), requirements(count), brand_contacts(count)'
+        'id, name, logo_url, domain, website_url, store_locator_url, latest_store_name, latest_store_town, latest_store_opened_at, stores(count), requirements(count), brand_contacts(count), brand_use_classes(use_classes(code))'
       )
       .eq('id', id)
       .single();
@@ -46,7 +46,10 @@ export async function GET(
       return NextResponse.json({ error: 'Brand not found' }, { status: 404 });
     }
 
-    const category = await fetchBrandCategory(supabase, id);
+    const [category, { data: useClassOptions }] = await Promise.all([
+      fetchBrandCategory(supabase, id),
+      supabase.from('use_classes').select('code, name').order('code'),
+    ]);
 
     return NextResponse.json({
       brand: {
@@ -63,7 +66,11 @@ export async function GET(
         storeCount: (brand as any).stores?.[0]?.count ?? 0,
         requirementCount: (brand as any).requirements?.[0]?.count ?? 0,
         contactCount: (brand as any).brand_contacts?.[0]?.count ?? 0,
+        use_class_codes: (((brand as any).brand_use_classes ?? []) as { use_classes: { code: string } | null }[])
+          .map((u) => u.use_classes?.code)
+          .filter((c): c is string => !!c),
       },
+      useClassOptions: useClassOptions ?? [],
     });
   } catch (error) {
     console.error('Error fetching brand:', error);
@@ -123,18 +130,34 @@ export async function PATCH(
     if ('latest_store_town' in body) update.latest_store_town = body.latest_store_town || null;
     if ('latest_store_opened_at' in body) update.latest_store_opened_at = body.latest_store_opened_at || null;
 
-    if (Object.keys(update).length === 0) {
+    let useClassCodes: string[] | null = null;
+    if ('use_class_codes' in body) {
+      if (!Array.isArray(body.use_class_codes) || body.use_class_codes.some((c: unknown) => typeof c !== 'string')) {
+        return NextResponse.json({ error: 'use_class_codes must be an array of codes' }, { status: 400 });
+      }
+      useClassCodes = body.use_class_codes;
+    }
+
+    if (Object.keys(update).length === 0 && !useClassCodes) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
     const supabase = adminClient();
-    const { data, error } = await supabase
-      .from('brands')
-      .update(update)
-      .eq('id', id)
-      .select('id, name, logo_url, domain, latest_store_name, latest_store_town, latest_store_opened_at')
-      .single();
-    if (error) throw error;
+    let data = null;
+    if (Object.keys(update).length > 0) {
+      const res = await supabase
+        .from('brands')
+        .update(update)
+        .eq('id', id)
+        .select('id, name, logo_url, domain, latest_store_name, latest_store_town, latest_store_opened_at')
+        .single();
+      if (res.error) throw res.error;
+      data = res.data;
+    }
+    if (useClassCodes) {
+      const { error } = await supabase.rpc('save_brand_use_classes', { p_brand_id: id, p_codes: useClassCodes });
+      if (error) throw error;
+    }
 
     return NextResponse.json({ brand: data });
   } catch (error) {

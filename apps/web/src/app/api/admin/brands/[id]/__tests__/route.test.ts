@@ -23,7 +23,8 @@ const update = jest.fn((payload: any) => {
   capturedUpdate = payload
   return { eq }
 })
-const mockClient = { from: jest.fn(() => ({ update })) }
+const rpc = jest.fn(async () => ({ error: null }))
+const mockClient = { from: jest.fn(() => ({ update })), rpc }
 
 const makeRequest = (body: unknown) => ({ json: async () => body })
 const params = Promise.resolve({ id: 'b1' })
@@ -66,6 +67,30 @@ describe('PATCH /api/admin/brands/[id] domain normalization', () => {
 
     expect(response.status).toBe(200)
     expect(capturedUpdate.domain).toBeNull()
+  })
+})
+
+describe('PATCH /api/admin/brands/[id] use classes', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    capturedUpdate = null
+    ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: 'u1', role: 'admin' })
+    ;(createClient as jest.Mock).mockReturnValue(mockClient)
+  })
+
+  it('saves use classes alone without touching the brand row', async () => {
+    const response = await PATCH(makeRequest({ use_class_codes: ['E', 'Sui Generis'] }) as any, { params } as any)
+
+    expect(response.status).toBe(200)
+    expect(update).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('save_brand_use_classes', { p_brand_id: 'b1', p_codes: ['E', 'Sui Generis'] })
+  })
+
+  it('rejects use classes that are not an array of codes', async () => {
+    const response = await PATCH(makeRequest({ use_class_codes: 'E' }) as any, { params } as any)
+
+    expect(response.status).toBe(400)
+    expect(rpc).not.toHaveBeenCalled()
   })
 })
 

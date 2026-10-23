@@ -178,6 +178,22 @@ async function loadRequirements(db: Db): Promise<RawRequirement[]> {
   }))
 }
 
+async function loadBrandUseClasses(db: Db): Promise<Map<string, string[]>> {
+  const rows = await selectAll<{ brand_id: string; use_classes: { code: string } | null }>(() =>
+    db.from('brand_use_classes').select('brand_id, use_classes(code)').order('id')
+  )
+  const map = new Map<string, string[]>()
+  for (const r of rows) {
+    const code = r.use_classes?.code
+    if (!code) continue
+    const list = map.get(r.brand_id)
+    if (list) {
+      if (!list.includes(code)) list.push(code)
+    } else map.set(r.brand_id, [code])
+  }
+  return map
+}
+
 async function loadBrandContacts(db: Db): Promise<Map<string, BrandMatcherContact[]>> {
   const rows = await selectAll<ContactRow>(() =>
     db
@@ -472,11 +488,16 @@ export async function matchSite(query: BrandMatcherQuery): Promise<MatchSiteResu
     return { ok: false, status: 422, error: `We couldn't find ${query.postcode}. Check the postcode and try again.` }
   }
 
-  const [brands, estateRanges, requirements, brandContacts, news, planningCounts, geo, tradingFacts, franchises, towns] =
+  const [brands, estateRanges, requirements, brandUseClasses, brandContacts, news, planningCounts, geo, tradingFacts, franchises, towns] =
     await Promise.all([
       loadBrands(db),
       loadEstateRanges(db),
       loadRequirements(db),
+      // Falls back to requirement use classes rather than failing the search.
+      loadBrandUseClasses(db).catch((error) => {
+        console.error('Brand matcher brand use classes failed:', error)
+        return new Map<string, string[]>()
+      }),
       loadBrandContacts(db),
       loadNews(db),
       loadPlanningCounts(db),
@@ -504,6 +525,7 @@ export async function matchSite(query: BrandMatcherQuery): Promise<MatchSiteResu
     brands,
     estateRanges,
     requirements,
+    brandUseClasses,
     brandContacts,
     news,
     planningCounts,
