@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { UserType } from '@/types/auth'
-import { getModalPricing, getAnnualSavingsMessage } from '@/data/homepage-new/constants'
+import { PRO_PLANS, PRO_TRIAL_DAYS } from '@/lib/pro-plan'
 
 interface TrialSignupFormData {
   companyName: string
@@ -328,7 +328,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
                     Annual
                   </button>
                   <span className="absolute -top-3 -right-2 bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium">
-                    {getAnnualSavingsMessage(tier)}
+                    Save 17%
                   </span>
                 </div>
               </div>
@@ -337,11 +337,11 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
             {/* Pricing highlight */}
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-base font-semibold">
-                <span className="line-through text-white/70">
-                  {getModalPricing(tier, selectedInterval).originalFormatted}
-                </span>{' '}
                 <span className="text-white">
-                  {getModalPricing(tier, selectedInterval).display} - 30 days free
+                  {selectedInterval === 'month'
+                    ? `${PRO_PLANS.monthly.price}${PRO_PLANS.monthly.per}`
+                    : `${PRO_PLANS.annual.price}${PRO_PLANS.annual.per}`}{' '}
+                  - {PRO_TRIAL_DAYS} days free
                 </span>
               </div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>

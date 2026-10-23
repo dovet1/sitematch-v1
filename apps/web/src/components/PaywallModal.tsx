@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
-import { getModalPricing } from '@/data/homepage-new/constants'
+import { PRO_PLANS, PRO_TRIAL_DAYS } from '@/lib/pro-plan'
 
 interface PaywallModalProps {
   children?: React.ReactNode
@@ -202,14 +202,10 @@ export function PaywallModal({
     handleOpenChange(false)
   }
 
-  // Get tier-specific pricing
-  // Get pricing from centralized constants
-  const monthlyPricing = getModalPricing(tier, 'month')
-  const annualPricing = getModalPricing(tier, 'year')
+  // New subscriptions are SiteMatcher Pro whatever the tier prop says (see create-checkout-session)
   const pricing = {
-    monthly: monthlyPricing.formatted,
-    annual: annualPricing.formatted,
-    original: annualPricing.originalFormatted,
+    monthly: PRO_PLANS.monthly.price,
+    annual: PRO_PLANS.annual.price,
   }
 
   return (
@@ -264,12 +260,11 @@ export function PaywallModal({
             <div className="text-center p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               {billingInterval === 'year' ? (
                 <div className="text-base font-semibold">
-                  <span className="line-through text-white/70">{pricing.original}</span>{' '}
-                  <span className="text-white">{pricing.annual}/year</span> - 30 days free
+                  <span className="text-white">{pricing.annual}/year</span> - {PRO_TRIAL_DAYS} days free
                 </div>
               ) : (
                 <div className="text-base font-semibold">
-                  {pricing.monthly}/month - 30 days free
+                  {pricing.monthly}/month - {PRO_TRIAL_DAYS} days free
                 </div>
               )}
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, ArrowRight, Calendar, CreditCard } from 'lucide-react'
+import { PRO_PLANS, PRO_TRIAL_DAYS, trialEndDate as proTrialEndDate } from '@/lib/pro-plan'
 
 // Whitelist of allowed redirect paths for security
 const ALLOWED_REDIRECTS = ['/search', '/agencies/create', '/sitesketcher', '/gapfinder']
@@ -48,7 +49,7 @@ function SubscriptionSuccessContent() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [trialEndDate, setTrialEndDate] = useState<string>('')
-  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(975)
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(PRO_PLANS.monthly.pence / 100)
 
   const sessionId = searchParams?.get('session_id')
   const redirectParam = searchParams?.get('redirect') ?? null
@@ -67,8 +68,7 @@ function SubscriptionSuccessContent() {
       if (!sessionId) {
         console.log('[SUCCESS] No sessionId in URL, using fallback')
         // Fallback if no session ID
-        const endDate = new Date()
-        endDate.setDate(endDate.getDate() + 30)
+        const endDate = proTrialEndDate()
         setTrialEndDate(endDate.toLocaleDateString('en-GB', {
           day: 'numeric',
           month: 'long',
@@ -191,8 +191,7 @@ function SubscriptionSuccessContent() {
       } catch (error) {
         console.error('Error fetching session details:', error)
         // Fallback to default values
-        const endDate = new Date()
-        endDate.setDate(endDate.getDate() + 30)
+        const endDate = proTrialEndDate()
         setTrialEndDate(endDate.toLocaleDateString('en-GB', {
           day: 'numeric',
           month: 'long',
@@ -252,7 +251,7 @@ function SubscriptionSuccessContent() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <p className="text-gray-600">
-                    <strong>Trial Period:</strong> 30 days (ends {trialEndDate})
+                    <strong>Trial Period:</strong> {PRO_TRIAL_DAYS} days (ends {trialEndDate})
                   </p>
                   <p className="text-gray-600">
                     <strong>Next Billing:</strong> £{subscriptionAmount.toFixed(2)} on {trialEndDate} (unless cancelled)

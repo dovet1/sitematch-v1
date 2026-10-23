@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { createServerClient } from '@supabase/ssr'
-import { stripe, SUBSCRIPTION_CONFIG, type SubscriptionTier, type BillingInterval } from '@/lib/stripe'
+import { stripe, SUBSCRIPTION_CONFIG, getSitematcherProPriceId, type SubscriptionTier, type BillingInterval } from '@/lib/stripe'
 import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic';
@@ -84,22 +84,12 @@ export async function POST(request: NextRequest) {
       // Allow through - their legacy access will be replaced by real Stripe subscription
     }
 
-    // ===== TIER RESOLUTION =====
-    // Force Plus tier for GapFinder context, otherwise use provided tier or default to Pro
-    let tier: SubscriptionTier
-    if (userType === 'gapfinder') {
-      tier = 'plus'  // Always force Plus for GapFinder
-      if (providedTier && providedTier !== 'plus') {
-        console.warn('[CHECKOUT] WARNING: GapFinder user requested', providedTier, 'but forcing Plus')
-      }
-    } else {
-      tier = providedTier || 'pro'
-    }
-
-    console.log('[CHECKOUT] Tier resolution for user', userId)
-    console.log('[CHECKOUT]   - providedTier:', providedTier)
-    console.log('[CHECKOUT]   - userType:', userType)
-    console.log('[CHECKOUT]   - Final tier:', tier)
+    // ===== PLAN =====
+    // New sign-ups only buy SiteMatcher Pro (£199/month or £1,990/year, 14-day trial, no coupons),
+    // whichever older paywall sent them here. Pro carries the 'plus' tier internally.
+    // providedTier is still accepted from older callers but no longer changes the price.
+    const tier: SubscriptionTier = SUBSCRIPTION_CONFIG.SITEMATCHER_PRO.TIER
+    console.log('[CHECKOUT] SiteMatcher Pro checkout for user', userId, '(requested tier:', providedTier, ')')
 
     // Block users with real Stripe subscriptions from creating duplicates
     // Include past_due to prevent users in dunning from creating second subscription
@@ -175,63 +165,30 @@ export async function POST(request: NextRequest) {
     console.log('Normalized billing interval:', normalizedInterval)
 
     // ===== REDIRECT PATH DETERMINATION =====
-    // Determine success redirect based on tier
-    const defaultRedirect = tier === 'plus' ? '/gapfinder' : '/search'
+    const defaultRedirect = userType === 'gapfinder' ? '/gapfinder' : '/sitematcher'
     const finalRedirectPath = redirectPath || defaultRedirect
 
     // Build success URL with redirect path
     let successUrl = `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`
     successUrl += `&redirect=${encodeURIComponent(finalRedirectPath)}`
 
-    // Customize messaging based on tier and user type
-    const getCustomText = (tier: SubscriptionTier, userType?: string) => {
-      if (tier === 'plus') {
-        return {
-          description: 'Find retail white space and analyse operator coverage',
-          custom_text: 'Start your 30-day free trial and use GapFinder to spot better market opportunities'
-        }
-      }
-
-      // Pro tier messaging based on userType
-      switch (userType) {
-        case 'agency':
-          return {
-            description: 'Showcase your properties to qualified occupiers',
-            custom_text: 'Start your 30-day free trial and browse thousands of active requirements'
-          }
-        case 'sitesketcher':
-          return {
-            description: 'Visualize and plan your property projects',
-            custom_text: 'Start your 30-day free trial and access SiteSketcher visualization tools'
-          }
-        case 'gapfinder':
-          // Note: gapfinder userType with pro tier shouldn't normally happen, but handle gracefully
-          return {
-            description: 'Access property search tools',
-            custom_text: 'Start your 30-day free trial and search thousands of properties'
-          }
-        case 'searcher':
-        default:
-          return {
-            description: 'Access thousands of property listings',
-            custom_text: 'Start your 30-day free trial and search thousands of properties'
-          }
-      }
+    const trialDays = SUBSCRIPTION_CONFIG.SITEMATCHER_PRO.TRIAL_DAYS
+    const customText = {
+      custom_text: `Start your ${trialDays}-day free trial. Nothing is charged until the trial ends.`,
     }
 
-    const customText = getCustomText(tier, userType)
-
-    // ===== PRICE AND COUPON SELECTION =====
-    // Select price ID and coupon based on tier and interval
-    const priceId = SUBSCRIPTION_CONFIG.getPriceIdForTier(tier, normalizedInterval)
-    const couponId = SUBSCRIPTION_CONFIG.getCouponIdForTier(tier, normalizedInterval)
+    // ===== PRICE SELECTION =====
+    const priceId = getSitematcherProPriceId(normalizedInterval === 'month' ? 'monthly' : 'annual')
+    if (!priceId) {
+      console.error(`[CHECKOUT] STRIPE_SITEMATCHER_PRO_${normalizedInterval === 'month' ? 'MONTHLY' : 'ANNUAL'}_PRICE_ID is not set`)
+      return NextResponse.json({ error: 'Plans are not available right now. Please contact us.' }, { status: 503 })
+    }
 
     console.log('Creating checkout session for user:', userId)
-    console.log('Billing interval:', billingInterval)
+    console.log('Billing interval:', normalizedInterval)
     console.log('Using price:', priceId)
-    console.log('Applying coupon:', couponId)
 
-    // Create Stripe Checkout session with discount at top level
+    // Create Stripe Checkout session
     let sessionConfig: any = {
       customer: customerId,
       mode: 'subscription',
@@ -243,13 +200,8 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      discounts: [
-        {
-          coupon: couponId, // Apply coupon directly to checkout session
-        },
-      ],
       subscription_data: {
-        trial_period_days: SUBSCRIPTION_CONFIG.TRIAL_DAYS,
+        trial_period_days: trialDays,
         trial_settings: {
           end_behavior: {
             missing_payment_method: 'cancel',
@@ -287,7 +239,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create session with coupon applied to subscription
     const session = await stripe.checkout.sessions.create(sessionConfig)
 
     return NextResponse.json({
